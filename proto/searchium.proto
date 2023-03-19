@@ -1,0 +1,381 @@
+syntax = "proto3";
+
+import "protobuf-net/bcl.proto";
+
+message IpcMessage {
+  int64 request_id = 1;
+  string protocol = 2;
+  IpcMessageData data = 3;
+    
+  oneof request_response {
+    IpcRequest request = 10;
+    IpcResponse response = 11;
+  }
+}
+
+message IpcMessageData {
+  oneof subtype {
+    IpcStringData ipc_string_data = 10;
+    TypedMessage typed_message = 11;
+    ErrorResponse error_response = 12;
+  }
+}
+
+message IpcStringData {
+  string text = 1;
+}
+
+message TypedMessage {
+  string class_name = 1;
+  oneof subtype { 
+    TypedRequest typed_request = 10;
+    TypedResponse typed_response = 11;
+    TypedEvent typed_event = 12;
+  }  
+}
+
+message ErrorResponse {
+  string message = 1;
+  string full_type_name = 2;
+  string stack_trace = 3;
+  ErrorResponse inner_error = 4;
+}
+
+message TypedRequest {
+  oneof subtype { 
+    RegisterFileRequest register_file_request = 10;
+    UnregisterFileRequest unregister_file_request = 11;
+    GetFileSystemRequest get_file_system_request = 12;
+    SearchFilePathsRequest search_file_paths_request = 13;
+    SearchCodeRequest search_code_request = 14;
+    GetFileSystemVersionRequest get_file_system_version_request = 15;
+    GetFileExtractsRequest get_file_extracts_request = 16;
+    GetDirectoryStatisticsRequest get_directory_statistics_request = 18;
+    RefreshFileSystemTreeRequest refresh_filesystem_tree_request = 19;
+    GetDatabaseStatisticsRequest get_database_statistics_request = 20;
+    PauseIndexingRequest pause_indexing_request = 21;
+    ResumeIndexingRequest resume_indexing_request = 22;
+    GetDatabaseDetailsRequest get_database_details_request = 23;
+    GetProjectDetailsRequest get_project_details_request = 24;
+    GetDirectoryDetailsRequest get_directory_details_request = 25;
+    GetFilesystemTreeRequest get_filesystem_tree_request = 26;
+    GetDirectoryEntriesRequest get_directory_entries_request = 27;
+    GetDirectoryEntriesMultipleRequest get_directory_entries_multiple_request = 28;
+  }
+}
+
+message TypedResponse { 
+  oneof subtype {
+    DoneResponse done_response = 10;
+    GetFileSystemResponse get_file_system_response = 11;
+    SearchFilePathsResponse search_file_paths_response = 12;
+    SearchCodeResponse search_code_response = 13;
+    GetFileSystemVersionResponse get_file_system_version_response = 14;
+    GetFileExtractsResponse get_file_extracts_response = 16;
+    GetDirectoryStatisticsResponse get_directory_statistics_response = 17;
+    RefreshFileSystemTreeResponse refresh_file_system_tree_response = 18;
+    GetDatabaseStatisticsResponse get_database_statistics_response = 19;
+    PauseResumeIndexingResponse pause_resume_indexing_response = 20;
+    GetDatabaseDetailsResponse get_database_details_response = 21;
+    GetProjectDetailsResponse get_project_details_response = 22;
+    GetDirectoryDetailsResponse get_directory_details_response = 23;
+    GetFileSystemTreeResponse get_filesystem_tree_response = 24;
+    GetDirectoryEntriesResponse get_directory_entries_response = 25;
+    GetDirectoryEntriesMultipleResponse get_directory_entries_multiple_response = 26;
+  }
+}
+
+message TypedEvent {
+  oneof subtype {
+    PairedTypedEvent paired_typed_event = 10;
+    ProgressReportEvent progress_report_event = 11;
+    IndexingServerStateChangedEvent indexing_server_state_changed_event = 12;
+  }
+}
+
+message PairedTypedEvent {
+  int64 operation_id = 1;
+  ErrorResponse error = 2;
+
+  oneof subtype { 
+    FileSystemScanStarted file_system_scan_started = 10;
+    FileSystemScanFinished file_system_scan_finished = 11;
+    SearchEngineFilesLoading search_engine_files_loading = 12;
+    SearchEngineFilesLoadingProgress search_engine_files_loading_progress = 13;
+    SearchEngineFilesLoaded search_engine_files_loaded = 14;
+  }
+}
+
+message FileSystemScanStarted {
+}
+message FileSystemScanFinished {
+  int32 old_version = 1;
+  int32 new_version = 2;
+}
+message SearchEngineFilesLoading {
+}
+message SearchEngineFilesLoadingProgress {
+}
+message SearchEngineFilesLoaded {
+  int64 tree_version = 1;
+}
+
+message ProgressReportEvent { 
+  string display_text = 1;
+  int32 completed = 2; // number of completed steps <= total
+  int32 total = 3; // total expected number of steps 
+}
+
+enum IndexingServerStatus {
+  INDEXING_SERVER_STATUS_IDLE = 0;
+  INDEXING_SERVER_STATUS_PAUSED = 1;
+  INDEXING_SERVER_STATUS_YIELD = 2;
+  INDEXING_SERVER_STATUS_BUSY = 3;
+}
+
+message IndexingServerStateChangedEvent {
+  IndexingServerStatus server_status = 1;
+  bcl.DateTime last_index_updated_utc = 2;
+}
+
+message IpcRequest {
+  bool run_on_sequential_queue = 3;
+}
+
+message IpcResponse { 
+  IpcEvent ipc_event = 10;
+}
+
+message IpcEvent {
+}
+
+message RegisterFileRequest {
+  string file_name = 1;
+}
+message UnregisterFileRequest {
+  string file_name = 1;
+}
+message GetFileSystemRequest {
+  int32 known_version = 1;
+}
+message SearchFilePathsRequest {
+  SearchParams search_params = 1;
+}
+message SearchCodeRequest {
+  SearchParams search_params = 1;
+}
+message GetFileSystemVersionRequest {
+}
+message GetFileExtractsRequest {
+  string file_name = 1;
+  repeated FilePositionSpan positions = 2;
+  int32 max_extract_length = 3;
+}
+message GetDirectoryStatisticsRequest {
+  string directory_name = 1;
+}
+message RefreshFileSystemTreeRequest {
+}
+message GetDatabaseStatisticsRequest {
+  bool force_garbage_collection = 1;
+}
+message PauseIndexingRequest {
+}
+message ResumeIndexingRequest {
+}
+message GetDatabaseDetailsRequest {
+  int32 max_files_by_extension_details_count = 1;
+  int32 max_large_files_details_count = 2;
+}
+message GetProjectDetailsRequest {
+  string project_path = 1;
+  int32 max_files_by_extension_details_count = 2;
+  int32 max_large_files_details_count = 3;
+}
+message GetDirectoryDetailsRequest {
+  string path = 1;
+  int32 max_files_by_extension_details_count = 2;
+  int32 max_large_files_details_count = 3;
+}
+message GetFilesystemTreeRequest {
+  int32 known_version = 1;
+}
+message GetDirectoryEntriesRequest {
+  string project_path = 1;
+  string directory_relative_path = 2;
+}
+message GetDirectoryEntriesMultipleRequest {
+  string project_path = 1;
+  repeated string relative_path_list = 2;
+}
+
+message FilePositionSpan {
+  int32 position = 1;
+  int32 length = 2;
+}
+
+message SearchParams {
+  string search_string = 1;
+  string file_path_pattern = 2;
+  int32 max_results = 3; 
+  bool match_case = 4;
+  bool match_whole_word = 5;
+  bool include_sym_links = 6;
+  bool regex = 7;
+  bool use_re2_engine = 8;
+}
+
+message DoneResponse {
+  string info = 1;
+}
+message GetFileSystemResponse {
+  FileSystemTree_Obsolete file_system_tree_obsolete = 1;
+}
+message SearchFilePathsResponse {
+  DirectoryEntry search_result = 1;
+  int64 hit_count = 2;
+  int64 total_count = 3;
+}
+message SearchCodeResponse {
+  DirectoryEntry search_results = 1;
+  int64 hit_count = 2;
+  int64 searched_file_count = 3;
+  int64 total_file_count = 4;
+}
+message GetFileSystemVersionResponse {
+  int32 version = 1;
+}
+message GetFileExtractsResponse {
+  string file_name = 1;
+  repeated FileExtract file_extracts = 2;
+}
+message GetDirectoryStatisticsResponse {
+  int32 directory_count = 1;
+  int32 file_count = 2;
+  int32 indexed_file_count = 3;
+  int64 total_indexed_file_size = 4;
+}
+message RefreshFileSystemTreeResponse {
+}
+message GetDatabaseStatisticsResponse {
+  int32 project_count = 1;
+  int64 file_count = 2;
+  int64 searchable_file_count = 3;
+  int64 server_native_memory_usage = 4;
+  int64 server_gc_memory_usage = 5;
+  bcl.DateTime index_last_updated_utc = 6;
+  IndexingServerStatus server_status = 7;
+}
+message PauseResumeIndexingResponse {
+}
+message GetDatabaseDetailsResponse {
+  repeated ProjectDetails project_details = 1;
+}
+message GetProjectDetailsResponse {
+  ProjectDetails project_details = 1;
+}
+message GetDirectoryDetailsResponse {
+  DirectoryDetails directory_details = 1;
+}
+message GetFileSystemTreeResponse {
+  FileSystemTree file_system_tree = 1;
+}
+message GetDirectoryEntriesResponse {
+  DirectoryEntry directory_entry = 1;
+}
+message GetDirectoryEntriesMultipleResponse {
+  repeated OptionalDirectoryEntry directory_entries = 1;
+}
+
+message FileSystemTree {
+  int32 version = 1;
+  repeated ProjectEntry projects = 2;
+}
+
+message ProjectEntry { 
+  string root_path = 1;
+}
+
+message FileSystemTree_Obsolete { 
+  int32 version = 1;
+  DirectoryEntry root = 2;
+}
+
+message ProjectDetails {
+  string root_path = 1;
+  DirectoryDetails directory_details = 2;
+  ProjectConfigurationDetails project_configuration_details = 3;
+}
+
+message ProjectConfigurationDetails { 
+  ProjectConfigurationSectionDetails ignore_paths_section = 1;
+  ProjectConfigurationSectionDetails ignore_searchable_files_section = 2;
+  ProjectConfigurationSectionDetails include_searchable_files_section = 3;
+}
+
+message ProjectConfigurationSectionDetails {
+  string containing_file_path = 1;
+  string name = 2;
+  string contents = 3;
+}
+
+message OptionalDirectoryEntry { 
+  bool has_value = 1;
+  DirectoryEntry value = 2;
+}
+
+message DirectoryEntry {
+  repeated FileSystemEntry entries = 1;
+}
+message FileEntry { 
+}
+
+message FileSystemEntry { 
+  string name = 1;
+  FileSystemEntryData data = 2;
+  oneof subtype { 
+    FileEntry file_entry = 10;
+    DirectoryEntry directory_entry = 11;
+  }
+}
+
+message FileSystemEntryData {
+  FilePositionsData file_positions_data = 10;
+}
+
+message FilePositionsData { 
+  repeated FilePositionSpan positions = 1;
+}
+
+message DirectoryDetails {
+  string path = 1;
+  int64 directory_count = 2;
+  int64 file_count = 3;
+  int64 searchable_files_count = 4;
+  int64 searchable_files_byte_length = 5;
+  int64 binary_files_count = 6;
+  int64 binary_files_byte_length = 7;
+  repeated FileByExtensionDetails searchable_files_by_extension_details = 8;
+  repeated LargeFileDetails large_searchable_file_details = 9;
+  repeated FileByExtensionDetails binary_files_by_extension_details = 10;
+  repeated LargeFileDetails large_binary_files_details = 11;
+}
+
+message FileByExtensionDetails {
+  string file_extension = 1;
+  int64 file_count = 2;
+  int64 file_byte_length = 3;
+}
+
+message LargeFileDetails { 
+  string relative_path = 1;
+  int64 byte_length = 2;
+}
+
+message FileExtract {
+  string text = 1;
+  int32 offset = 2;
+  int32 length = 3;
+  int32 line_number = 4;
+  int32 column_number = 5;
+}
