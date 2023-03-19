@@ -5,14 +5,7 @@ import { TypedEmitter } from 'tiny-typed-emitter';
 import * as vscode from 'vscode';
 import * as ipc from './ipc';
 import { IpcChannel } from './ipcChannel';
-
-let _channel: vscode.OutputChannel;
-function getOutputChannel(): vscode.OutputChannel {
-    if (!_channel) {
-        _channel = vscode.window.createOutputChannel('searchium');
-    }
-    return _channel;
-}
+import { getLogger } from './logger';
 
 class ServerProxy {
     server: Server;
@@ -29,7 +22,7 @@ class ServerProxy {
 
     private onListening() {
         const port = (this.server.address() as AddressInfo).port;
-        getOutputChannel().appendLine(`Listening on port ${port}`);
+        getLogger().log`Listening on port ${port}`;
         // TODO: Check necessity of intermediate host process and 'break away from job' - does that ensure server can live longer than extension runner? 
         let hostExePath = path.join(this.extensionContext.extensionPath, "bin", "VSChromium.Host.exe");
         let serverExePath = path.join(this.extensionContext.extensionPath, "bin", "VSChromium.Server.exe");
@@ -37,13 +30,13 @@ class ServerProxy {
     }
 
     private onError(err: Error) {
-        getOutputChannel().appendLine(`Connection error: ${err.toString()}`);
+        getLogger().log`Connection error: ${err}`;
     }
 
     private async onConnectionReceived(c: Socket) {
-        getOutputChannel().appendLine("Received connection from search server");
+        getLogger().log`Received connection from search server`;
         c.on('end', () => {
-            getOutputChannel().appendLine("Search server disconnected");
+            getLogger().log`Search server disconnected`;
         });
 
         const channel = new IpcChannel(c);
@@ -68,17 +61,17 @@ class ServerProxy {
 
         try {
             await handshake;
-            getOutputChannel().appendLine("Handshaking successful!");
+            getLogger().log`Handshaking successful!`;
         }
         catch (err: any) {
             vscode.window.showErrorMessage("Error handshaking with search server process.");
-            getOutputChannel().appendLine(`Handshake error: ${err.toString()}`);
+            getLogger().log`Handshake error: ${err}`;
         }
     }
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    getOutputChannel().appendLine("Initializing searchium");
+    getLogger().log`Initializing searchium`;
     context.subscriptions.push(vscode.commands.registerCommand('searchium.helloWorld', () => {
         vscode.window.showInformationMessage('Hello searchium!');
     }));
