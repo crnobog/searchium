@@ -146,10 +146,11 @@ export class SearchManager {
             prompt: "Search term",
         });
         if (!query) { return; }
+        const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
         this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
             searchString: query,
             filePathPattern: "",
-            maxResults: 10000,
+            maxResults,
             matchCase: false,
             matchWholeWord: false,
             includeSymLinks: false,
@@ -159,6 +160,9 @@ export class SearchManager {
             .then((r: ipcResponses.SearchCodeResponse) => {
                 getLogger().log`Search request complete`;
                 // TODO: compare num results vs max to message truncation 
+                if (r.hitCount >= maxResults) {
+                    vscode.window.showInformationMessage("Search results exceeded configured maximum. Search results will be truncated.");
+                }
                 this.provider.populate(r);
                 // TODO: Focus view 
                 vscode.commands.executeCommand('searchium-results.focus');

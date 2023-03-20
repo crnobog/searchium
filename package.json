@@ -14,6 +14,18 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": [
+      {
+        "title": "Searchium",
+        "properties": {
+          "searchium.maxResults": {
+            "type": "number",
+            "default": 10000,
+            "description": "Maximum number of search results to return."
+          }
+        }
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
