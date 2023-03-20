@@ -9,6 +9,7 @@ import * as ipc from './ipc';
 import { IpcChannel } from './ipcChannel';
 import { getLogger } from './logger';
 import * as searchium_pb from './gen/searchium_pb';
+import { SearchResultsProvider, SearchManager } from './search';
 
 class ServerProxy implements vscode.Disposable {
     listener?: Server;
@@ -113,6 +114,7 @@ class StatusTracker {
     }
 };
 
+
 export async function activate(context: vscode.ExtensionContext) {
     getLogger().log`Initializing searchium`;
 
@@ -133,6 +135,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
 
+        const searchResultsProvider = new SearchResultsProvider(channel);
+        context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
+        // vscode.window.createTreeView("searchium-results", { treeDataProvider : SearchResultsProvider });
+
+        const searchManager = new SearchManager(searchResultsProvider, channel);
+
+        context.subscriptions.push(
+            vscode.commands.registerCommand("searchium.newSearch", searchManager.newSearch, searchManager),
+            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", searchManager.searchCurrentToken, searchManager)
+        );
     } catch (err: any) {
 
     }

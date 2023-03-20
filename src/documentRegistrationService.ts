@@ -1,6 +1,7 @@
 import { nextTick } from "process";
 import * as vscode from "vscode";
 import * as ipc from './ipc';
+import * as ipcRequests from './ipcRequests';
 import { IpcChannel } from "./ipcChannel";
 import { getLogger } from "./logger";
 
@@ -40,13 +41,13 @@ export class DocumentRegistrationService implements vscode.Disposable {
     }
 
     private registerPath(path: string) {
-        this.channel.sendSequentialRequest(new ipc.RegisterFileRequest(path))
+        this.channel.sendSequentialRequest(new ipcRequests.RegisterFileRequest(path))
             .then(() => getLogger().log`Completed register for ${path}`)
             .catch((e) => getLogger().log`Error registering file ${path}: ${e}`);
     }
     // TODO: Refcount for multiple openings of documents? 
     private unregisterPath(path: string) {
-        this.channel.sendSequentialRequest(new ipc.UnregisterFileRequest(path))
+        this.channel.sendSequentialRequest(new ipcRequests.UnregisterFileRequest(path))
             .then(() => getLogger().log`Completed unregister for ${path}`)
             .catch((e) => getLogger().log`Error unregistering file ${path}: ${e}`);
     }

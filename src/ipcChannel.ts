@@ -4,6 +4,7 @@ import { PlainMessage, protoDelimited } from "@bufbuild/protobuf";
 import * as ipc from './ipc';
 import * as ipcEvents from './ipcEvents';
 import * as ipcResponses from './ipcResponses';
+import * as ipcRequests from './ipcRequests';
 import * as searchium_pb from './gen/searchium_pb';
 import * as vscode from "vscode";
 import { getLogger } from "./logger";
@@ -15,7 +16,7 @@ interface IpcChannelEvents {
     // 'fatalError' : (e : Error) => void;
 }
 
-type RequestSuccess = () => void;
+type RequestSuccess = (r: any) => void;
 type RequestFailure = (err: any) => void;
 type RequestCompletion = [RequestSuccess, RequestFailure];
 
@@ -49,10 +50,15 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
     }
 
     // TODO: map request types to response types 
-    public async sendSequentialRequest(payload: ipc.TypedRequest): Promise<void> {
+    public async sendSequentialRequest(payload: ipcRequests.Request): Promise<void> {
+        return await this.sendRequest(payload, true);
+    }
+
+    // TODO: typing for responses 
+    public async sendRequest(payload: ipcRequests.Request, sequential?: boolean): Promise<any> {
         return new Promise((resolve, reject) => {
             let typedMessage: PlainMessage<searchium_pb.TypedMessage> = {
-                className: payload.className,
+                className: "Unknown",
                 subtype: {
                     case: "typedRequest",
                     value: payload.toProto(),
@@ -68,7 +74,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                 },
                 requestResponse: {
                     case: "request", value: {
-                        runOnSequentialQueue: true,
+                        runOnSequentialQueue: sequential,
                     }
                 }
             });
@@ -144,7 +150,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                 // complete with string response
                 let s = msg.data.subtype.value.text;
                 if (success) {
-                    success();
+                    success(s);
                 }
                 // TODO: Emit global event 
                 break;
@@ -160,7 +166,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                         let r = this.translateTypedResponse(requestId, typedMessage.subtype.value);
                         this.emit('response', r);
                         if (success) {
-                            success();
+                            success(r);
                         }
                         break;
                 }
@@ -169,27 +175,6 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
             }
         }
     }
-
-    // private translateMessageData(requestId: bigint, data: searchium_pb.IpcMessageData | undefined): ipc.MessageData {
-    //     if (!data) {
-    //         throw new Error("Missing message data");
-    //     }
-    //     switch (data.subtype.case) {
-    //         case undefined: throw new Error("Missing subtytpe for ipc message data");
-    //         case 'ipcStringData': {
-    //             return {
-    //                 dataType: 'stringData',
-    //                 text: data.subtype.value.text,
-    //             };
-    //         }
-    //         case 'typedMessage': {
-    //             return this.translateTypedMessage(requestId, data.subtype.value);
-    //         }
-    //         case 'errorResponse': {
-    //             return this.translateErrorResponse(data.subtype.value);
-    //         }
-    //     }
-    // }
 
     private translateTypedEvent(requestId: bigint, data: searchium_pb.TypedEvent): ipcEvents.TypedEvent {
         switch (data.subtype.case) {
@@ -256,6 +241,24 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     responseType: "done",
                     requestId,
                     info: data.subtype.value.info
+                };
+            }
+            case "searchCodeResponse": {
+                return {
+                    responseType: "searchCode",
+                    requestId,
+                    searchResults: data.subtype.value.searchResults!, // todo: handle empty
+                    hitCount: data.subtype.value.hitCount,
+                    searchedFileCount: data.subtype.value.searchedFileCount,
+                    totalFileCount: data.subtype.value.totalFileCount,
+                };
+            }
+            case 'getFileExtractsResponse': {
+                return {
+                    responseType: "getFileExtracts",
+                    fileName: data.subtype.value.fileName,
+                    fileExtracts: data.subtype.value.fileExtracts ?? [],
+                    requestId
                 };
             }
         }

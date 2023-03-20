@@ -232,12 +232,12 @@ message GetFileSystemResponse {
   FileSystemTree_Obsolete file_system_tree_obsolete = 1;
 }
 message SearchFilePathsResponse {
-  DirectoryEntry search_result = 1;
+  FileSystemEntry search_result = 1;
   int64 hit_count = 2;
   int64 total_count = 3;
 }
 message SearchCodeResponse {
-  DirectoryEntry search_results = 1;
+  FileSystemEntry search_results = 1;
   int64 hit_count = 2;
   int64 searched_file_count = 3;
   int64 total_file_count = 4;

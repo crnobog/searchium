@@ -2040,9 +2040,9 @@ export class GetFileSystemResponse extends Message<GetFileSystemResponse> {
  */
 export class SearchFilePathsResponse extends Message<SearchFilePathsResponse> {
   /**
-   * @generated from field: DirectoryEntry search_result = 1;
+   * @generated from field: FileSystemEntry search_result = 1;
    */
-  searchResult?: DirectoryEntry;
+  searchResult?: FileSystemEntry;
 
   /**
    * @generated from field: int64 hit_count = 2;
@@ -2062,7 +2062,7 @@ export class SearchFilePathsResponse extends Message<SearchFilePathsResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "SearchFilePathsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "search_result", kind: "message", T: DirectoryEntry },
+    { no: 1, name: "search_result", kind: "message", T: FileSystemEntry },
     { no: 2, name: "hit_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "total_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
@@ -2089,9 +2089,9 @@ export class SearchFilePathsResponse extends Message<SearchFilePathsResponse> {
  */
 export class SearchCodeResponse extends Message<SearchCodeResponse> {
   /**
-   * @generated from field: DirectoryEntry search_results = 1;
+   * @generated from field: FileSystemEntry search_results = 1;
    */
-  searchResults?: DirectoryEntry;
+  searchResults?: FileSystemEntry;
 
   /**
    * @generated from field: int64 hit_count = 2;
@@ -2116,7 +2116,7 @@ export class SearchCodeResponse extends Message<SearchCodeResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "SearchCodeResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "search_results", kind: "message", T: DirectoryEntry },
+    { no: 1, name: "search_results", kind: "message", T: FileSystemEntry },
     { no: 2, name: "hit_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "searched_file_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 4, name: "total_file_count", kind: "scalar", T: 3 /* ScalarType.INT64 */ },

@@ -14,6 +14,37 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "searchium",
+          "title": "Searchium",
+          "icon": "media/search-bolt-rounded.svg"
+        }
+      ]
+    },
+    "views": {
+      "searchium": [
+        {
+          "id": "searchium-results",
+          "name": "Searchium",
+          "icon": "media/search_desktop.svg",
+          "contextualTitle": "Searchium"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "searchium.newSearch",
+        "title": "New Search",
+        "category": "Searchium"
+      },
+      {
+        "command": "searchium.searchCurrentToken",
+        "title": "Search Current Token",
+        "category": "Searchium"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
