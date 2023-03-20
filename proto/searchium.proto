@@ -89,7 +89,7 @@ message TypedEvent {
   oneof subtype {
     PairedTypedEvent paired_typed_event = 10;
     ProgressReportEvent progress_report_event = 11;
-    IndexingServerStateChangedEvent indexing_server_state_changed_event = 12;
+    IndexingServerStateChangedEvent indexing_server_state_changed_event = 21;
   }
 }
 

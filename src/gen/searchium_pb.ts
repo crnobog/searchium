@@ -650,7 +650,7 @@ export class TypedEvent extends Message<TypedEvent> {
     case: "progressReportEvent";
   } | {
     /**
-     * @generated from field: IndexingServerStateChangedEvent indexing_server_state_changed_event = 12;
+     * @generated from field: IndexingServerStateChangedEvent indexing_server_state_changed_event = 21;
      */
     value: IndexingServerStateChangedEvent;
     case: "indexingServerStateChangedEvent";
@@ -666,7 +666,7 @@ export class TypedEvent extends Message<TypedEvent> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 10, name: "paired_typed_event", kind: "message", T: PairedTypedEvent, oneof: "subtype" },
     { no: 11, name: "progress_report_event", kind: "message", T: ProgressReportEvent, oneof: "subtype" },
-    { no: 12, name: "indexing_server_state_changed_event", kind: "message", T: IndexingServerStateChangedEvent, oneof: "subtype" },
+    { no: 21, name: "indexing_server_state_changed_event", kind: "message", T: IndexingServerStateChangedEvent, oneof: "subtype" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypedEvent {

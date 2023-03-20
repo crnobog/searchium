@@ -14,12 +14,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "searchium.helloWorld",
-        "title": "Hello World"
-      }
-    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

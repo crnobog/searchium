@@ -1,0 +1,3 @@
+- [x] Register and unregister open documents with server process 
+- [x] Log out all received events/messages 
+- [ ] Add statusbar item 

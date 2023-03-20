@@ -3,58 +3,68 @@ import { AddressInfo, createServer, Server, Socket } from 'net';
 import * as path from 'path';
 import { TypedEmitter } from 'tiny-typed-emitter';
 import * as vscode from 'vscode';
+import { DocumentRegistrationService } from './documentRegistrationService';
 import * as ipc from './ipc';
 import { IpcChannel } from './ipcChannel';
 import { getLogger } from './logger';
+import * as searchium_pb from './gen/searchium_pb';
 
-class ServerProxy {
-    server: Server;
-    extensionContext: vscode.ExtensionContext;
-    channel?: IpcChannel;
+class ServerProxy implements vscode.Disposable {
+    listener?: Server;
+    proc?: child_process.ChildProcessWithoutNullStreams;
 
-    constructor(context: vscode.ExtensionContext) {
-        this.extensionContext = context;
-        this.server = createServer(this.onConnectionReceived.bind(this));
-        this.server.on('error', this.onError.bind(this));
-        this.server.on('listening', this.onListening.bind(this));
-        this.server.listen();
+    constructor() {
     }
 
-    private onListening() {
-        const port = (this.server.address() as AddressInfo).port;
+    public dispose() {
+        this.listener?.close();
+        this.proc?.kill();
+    }
+
+    public async startServer(context: vscode.ExtensionContext): Promise<IpcChannel> {
+        let pendingSocket = new Promise<Socket>((resolve, reject) => {
+            this.listener = createServer((c) => resolve(c));
+        });
+        this.listener?.on('error', this.onError.bind(this));
+        context.subscriptions.push(this);
+
+        const portTask = new Promise<number>((resolve, reject) => {
+            this.listener?.on('error', (e) => { reject(e); });
+            this.listener?.on('listening', () => {
+                const port = (this.listener?.address() as AddressInfo).port;
+                resolve(port);
+            });
+        });
+        this.listener?.listen();
+        const port = await portTask;
         getLogger().log`Listening on port ${port}`;
-        // TODO: Check necessity of intermediate host process and 'break away from job' - does that ensure server can live longer than extension runner? 
-        let hostExePath = path.join(this.extensionContext.extensionPath, "bin", "VSChromium.Host.exe");
-        let serverExePath = path.join(this.extensionContext.extensionPath, "bin", "VSChromium.Server.exe");
-        child_process.spawn(hostExePath, [serverExePath, `${port}`]);
-    }
 
-    private onError(err: Error) {
-        getLogger().log`Connection error: ${err}`;
-    }
+        let hostExePath = path.join(context.extensionPath, "bin", "VSChromium.Host.exe");
+        let serverExePath = path.join(context.extensionPath, "bin", "VSChromium.Server.exe");
+        this.proc = child_process.spawn(hostExePath, [serverExePath, `${port}`], { detached: true });
 
-    private async onConnectionReceived(c: Socket) {
+        const c = await pendingSocket;
         getLogger().log`Received connection from search server`;
         c.on('end', () => {
             getLogger().log`Search server disconnected`;
         });
 
         const channel = new IpcChannel(c);
-        this.channel = channel;
+        context.subscriptions.push(channel);
         const handshake = new Promise<void>((resolve, reject) => {
-            channel.once('raw', (r: ipc.Response) => {
-                if (r.data.type !== 'stringData') {
+            channel.once('raw', (r: searchium_pb.IpcMessage) => {
+                if (!r.data) { return reject("Empty initial response"); }
+                if (r.data.subtype.case !== 'ipcStringData') {
                     return reject(new Error("Expected initial response to contain string data"));
                 }
-                let message = r.data as ipc.StringData;
-                if (message.text !== 'Hello!') {
+                let message = r.data.subtype.value.text;
+                if (message !== 'Hello!') {
                     return reject(new Error("Expected initial response string to be 'Hello!'"));
                 }
                 resolve();
             });
         });
 
-        // TODO: Wait for a response message which should match HelloWorldProtocol.cs
         process.nextTick(async () => {
             await channel.drainDispatch();
         });
@@ -67,17 +77,25 @@ class ServerProxy {
             vscode.window.showErrorMessage("Error handshaking with search server process.");
             getLogger().log`Handshake error: ${err}`;
         }
+        return channel;
+    }
+
+    private onError(err: Error) {
+        getLogger().log`Connection error: ${err}`;
     }
 }
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     getLogger().log`Initializing searchium`;
-    context.subscriptions.push(vscode.commands.registerCommand('searchium.helloWorld', () => {
-        vscode.window.showInformationMessage('Hello searchium!');
-    }));
 
     try {
-        const proxy = new ServerProxy(context);
+        const proxy = new ServerProxy();
+        let channel = await proxy.startServer(context);
+
+        channel.on('event', (e) => getLogger().log`event: ${e}`);
+        channel.on('response', (r) => getLogger().log`response: ${r}`);
+
+        context.subscriptions.push(new DocumentRegistrationService(context, channel));
     } catch (err: any) {
 
     }

@@ -16,8 +16,30 @@ export class Logger {
     }
 
     public log(strings: TemplateStringsArray, ...insertions: any[]) {
-        let s = strings.reduce((acc, cur, i) => acc + cur + (insertions[i] ? `${insertions[i]}` : ""), "");
-        this.outputChannel.appendLine(s);
-        console.log(s);
+        try {
+            let s = "";
+            for (let i = 0; i < insertions.length; ++i) {
+                s += strings[i];
+                try {
+                    let insertion = insertions[i];
+                    if (insertion instanceof Object && insertion.toString === Object.prototype.toString) {
+                        s += JSON.stringify(insertion, (key, value) => {
+                            if (typeof value === 'bigint') { return value.toString(); }
+                            else { return value; }
+                        });
+                    }
+                    else {
+                        s += `${insertion}`;
+                    }
+                } catch {
+                    s += "LOG_ERROR";
+                }
+            }
+            s += strings[strings.length - 1];
+            this.outputChannel.appendLine(s);
+            console.log(s);
+        } catch (error) {
+
+        }
     }
 }
