@@ -23,6 +23,7 @@ interface FileResult {
 }
 type ExtractResult = PlainMessage<searchium_pb.FileExtract> & {
     type: 'extract';
+    highlights: [number, number][];
 };
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
@@ -51,8 +52,14 @@ function convertFilesystemEntries(entry: PlainMessage<searchium_pb.FileSystemEnt
     }
 }
 
-function convertFileExtracts(extract: PlainMessage<searchium_pb.FileExtract>): ExtractResult {
-    return Object.assign(extract, { type: 'extract' }) as ExtractResult;
+function convertFileExtracts(extract: PlainMessage<searchium_pb.FileExtract>, info: PlainMessage<searchium_pb.FilePositionSpan>): ExtractResult {
+    let start = info.position - extract.offset;
+    let end = start + info.length;
+    return {
+        type: "extract",
+        highlights: [[start, end]],
+        ...extract,
+    };
 }
 
 // TODO: Show progress bar on treeview or elsewhere if indexing is still in progress
@@ -88,13 +95,21 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                 return item;
             }
             case 'file': {
-                const label = `${element.name} (${element.positions.length} results)`;
+                const label: vscode.TreeItemLabel = {
+                    label: `${element.name} (${element.positions.length} results)`,
+                };
                 const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
                 item.resourceUri = vscode.Uri.file(element.path);
                 item.iconPath = vscode.ThemeIcon.File;
                 return item;
             }
-            case 'extract': return new vscode.TreeItem(element.text);
+            case 'extract': {
+                const label: vscode.TreeItemLabel = {
+                    label: element.text,
+                    highlights: element.highlights,
+                };
+                return new vscode.TreeItem(label);
+            }
         }
     }
     public async getChildren(element?: SearchResult): Promise<SearchResult[] | undefined> {
@@ -109,7 +124,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
             case 'file': {
                 let extracts = await this.channel.sendRequest(new ipcRequests.GetFileExtractsRequest(element.path, element.positions, 100))
                     .then((r: ipcResponses.GetFileExtractsResponse) => r.fileExtracts);
-                return extracts.map(convertFileExtracts);
+                return extracts.map((e, i) => convertFileExtracts(e, element.positions[i]));
             }
         }
     }
@@ -134,7 +149,7 @@ export class SearchManager {
         this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
             searchString: query,
             filePathPattern: "",
-            maxResults: 100,
+            maxResults: 10000,
             matchCase: false,
             matchWholeWord: false,
             includeSymLinks: false,
@@ -143,6 +158,7 @@ export class SearchManager {
         }))
             .then((r: ipcResponses.SearchCodeResponse) => {
                 getLogger().log`Search request complete`;
+                // TODO: compare num results vs max to message truncation 
                 this.provider.populate(r);
                 // TODO: Focus view 
                 vscode.commands.executeCommand('searchium-results.focus');
