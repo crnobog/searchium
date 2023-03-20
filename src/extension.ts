@@ -139,7 +139,9 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
         // vscode.window.createTreeView("searchium-results", { treeDataProvider : SearchResultsProvider });
 
-        const searchManager = new SearchManager(searchResultsProvider, channel);
+        const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
+            { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
+        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel);
 
         context.subscriptions.push(
             vscode.commands.registerCommand("searchium.newSearch", searchManager.newSearch, searchManager),

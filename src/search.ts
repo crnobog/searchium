@@ -81,10 +81,18 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     }
     public getTreeItem(element: SearchResult): vscode.TreeItem | Thenable<vscode.TreeItem> {
         switch (element.type) {
-            case 'directory': return new vscode.TreeItem(element.name, vscode.TreeItemCollapsibleState.Expanded);
+            case 'directory': {
+                const item = new vscode.TreeItem(element.name, vscode.TreeItemCollapsibleState.Expanded);
+                item.resourceUri = vscode.Uri.file(element.path);
+                item.iconPath = vscode.ThemeIcon.Folder;
+                return item;
+            }
             case 'file': {
                 const label = `${element.name} (${element.positions.length} results)`;
-                return new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
+                const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
+                item.resourceUri = vscode.Uri.file(element.path);
+                item.iconPath = vscode.ThemeIcon.File;
+                return item;
             }
             case 'extract': return new vscode.TreeItem(element.text);
         }
@@ -114,7 +122,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 }
 
 export class SearchManager {
-    constructor(private provider: SearchResultsProvider, private channel: IpcChannel) {
+    constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
     }
     public async newSearch() {
         // TODO: cancel previous tasks/deal with spamming search requests 
