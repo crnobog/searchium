@@ -4,6 +4,7 @@ import * as path from 'path';
 import { TypedEmitter } from 'tiny-typed-emitter';
 import * as vscode from 'vscode';
 import { DocumentRegistrationService } from './documentRegistrationService';
+import * as ipcEvents from './ipcEvents';
 import * as ipc from './ipc';
 import { IpcChannel } from './ipcChannel';
 import { getLogger } from './logger';
@@ -85,6 +86,33 @@ class ServerProxy implements vscode.Disposable {
     }
 }
 
+class StatusTracker {
+    status: searchium_pb.IndexingServerStatus;
+    statusItem: vscode.StatusBarItem;
+
+    constructor(context: vscode.ExtensionContext) {
+        this.statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+        this.statusItem.text = "$(search)";
+        this.statusItem.show();
+        // TODO: Click command - summon window/panel/view? 
+        // TODO: Update tooltip based on index state 
+        context.subscriptions.push(this.statusItem);
+        this.status = searchium_pb.IndexingServerStatus.IDLE;
+    }
+
+    public update(e: ipcEvents.IndexingServerStateChangedEvent) {
+        this.status = e.serverStatus;
+        this.statusItem.tooltip = (() => {
+            switch (this.status) {
+                case searchium_pb.IndexingServerStatus.IDLE: return "searchium status: idle";
+                case searchium_pb.IndexingServerStatus.BUSY: return "searchium status: busy";
+                case searchium_pb.IndexingServerStatus.PAUSED: return "searchium status: paused";
+                case searchium_pb.IndexingServerStatus.YIELD: return "searchium status: yield";
+            }
+        })();
+    }
+};
+
 export async function activate(context: vscode.ExtensionContext) {
     getLogger().log`Initializing searchium`;
 
@@ -92,10 +120,19 @@ export async function activate(context: vscode.ExtensionContext) {
         const proxy = new ServerProxy();
         let channel = await proxy.startServer(context);
 
-        channel.on('event', (e) => getLogger().log`event: ${e}`);
+        let tracker = new StatusTracker(context);
+        channel.on('event', (e) => {
+            getLogger().log`event: ${e}`;
+            switch (e.eventType) {
+                case 'indexingServerStateChanged': {
+                    tracker.update(e);
+                }
+            }
+        });
         channel.on('response', (r) => getLogger().log`response: ${r}`);
 
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
+
     } catch (err: any) {
 
     }
