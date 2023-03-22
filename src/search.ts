@@ -142,15 +142,36 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 export class SearchManager {
     constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
     }
-    public async newSearch() {
+    public async onNewSearch() {
         // TODO: cancel previous tasks/deal with spamming search requests 
         let query = await vscode.window.showInputBox({
             title: "Searchium",
             prompt: "Search term",
         });
         if (!query) { return; }
+        await this.executeSearch(query);
+    }
+    public async onSearchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
+        let range = editor.selection.isEmpty
+            ? editor.document.getWordRangeAtPosition(editor.selection.start)
+            : editor.selection;
+        let query = editor.document.getText(range);
+        if (query) {
+            return await this.executeSearch(query);
+        }
+    }
+
+    // TODO: this is not ideal, seems no easy way to highlight/underline using current theme 
+    public onEnableCaseSensitive() {
+        vscode.commands.executeCommand('setContext', 'searchium.caseSensitivityEnabled', true);
+    }
+    public onDisableCaseSensitive() {
+        vscode.commands.executeCommand('setContext', 'searchium.caseSensitivityEnabled', false);
+    }
+
+    private executeSearch(query: string): Promise<void> {
         const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
-        this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
+        return this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
             searchString: query,
             filePathPattern: "",
             maxResults,
@@ -171,7 +192,5 @@ export class SearchManager {
                 vscode.commands.executeCommand('searchium-results.focus');
             })
             .catch((err) => getLogger().log`Search request failed: ${err}`);
-    }
-    public searchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
     }
 }

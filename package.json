@@ -45,6 +45,20 @@
         }
       ]
     },
+    "menus": {
+      "view/title": [
+        {
+          "command": "searchium.enableCaseSensitivity",
+          "when": "view == searchium-results && !searchium.caseSensitivityEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "searchium.disableCaseSensitivity",
+          "when": "view == searchium-results && searchium.caseSensitivityEnabled",
+          "group": "navigation"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "searchium.newSearch",
@@ -55,6 +69,26 @@
         "command": "searchium.searchCurrentToken",
         "title": "Search Current Token",
         "category": "Searchium"
+      },
+      {
+        "command": "searchium.enableCaseSensitivity",
+        "title": "Enable Case Sensitive Search",
+        "category": "Searchium",
+        "enablement": "!searchium.caseSensitivityEnabled",
+        "icon": "$(case-sensitive)"
+      },
+      {
+        "command": "searchium.disableCaseSensitivity",
+        "title": "Disable Case Sensitive Search",
+        "category": "Searchium",
+        "enablement": "searchium.caseSensitivityEnabled",
+        "icon": "$(case-sensitive)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "searchium.searchCurrentToken",
+        "key": "ctrl+shift+;"
       }
     ]
   },

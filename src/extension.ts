@@ -137,15 +137,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
         const searchResultsProvider = new SearchResultsProvider(channel);
         context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
-        // vscode.window.createTreeView("searchium-results", { treeDataProvider : SearchResultsProvider });
-
         const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
             { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
         const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel);
 
         context.subscriptions.push(
-            vscode.commands.registerCommand("searchium.newSearch", searchManager.newSearch, searchManager),
-            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", searchManager.searchCurrentToken, searchManager)
+            vscode.commands.registerCommand("searchium.newSearch", searchManager.onNewSearch, searchManager),
+            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", searchManager.onSearchCurrentToken, searchManager),
+            vscode.commands.registerCommand("searchium.enableCaseSensitivity", searchManager.onEnableCaseSensitive, searchManager),
+            vscode.commands.registerCommand("searchium.disableCaseSensitivity", searchManager.onDisableCaseSensitive, searchManager),
         );
     } catch (err: any) {
 
