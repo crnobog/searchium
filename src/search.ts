@@ -71,8 +71,11 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     rootResults: SearchResult[] = [];
 
     constructor(private channel: IpcChannel) {
+        // TODO: Store context for case sensitivity, stored it to workspace memento etc
+        // TODO: Populate case sensitivity context for when clauses 
     }
 
+    // TODO: Remove first layer of tree if there's only one project/directory 
     public populate(r: ipcResponses.SearchCodeResponse) {
         if (r.requestId < this.currentRequestId) {
             return;
