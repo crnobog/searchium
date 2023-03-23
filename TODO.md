@@ -10,7 +10,7 @@
 - [x] Search for selected text/token under edit cursor
 - [ ] Enable/disable regular expression syntax
 - [ ] Path filter for search 
-- [ ] Progress for indexing 
+- [x] Progress for indexing 
 - [ ] Index stats
 - [ ] Search time stats 
 - [ ] 'Whole word' for search 

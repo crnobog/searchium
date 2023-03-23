@@ -114,6 +114,46 @@ class StatusTracker {
     }
 };
 
+class IndexProgressReporter {
+    constructor(private channel: IpcChannel) {
+        this.channel.once('event', this.onIpcEvent.bind(this));
+    }
+
+    public onIpcEvent(event: ipcEvents.TypedEvent) {
+        if (event.eventType === 'progressReport') {
+            this.startProgress(event);
+        }
+    }
+
+    private startProgress(event: ipcEvents.ProgressReportEvent) {
+        let options: vscode.ProgressOptions = {
+            location: vscode.ProgressLocation.Notification,
+            cancellable: false,
+            title: event.displayText
+        };
+        let task = (progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken) => {
+            let total = event.total;
+            let completed = 0;
+            progress.report({ increment: event.completed / event.total * 100, message: "" });
+            completed = event.completed;
+            return new Promise<void>((resolve, reject) => {
+                this.channel.on('event', (e) => {
+                    if (e.eventType !== 'progressReport') { return; }
+
+                    // If total changed, start a new progress window
+                    if (event.total !== total) { reject(); this.startProgress(event); return; }
+
+                    progress.report({ increment: (completed - event.completed) / event.total * 100, message: event.displayText });
+                    completed = event.completed;
+                    if (event.completed === event.total) {
+                        resolve();
+                    }
+                });
+            });
+        };
+        vscode.window.withProgress(options, task);
+    }
+}
 
 export async function activate(context: vscode.ExtensionContext) {
     getLogger().log`Initializing searchium`;
@@ -132,6 +172,8 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         });
         channel.on('response', (r) => getLogger().log`response: ${r}`);
+
+        let reporter = new IndexProgressReporter(channel);
 
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
 
