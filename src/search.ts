@@ -24,6 +24,8 @@ interface FileResult {
 type ExtractResult = PlainMessage<searchium_pb.FileExtract> & {
     type: 'extract';
     highlights: [number, number][];
+    range: vscode.Range;
+    parent: FileResult;
 };
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
@@ -52,12 +54,16 @@ function convertFilesystemEntries(entry: PlainMessage<searchium_pb.FileSystemEnt
     }
 }
 
-function convertFileExtracts(extract: PlainMessage<searchium_pb.FileExtract>, info: PlainMessage<searchium_pb.FilePositionSpan>): ExtractResult {
+function convertFileExtracts(parent: FileResult, extract: PlainMessage<searchium_pb.FileExtract>, info: PlainMessage<searchium_pb.FilePositionSpan>): ExtractResult {
     let start = info.position - extract.offset;
     let end = start + info.length;
+    let range =
+        new vscode.Range(extract.lineNumber, extract.columnNumber, extract.lineNumber, extract.columnNumber + end - start);
     return {
         type: "extract",
         highlights: [[start, end]],
+        parent,
+        range,
         ...extract,
     };
 }
@@ -104,6 +110,12 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                 const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
                 item.resourceUri = vscode.Uri.file(element.path);
                 item.iconPath = vscode.ThemeIcon.File;
+                let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: true };
+                item.command = {
+                    command: "vscode.open",
+                    arguments: [item.resourceUri, showOptions],
+                    title: `Open ${item.resourceUri}`
+                };
                 return item;
             }
             case 'extract': {
@@ -111,7 +123,14 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                     label: element.text,
                     highlights: element.highlights,
                 };
-                return new vscode.TreeItem(label);
+                let item = new vscode.TreeItem(label);
+                let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: false, selection: element.range };
+                item.command = {
+                    command: "vscode.open",
+                    arguments: [vscode.Uri.file(element.parent.path), showOptions],
+                    title: `Open ${item.resourceUri}`
+                };
+                return item;
             }
         }
     }
@@ -127,7 +146,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
             case 'file': {
                 let extracts = await this.channel.sendRequest(new ipcRequests.GetFileExtractsRequest(element.path, element.positions, 100))
                     .then((r: ipcResponses.GetFileExtractsResponse) => r.fileExtracts);
-                return extracts.map((e, i) => convertFileExtracts(e, element.positions[i]));
+                return extracts.map((e, i) => convertFileExtracts(element, e, element.positions[i]));
             }
         }
     }

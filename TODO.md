@@ -1,8 +1,17 @@
 - [x] Register and unregister open documents with server process 
 - [x] Log out all received events/messages 
+- [x] Navigate to file/result from search results
 - [ ] Add statusbar item 
 - [ ] Search file paths - with quick pick?
+- [ ] Search file paths - side view?
 - [x] Search code - quick pick, then open window? 
  - [x] Is it possible to contribute to the existing search view container? 
     No
- - [ ] Populate with selected text/token under edit cursor
+- [x] Search for selected text/token under edit cursor
+- [ ] Enable/disable regular expression syntax
+- [ ] Path filter for search 
+- [ ] Progress for indexing 
+- [ ] Index stats
+- [ ] Search time stats 
+- [ ] 'Whole word' for search 
+- [ ] Pause/resume/refresh index 
