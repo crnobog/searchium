@@ -38,8 +38,14 @@
     "views": {
       "searchium": [
         {
+          "id": "searchium-controls",
+          "name": "Searchium",
+          "type": "webview"
+        },
+        {
           "id": "searchium-results",
           "name": "Searchium",
+          "type": "tree",
           "icon": "media/search_desktop.svg",
           "contextualTitle": "Searchium"
         }

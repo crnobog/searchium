@@ -10,6 +10,7 @@ import { IpcChannel } from './ipcChannel';
 import { getLogger } from './logger';
 import * as searchium_pb from './gen/searchium_pb';
 import { SearchResultsProvider, SearchManager } from './search';
+import { ControlsProvider } from './controlsProvider';
 
 class ServerProxy implements vscode.Disposable {
     listener?: Server;
@@ -173,8 +174,10 @@ export async function activate(context: vscode.ExtensionContext) {
         });
         channel.on('response', (r) => getLogger().log`response: ${r}`);
 
-        let reporter = new IndexProgressReporter(channel);
+        let controlsProvider = new ControlsProvider(context.extensionUri);
+        context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
 
+        let reporter = new IndexProgressReporter(channel);
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
 
         const searchResultsProvider = new SearchResultsProvider(channel);
