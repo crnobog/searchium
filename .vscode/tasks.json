@@ -25,6 +25,15 @@
 			"problemMatcher": [],
 			"label": "npm: compile",
 			"detail": "tsc -p ./"
+		},
+		{
+			"type": "npm",
+			"script": "lint",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"label": "npm: lint",
+			"detail": "tsc --noEmit && eslint src --ext ts"
 		}
 	]
 }
