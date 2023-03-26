@@ -7,6 +7,14 @@ import { getLogger } from "./logger";
 import * as searchium_pb from "./gen/searchium_pb";
 import * as path from "path";
 
+export interface SearchOptions {
+    query: string,
+    pathFilter: string,
+    matchCase: boolean,
+    wholeWord: boolean,
+    regex: boolean,
+}
+
 // TODO: file locations 
 interface DirectoryResult {
     type: 'directory';
@@ -168,7 +176,7 @@ export class SearchManager {
             prompt: "Search term",
         });
         if (!query) { return; }
-        await this.executeSearch(query);
+        await this.executeSearch({ query });
     }
     public async onSearchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
         let range = editor.selection.isEmpty
@@ -176,13 +184,13 @@ export class SearchManager {
             : editor.selection;
         let query = editor.document.getText(range);
         if (query) {
-            return await this.executeSearch(query);
+            return await this.executeSearch({ query });
         }
     }
 
-    public async onQuery(query: string | undefined) {
-        if (query) {
-            return await this.executeSearch(query);
+    public async onQuery(options: SearchOptions | undefined) {
+        if (options) {
+            return await this.executeSearch(options);
         }
         else {
             getLogger().log`Undefined query string`;
@@ -197,16 +205,16 @@ export class SearchManager {
         vscode.commands.executeCommand('setContext', 'searchium.caseSensitivityEnabled', false);
     }
 
-    private executeSearch(query: string): Promise<void> {
+    private executeSearch(options: Partial<SearchOptions>): Promise<void> {
         const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
         return this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
-            searchString: query,
-            filePathPattern: "",
+            searchString: options.query ?? "",
+            filePathPattern: options.pathFilter ?? "",
             maxResults,
-            matchCase: false,
-            matchWholeWord: false,
+            matchCase: options.matchCase ?? false,
+            matchWholeWord: options.wholeWord ?? false,
             includeSymLinks: false,
-            regex: false,
+            regex: options.regex ?? false,
             useRe2Engine: false
         }))
             .then((r: ipcResponses.SearchCodeResponse) => {

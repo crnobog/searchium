@@ -174,7 +174,7 @@ export async function activate(context: vscode.ExtensionContext) {
         });
         channel.on('response', (r) => getLogger().log`response: ${r}`);
 
-        let controlsProvider = new ControlsProvider(context.extensionUri);
+        let controlsProvider = new ControlsProvider(context, context.extensionUri);
         context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
 
         let reporter = new IndexProgressReporter(channel);
