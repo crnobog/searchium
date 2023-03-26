@@ -55,7 +55,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         const codiconsUri = getUri(webview, extensionUri, ['node_modules', '@vscode/codicons', 'dist', 'codicon.css']);
         const stylesheetUri = getUri(webview, extensionUri, ["out", "style.css"]);
         const nonce = getNonce();
-        return html`
+        let content = html`
 <!DOCTYPE html>
 <html lang="en">
 
@@ -68,17 +68,31 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 </head>
 
 <body>
+<section style="display:grid">
     <vscode-text-field class="search-input">
-        <span slot="start" class="codicon codicon-search" />
+    <span slot="start" class="codicon codicon-search">
+    </span>
+    
+    <span slot="end" style="display:contents">
+        <vscode-button appearance="icon" aria-label="Match Case">
+            <span class="codicon codicon-case-sensitive"></span>
+        </vscode-button>
+        <vscode-button appearance="icon" aria-label="Match Whole Word">
+            <span class="codicon codicon-whole-word"></span>
+        </vscode-button>
+        <vscode-button appearance="icon" aria-label="Use Regular Expression">
+            <span class="codicon codicon-regex"></span>
+        </vscode-button>  </span>
     </vscode-text-field>
-    <br>
-    <vscode-text-field class="search-input">
-        <span slot="start" class="codicon codicon-folder" />
-    </vscode-text-field>
+        <vscode-text-field class="search-input">
+            <span slot="start" class="codicon codicon-folder" />
+            </vscode-text-field>
+</section>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
 </body>
 
 </html>
         `;
+        return content;
     }
 }
