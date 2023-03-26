@@ -3,3 +3,21 @@
     margin-top: 0.5rem;
     width: 100%;
 }
+.search-inline-check-container {
+    display: contents;
+}
+
+.search-inline-check {
+    display: none
+}
+
+.search-inline-check+label {
+    margin-left: 2px;
+    display: inline-flex !important;
+    border: calc(var(--border-width) * 1px) solid transparent;
+    border-radius: calc(var(--checkbox-corner-radius) * 1px);
+}
+
+.search-inline-check:checked+label {
+    border-color: var(--vscode-inputOption-activeBorder);
+}

@@ -87,28 +87,34 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 </head>
 
 <body>
-<section style="display:grid" id="query-form">
-    <vscode-text-field class="search-input" id="query-input">
-    <span slot="start" class="codicon codicon-search">
-    </span>
-    
-    <span slot="end" style="display:contents">
-        <vscode-button appearance="icon" aria-label="Match Case">
-            <span class="codicon codicon-case-sensitive"></span>
-        </vscode-button>
-        <vscode-button appearance="icon" aria-label="Match Whole Word">
-            <span class="codicon codicon-whole-word"></span>
-        </vscode-button>
-        <vscode-button appearance="icon" aria-label="Use Regular Expression">
-            <span class="codicon codicon-regex"></span>
-        </vscode-button>  </span>
-    </vscode-text-field>
+    <section style="display:grid" id="query-form">
+        <vscode-text-field class="search-input" id="query-input">
+            <span slot="start" class="codicon codicon-search"></span>
+            
+            <input type="checkbox" id="check-case-sensitive" 
+                   slot="end" class="search-inline-check monaco-custom-toggle" />
+            <label for="check-case-sensitive" slot="end" 
+                   class="codicon codicon-case-sensitive search-inline-check-label">
+            </label>
+
+            <input type="checkbox" id="check-whole-word" slot="end" 
+                   class="search-inline-check" />
+            <label for="check-whole-word" slot="end" 
+                   class="codicon codicon-whole-word search-inline-check-label">
+            </label>
+
+            <input type="checkbox" id="check-regex" slot="end" 
+                   class="search-inline-check" />
+            <label for="check-regex" slot="end" 
+                   class="codicon codicon-regex search-inline-check-label">
+            </label>
+        </vscode-text-field>
         <vscode-text-field class="search-input">
             <span slot="start" class="codicon codicon-folder" />
-            </vscode-text-field>
-</section>
+        </vscode-text-field>
+    </section>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
-    </body>
+</body>
 
 </html>
         `;
