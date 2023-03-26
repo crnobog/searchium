@@ -100,7 +100,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "npm run lint && ts-node ./build.ts",
+    "build": "ts-node ./build.ts",
     "watch": "ts-node ./built.ts --watch",
     "pretest": "npm run build && npm run lint",
     "lint": "tsc --noEmit && tsc --noEmit -p ./tsconfig.webview.json && eslint src --ext ts",
