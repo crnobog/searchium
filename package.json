@@ -125,6 +125,7 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^1.1.1",
+    "@vscode/codicons": "^0.0.32",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "tiny-typed-emitter": "^2.1.0"
   }

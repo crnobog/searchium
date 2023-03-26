@@ -29,6 +29,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 
     private getWebViewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
         const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
+        const codiconsUri = getUri(webview, extensionUri, ['node_modules', '@vscode/codicons', 'dist', 'codicon.css']);
+        const stylesheetUri = getUri(webview, extensionUri, ["out", "style.css"]);
         const nonce = getNonce();
         return /*html*/ `
           <!DOCTYPE html>
@@ -36,11 +38,18 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <link href="${codiconsUri}" rel="stylesheet" />
+              <link href="${stylesheetUri}" rel="stylesheet" />
               <title>Hello World!</title>
             </head>
             <body>
-              <h1>Hello World!</h1>
-              <vscode-text-field>Text Field Label</vscode-text-field>
+                <vscode-text-field class="search-input">
+                    <span slot="start" class="codicon codicon-search" />
+                </vscode-text-field>
+                <br>
+                <vscode-text-field class="search-input">
+                    <span slot="start" class="codicon codicon-folder" />
+                </vscode-text-field>
               <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
             </body>
           </html>
