@@ -4,6 +4,7 @@ import { copy } from "esbuild-plugin-copy";
 const baseConfig: esbuild.BuildOptions = {
     bundle: true,
     minify: process.env.NODE_ENV === 'PRODUCTION',
+    sourcemap: true
 };
 
 const extensionConfig: esbuild.BuildOptions = {
