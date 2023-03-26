@@ -15,3 +15,5 @@
 - [ ] Search time stats 
 - [ ] 'Whole word' for search 
 - [ ] Pause/resume/refresh index 
+- [ ] Change enter/click on file items to reveal?
+- [ ] Key bindings for cycling through search results 

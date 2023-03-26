@@ -22,6 +22,7 @@ import {
     vsCodeTextArea,
     vsCodeTextField,
 } from "@vscode/webview-ui-toolkit";
+import * as vscodeUi from "@vscode/webview-ui-toolkit";
 
 // In order to use the Webview UI Toolkit web components they
 // must be registered with the browser (i.e. webview) using the
@@ -47,5 +48,24 @@ provideVSCodeDesignSystem().register(
     vsCodeTextArea(),
     vsCodeTextField()
 );
+
+declare function acquireVsCodeApi(): {
+    postMessage(msg: any): void,
+};
+
+const vscode = acquireVsCodeApi();
+window.addEventListener("load", main);
+
+function main() {
+    const queryForm = document.getElementById("query-form") as HTMLFormElement;
+    queryForm?.addEventListener("keypress", onFormKeyUp);
+}
+
+function onFormKeyUp(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+        const queryInput = document.getElementById("query-input") as HTMLInputElement;
+        vscode.postMessage({ command: "query", text: queryInput.value });
+    }
+}
 
 export { };

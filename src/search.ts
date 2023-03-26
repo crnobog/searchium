@@ -180,6 +180,15 @@ export class SearchManager {
         }
     }
 
+    public async onQuery(query: string | undefined) {
+        if (query) {
+            return await this.executeSearch(query);
+        }
+        else {
+            getLogger().log`Undefined query string`;
+        }
+    }
+
     // TODO: this is not ideal, seems no easy way to highlight/underline using current theme 
     public onEnableCaseSensitive() {
         vscode.commands.executeCommand('setContext', 'searchium.caseSensitivityEnabled', true);
