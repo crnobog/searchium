@@ -31,3 +31,18 @@
     margin-top: 5px;
     justify-content: space-between;
 }
+.db-needed {
+    display: none;
+}
+
+.db-available .db-needed {
+    display: inline-block;
+}
+
+#tag-no-db {
+    display: block;
+}
+
+.db-available #tag-no-db {
+    display: none;
+}

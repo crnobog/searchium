@@ -54,6 +54,7 @@ declare function acquireVsCodeApi(): {
     postMessage(msg: any): void,
 };
 
+let queryForm: HTMLElement;
 let queryInput: HTMLInputElement;
 let filterInput: HTMLInputElement;
 let matchCaseInput: HTMLInputElement;
@@ -67,7 +68,7 @@ let tagState: HTMLElement;
 
 const vscode = acquireVsCodeApi();
 window.addEventListener("load", () => {
-    const queryForm = document.getElementById("query-form") as HTMLFormElement;
+    queryForm = document.getElementById("query-form") as HTMLElement;
     queryForm?.addEventListener("keypress", onFormKeyUp);
 
     queryInput = document.getElementById("query-input") as HTMLInputElement;
@@ -92,7 +93,11 @@ window.addEventListener("load", () => {
 window.addEventListener("message", (event: any) => {
     let msg = event.data as any;
     switch (msg.type) {
+        case 'nostatus':
+            queryForm.classList.remove("db-available");
+            break;
         case 'status':
+            queryForm.classList.add("db-available");
             tagNumFiles.textContent = msg.numFiles;
             tagMemory.textContent = msg.memory;
             tagState.textContent = msg.state;

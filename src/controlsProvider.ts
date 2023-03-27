@@ -93,6 +93,12 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 
     private sendStatsToWebview() {
         if (this.databaseStats && this.webview) {
+            if (this.databaseStats.projectCount === 0) {
+                this.webview.postMessage({
+                    type: 'nostatus'
+                });
+                return;
+            }
             let mem = Number(this.databaseStats.serverNativeMemoryUsage) / 1024.0 / 1024.0;
             let state = "Idle";
             switch (this.databaseStats.serverStatus) {
@@ -185,8 +191,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 ${initialState.matchCase ? "checked" : "" } />
             <label for="check-case-sensitive" slot="end" class="codicon codicon-case-sensitive search-inline-check-label">
             </label>
-
-            <input type="checkbox" id="check-whole-word" slot="end" ${initialState.wholeWord ? "checked" : "" }
+ 
+            <input type="checkbox" id="check-whole-word" slot="end" ${initialState.wholeWord ? "checked" : ""}
                 class="search-inline-check" />
             <label for="check-whole-word" slot="end" class="codicon codicon-whole-word search-inline-check-label">
             </label>
@@ -199,10 +205,11 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             <span slot="start" class="codicon codicon-folder" />
         </vscode-text-field>
         <div class="control-row">
-            <span class="left-controls">
-                <vscode-tag id="tag-num-files"></vscode-tag>
-                <vscode-tag id="tag-memory-usage"></vscode-tag>
-                <vscode-tag id="tag-index-state"></vscode-tag>
+             <span class="db-state">
+                <vscode-tag class="db-needed" id="tag-num-files"></vscode-tag>
+                <vscode-tag class="db-needed" id="tag-memory-usage"></vscode-tag>
+                <vscode-tag class="db-needed" id="tag-index-state"></vscode-tag>
+                <vscode-tag  id="tag-no-db">No DB</vscode-tag>
             </span>
             <vscode-button appearance="primary" id="query-execute">Search</vscode-button>
         </div>
