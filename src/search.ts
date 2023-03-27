@@ -17,7 +17,6 @@ export interface SearchOptions {
     regex: boolean,
 }
 
-// TODO: file locations 
 interface DirectoryResult {
     type: 'directory';
     name: string;
@@ -43,7 +42,6 @@ type ExtractResult = PlainMessage<searchium_pb.FileExtract> & {
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
 
-// TODO: concatenate paths as we recurse 
 function convertFilesystemEntries(parent: DirectoryResult | undefined, entry: PlainMessage<searchium_pb.FileSystemEntry>, parentPath?: string): (DirectoryResult | FileResult) {
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
     switch (entry.subtype.case) {
@@ -182,19 +180,23 @@ export class SearchManager {
         }
     }
 
-    public executeSearch(options: Partial<SearchOptions>): Promise<void> {
+    public async executeSearch(options: Partial<SearchOptions>): Promise<void> {
         // TODO: cancel previous tasks/deal with spamming search requests
         const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
-        return this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
-            searchString: options.query ?? "",
-            filePathPattern: options.pathFilter ?? "",
-            maxResults,
-            matchCase: options.matchCase ?? false,
-            matchWholeWord: options.wholeWord ?? false,
-            includeSymLinks: false,
-            regex: options.regex ?? false,
-            useRe2Engine: false
-        }))
+        this.treeView.badge = undefined;
+        vscode.commands.executeCommand('searchium-results.focus'); // Reveal first to show progress spinner
+        await vscode.window.withProgress({ location: { viewId: 'searchium-results' }, cancellable: false, title: "Searching..." },
+            async (progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
+                return await this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
+                    searchString: options.query ?? "",
+                    filePathPattern: options.pathFilter ?? "",
+                    maxResults,
+                    matchCase: options.matchCase ?? false,
+                    matchWholeWord: options.wholeWord ?? false,
+                    includeSymLinks: false,
+                    regex: options.regex ?? false,
+                    useRe2Engine: false
+                }))
             .then((r: ipcResponses.SearchCodeResponse) => {
                 getLogger().log`Search request complete`;
                 // TODO: compare num results vs max to message truncation 
@@ -204,12 +206,11 @@ export class SearchManager {
                     prefix = "More than ";
                 }
                 this.treeView.badge = { tooltip: `${prefix}${r.hitCount.toLocaleString()} search results`, value: Number(r.hitCount) };
-
                 this.provider.populate(r);
                 // TODO: Focus view 
-                vscode.commands.executeCommand('searchium-results.focus');
             })
             .catch((err) => getLogger().log`Search request failed: ${err}`);
+            });
     }
 
     private onTreeViewSelectionChanged(event: vscode.TreeViewSelectionChangeEvent<SearchResult>) {
