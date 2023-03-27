@@ -5,8 +5,8 @@
 - [x] database info sometimes not appearing 
     not cached before view is created?
 - [x] Set query input box from 'search for current token'
-- [ ] Expand file item when selecting
-- [ ] Remove statusbar item 
+- [x] Expand file item when selecting
+- [x] Remove statusbar item 
 - [ ] Search file paths - with quick pick?
 - [ ] Search file paths - side view?
 - [x] Search code - quick pick, then open window? 
@@ -32,5 +32,5 @@
 
 - [ ] Build own treeview to get focus events 
 - [ ] Implement proposed 'FileSearchProvider' 
-- [ ] Search progress indicator?
+- [x] Search progress indicator?
     withProgress using treeview view id?

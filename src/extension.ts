@@ -89,33 +89,6 @@ class ServerProxy implements vscode.Disposable {
     }
 }
 
-class StatusTracker {
-    status: searchium_pb.IndexingServerStatus;
-    statusItem: vscode.StatusBarItem;
-
-    constructor(context: vscode.ExtensionContext) {
-        this.statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-        this.statusItem.text = "$(search)";
-        this.statusItem.show();
-        // TODO: Click command - summon window/panel/view? 
-        // TODO: Update tooltip based on index state 
-        context.subscriptions.push(this.statusItem);
-        this.status = searchium_pb.IndexingServerStatus.IDLE;
-    }
-
-    public update(e: ipcEvents.IndexingServerStateChangedEvent) {
-        this.status = e.serverStatus;
-        this.statusItem.tooltip = (() => {
-            switch (this.status) {
-                case searchium_pb.IndexingServerStatus.IDLE: return "searchium status: idle";
-                case searchium_pb.IndexingServerStatus.BUSY: return "searchium status: busy";
-                case searchium_pb.IndexingServerStatus.PAUSED: return "searchium status: paused";
-                case searchium_pb.IndexingServerStatus.YIELD: return "searchium status: yield";
-            }
-        })();
-    }
-};
-
 class IndexProgressReporter {
     constructor(private channel: IpcChannel) {
         this.channel.once('event', this.onIpcEvent.bind(this));
@@ -164,16 +137,15 @@ export async function activate(context: vscode.ExtensionContext) {
         const proxy = new ServerProxy();
         let channel = await proxy.startServer(context);
 
-        let tracker = new StatusTracker(context);
-        channel.on('event', (e) => {
-            getLogger().log`event: ${e}`;
-            switch (e.eventType) {
-                case 'indexingServerStateChanged': {
-                    tracker.update(e);
-                }
+        channel.on('response', (r) => {
+            switch (r.responseType) {
+                default:
+                    getLogger().log`response: ${r}`;
+                case 'searchCode':
+                    break;
             }
         });
-        channel.on('response', (r) => getLogger().log`response: ${r}`);
+        channel.on('event', (e) => getLogger().log`event: ${e}`);
 
         let indexState = new IndexState(channel);
         const searchResultsProvider = new SearchResultsProvider(channel);
@@ -188,7 +160,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         let reporter = new IndexProgressReporter(channel);
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
-
 
         context.subscriptions.push(
             vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
