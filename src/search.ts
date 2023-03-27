@@ -174,24 +174,6 @@ export class SearchManager {
     constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
         treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this);
     }
-    public async onNewSearch() {
-        // TODO: cancel previous tasks/deal with spamming search requests 
-        let query = await vscode.window.showInputBox({
-            title: "Searchium",
-            prompt: "Search term",
-        });
-        if (!query) { return; }
-        await this.executeSearch({ query });
-    }
-    public async onSearchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
-        let range = editor.selection.isEmpty
-            ? editor.document.getWordRangeAtPosition(editor.selection.start)
-            : editor.selection;
-        let query = editor.document.getText(range);
-        if (query) {
-            return await this.executeSearch({ query });
-        }
-    }
 
     public async onQuery(options: SearchOptions | undefined) {
         if (options) {
@@ -202,7 +184,8 @@ export class SearchManager {
         }
     }
 
-    private executeSearch(options: Partial<SearchOptions>): Promise<void> {
+    public executeSearch(options: Partial<SearchOptions>): Promise<void> {
+        // TODO: cancel previous tasks/deal with spamming search requests
         const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
         return this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
             searchString: options.query ?? "",

@@ -102,6 +102,10 @@ window.addEventListener("message", (event: any) => {
             tagMemory.textContent = msg.memory;
             tagState.textContent = msg.state;
             break;
+        case 'setQuery':
+            console.log(`Set query input to: ${msg.value}`);
+            queryInput.value = msg.value;
+            break;
     }
 });
 

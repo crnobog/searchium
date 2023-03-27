@@ -176,24 +176,26 @@ export async function activate(context: vscode.ExtensionContext) {
         channel.on('response', (r) => getLogger().log`response: ${r}`);
 
         let indexState = new IndexState(channel);
+        const searchResultsProvider = new SearchResultsProvider(channel);
+
+        context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
+        const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
+            { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
+        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel);
+
         let controlsProvider = new ControlsProvider(context, context.extensionUri, indexState);
         context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
 
         let reporter = new IndexProgressReporter(channel);
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
 
-        const searchResultsProvider = new SearchResultsProvider(channel);
-        context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
-        const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
-            { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
-        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel);
 
         context.subscriptions.push(
-            vscode.commands.registerCommand("searchium.newSearch", searchManager.onNewSearch, searchManager),
             vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
-            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", searchManager.onSearchCurrentToken, searchManager),
-            vscode.commands.registerCommand("searchium.enableCaseSensitivity", controlsProvider.onEnableCaseSensitive, searchManager),
-            vscode.commands.registerCommand("searchium.disableCaseSensitivity", controlsProvider.onDisableCaseSensitive, searchManager),
+            vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
+            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
+            vscode.commands.registerCommand("searchium.enableCaseSensitivity", controlsProvider.onEnableCaseSensitive, controlsProvider),
+            vscode.commands.registerCommand("searchium.disableCaseSensitivity", controlsProvider.onDisableCaseSensitive, controlsProvider),
         );
     } catch (err: any) {
 

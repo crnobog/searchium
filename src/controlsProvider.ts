@@ -3,7 +3,8 @@ import { getLogger } from './logger';
 import { SearchOptions } from './search';
 import { IndexState } from './indexState';
 import { GetDatabaseStatisticsResponse } from './ipcResponses';
-import { GetDatabaseDetailsRequest, GetDatabaseDetailsResponse, IndexingServerStatus } from './gen/searchium_pb';
+import { Search } from '@microsoft/fast-foundation';
+import { IndexingServerStatus } from './gen/searchium_pb';
 
 export function getNonce() {
     let text = "";
@@ -79,6 +80,34 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(this.onMessage, this);
     }
 
+    public async onNewSearch() {
+        let query = await vscode.window.showInputBox({
+            title: "Searchium",
+            prompt: "Search term",
+        });
+        if (!query) { return; }
+        this.setQueryString(query);
+        vscode.commands.executeCommand("searchium.query", {
+            ... this.getControlsState(), query
+        });
+    }
+    public async onSearchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
+        let range = editor.selection.isEmpty
+            ? editor.document.getWordRangeAtPosition(editor.selection.start)
+            : editor.selection;
+        let query = editor.document.getText(range);
+        if (query) {
+            this.setQueryString(query);
+            // TODO: Should upate ui state to match these settings?
+            vscode.commands.executeCommand("searchium.query", <SearchOptions>{
+                query,
+                matchCase: true,
+                pathFilter: "", // TODO: Should inherit path filter or not?
+                regex: false,
+                wholeWord: editor.selection.isEmpty // Only do whole-word search if we selected the token ourselves 
+            });
+        }
+    }
     public onEnableCaseSensitive() {
         // todo: update ui 
         this.updateControlsState({ matchCase: true });
@@ -89,6 +118,15 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     }
     private onViewDisposed(webviewView: vscode.WebviewView) {
         this.webview = undefined;
+    }
+
+    private setQueryString(query: string) {
+        // Set state in case webview is not created yet 
+        this.updateControlsState({ query });
+        this.webview?.postMessage({
+            type: "setQuery",
+            value: query
+        });
     }
 
     private sendStatsToWebview() {
