@@ -61,10 +61,12 @@ let wholeWordInput: HTMLInputElement;
 let regexInput: HTMLInputElement;
 let searchButton: HTMLInputElement;
 
-const vscode = acquireVsCodeApi();
-window.addEventListener("load", main);
+let tagNumFiles: HTMLElement;
+let tagMemory: HTMLElement;
+let tagState: HTMLElement;
 
-function main() {
+const vscode = acquireVsCodeApi();
+window.addEventListener("load", () => {
     const queryForm = document.getElementById("query-form") as HTMLFormElement;
     queryForm?.addEventListener("keypress", onFormKeyUp);
 
@@ -80,6 +82,23 @@ function main() {
     regexInput.addEventListener('change', onRegexChange);
     searchButton = document.getElementById("query-execute") as HTMLInputElement;
     searchButton.addEventListener('click', onExecuteClick);
+
+    tagNumFiles = document.getElementById("tag-num-files")!;
+    tagMemory = document.getElementById("tag-memory-usage")!;
+    tagState = document.getElementById("tag-index-state")!;
+});
+window.addEventListener("message", (event: any) => {
+    let msg = event.data as any;
+    switch (msg.type) {
+        case 'status':
+            tagNumFiles.textContent = msg.numFiles;
+            tagMemory.textContent = msg.memory;
+            tagState.textContent = msg.state;
+            break;
+    }
+});
+
+function main() {
 }
 
 function onQueryChange() {

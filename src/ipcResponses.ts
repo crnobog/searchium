@@ -24,6 +24,18 @@ export interface GetFileExtractsResponse extends ResponseBase {
     fileExtracts: PlainMessage<searchium_pb.FileExtract>[];
 }
 
+export interface GetDatabaseStatisticsResponse extends ResponseBase {
+    responseType: "getDatabaseStatistics";
+    projectCount: number;
+    fileCount: bigint;
+    searchableFileCount: bigint;
+    serverNativeMemoryUsage: bigint;
+    serverGcMemoryUsage: bigint;
+    lastIndexUpdatedUtc: Date;
+    serverStatus: searchium_pb.IndexingServerStatus;
+}
+
 export type Response = DoneResponse
     | SearchCodeResponse
-    | GetFileExtractsResponse;
+    | GetFileExtractsResponse
+    | GetDatabaseStatisticsResponse;

@@ -1,10 +1,12 @@
-.search-input {
-    margin-bottom: 0.5rem;
-    margin-top: 0.5rem;
-    width: 100%;
+#query-form {
+    display: flex;
+    flex-direction: column;
 }
-.search-inline-check-container {
-    display: contents;
+.search-input {
+    /* margin-bottom: 0.5rem;
+                                margin-top: 0.5rem; */
+        margin-top: 5px;
+    width: 100%;
 }
 
 .search-inline-check {
@@ -20,4 +22,12 @@
 
 .search-inline-check:checked+label {
     border-color: var(--vscode-inputOption-activeBorder);
+}
+.control-row {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    margin-top: 5px;
+    justify-content: space-between;
 }

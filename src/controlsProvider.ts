@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { getLogger } from './logger';
 import { SearchOptions } from './search';
+import { IndexState } from './indexState';
+import { GetDatabaseStatisticsResponse } from './ipcResponses';
+import { IndexingServerStatus } from './gen/searchium_pb';
 
 export function getNonce() {
     let text = "";
@@ -47,24 +50,56 @@ function html(strings: TemplateStringsArray, ...insertions: any[]) {
 }
 
 export class ControlsProvider implements vscode.WebviewViewProvider {
-    constructor(private readonly context: vscode.ExtensionContext, private readonly extensionUri: vscode.Uri) { }
+    webview?: vscode.Webview;
+
+    constructor(
+        private readonly context: vscode.ExtensionContext,
+        private readonly extensionUri: vscode.Uri,
+        private readonly indexState: IndexState
+    ) { }
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         _resolveContext: vscode.WebviewViewResolveContext<unknown>,
         _token: vscode.CancellationToken): void | Thenable<void> {
 
+        this.webview = webviewView.webview;
         webviewView.webview.options = {
             enableScripts: true
         };
-        webviewView.onDidDispose(this.onViewDisposed, this);
+        webviewView.onDidDispose(() => this.onViewDisposed(webviewView));
 
         webviewView.webview.html = this.getWebViewContent(webviewView.webview, this.extensionUri, this.getControlsState());
-
         webviewView.webview.onDidReceiveMessage(this.onMessage, this);
+
+        let indexStateListener = (response: GetDatabaseStatisticsResponse) => {
+            let mem = Number(response.serverNativeMemoryUsage) / 1024.0 / 1024.0;
+            let state = "Idle";
+            switch (response.serverStatus) {
+                case IndexingServerStatus.IDLE:
+                    state = 'Idle';
+                    break;
+                case IndexingServerStatus.BUSY:
+                    state = 'Busy';
+                    break;
+                case IndexingServerStatus.PAUSED:
+                    state = 'Paused';
+                    break;
+                case IndexingServerStatus.YIELD:
+                    state = 'Yield';
+                    break;
+            }
+            webviewView.webview.postMessage({
+                type: 'status',
+                numFiles: `${response.searchableFileCount.toLocaleString()} files`,
+                memory: `${mem.toFixed(1)} MB`,
+                state
+            });
+        };
+        this.indexState.on('updated', indexStateListener);
     }
 
-    private onViewDisposed() {
-
+    private onViewDisposed(webviewView: vscode.WebviewView) {
+        this.webview = undefined;
     }
 
     private getControlsState(): SearchOptions {
@@ -124,7 +159,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 </head>
 
 <body>
-    <section style="display:grid" id="query-form">
+    <section id="query-form">
         <vscode-text-field class="search-input" id="query-input" value="${initialState.query}">
             <span slot="start" class="codicon codicon-search"></span>
             
@@ -150,7 +185,14 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             value="${initialState.pathFilter}">
             <span slot="start" class="codicon codicon-folder" />
         </vscode-text-field>
-        <vscode-button appearance="primary" id="query-execute">Search</vscode-button>
+        <div class="control-row">
+            <span class="left-controls">
+                <vscode-tag id="tag-num-files"></vscode-tag>
+                <vscode-tag id="tag-memory-usage"></vscode-tag>
+                <vscode-tag id="tag-index-state"></vscode-tag>
+            </span>
+            <vscode-button appearance="primary" id="query-execute">Search</vscode-button>
+        </div>
     </section>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
 </body>

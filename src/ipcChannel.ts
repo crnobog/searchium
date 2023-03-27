@@ -261,6 +261,19 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     requestId
                 };
             }
+            case 'getDatabaseStatisticsResponse': {
+                return {
+                    requestId,
+                    responseType: "getDatabaseStatistics",
+                    projectCount: data.subtype.value.projectCount,
+                    fileCount: data.subtype.value.fileCount,
+                    searchableFileCount: data.subtype.value.searchableFileCount,
+                    serverNativeMemoryUsage: data.subtype.value.serverNativeMemoryUsage,
+                    serverGcMemoryUsage: data.subtype.value.serverGcMemoryUsage,
+                    lastIndexUpdatedUtc: new Date(Date.now()), // TODO
+                    serverStatus: data.subtype.value.serverStatus,
+                };
+            }
         }
         throw new Error("TODO");
     }

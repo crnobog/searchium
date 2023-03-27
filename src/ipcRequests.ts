@@ -62,7 +62,23 @@ export class GetFileExtractsRequest {
     }
 }
 
+export class GetDatabaseStatisticsRequest {
+    constructor() { }
+
+    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+        return {
+            subtype: {
+                case: 'getDatabaseStatisticsRequest',
+                value: {
+                    forceGarbageCollection: false
+                }
+            }
+        }
+    }
+}
+
 export type Request = RegisterFileRequest
     | UnregisterFileRequest
     | SearchCodeRequest
-    | GetFileExtractsRequest;
+    | GetFileExtractsRequest
+    | GetDatabaseStatisticsRequest;
