@@ -7,6 +7,7 @@ import { getLogger } from "./logger";
 import * as searchium_pb from "./gen/searchium_pb";
 import * as path from "path";
 import assert = require("assert");
+import { Direction } from "@microsoft/fast-web-utilities";
 
 export interface SearchOptions {
     query: string,
@@ -21,6 +22,7 @@ interface DirectoryResult {
     type: 'directory';
     name: string;
     path: string;
+    parent: undefined;
     children: (DirectoryResult | FileResult)[];
 }
 interface FileResult {
@@ -28,6 +30,7 @@ interface FileResult {
     name: string;
     path: string;
     uri: vscode.Uri;
+    parent: DirectoryResult,
     positions: PlainMessage<searchium_pb.FilePositionSpan>[];
     // TODO: cache extracts?
 }
@@ -41,23 +44,27 @@ type ExtractResult = PlainMessage<searchium_pb.FileExtract> & {
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
 
 // TODO: concatenate paths as we recurse 
-function convertFilesystemEntries(entry: PlainMessage<searchium_pb.FileSystemEntry>, parentPath?: string): (DirectoryResult | FileResult) {
+function convertFilesystemEntries(parent: DirectoryResult | undefined, entry: PlainMessage<searchium_pb.FileSystemEntry>, parentPath?: string): (DirectoryResult | FileResult) {
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
     switch (entry.subtype.case) {
         case 'directoryEntry':
-            return {
+            let dir: DirectoryResult = {
                 type: 'directory',
                 name: entry.name,
                 path: thisPath,
-                children: entry.subtype.value.entries.map(
-                    (e) => convertFilesystemEntries(e, thisPath)
-                )
+                parent: undefined,
+                children: []
             };
+            dir.children = entry.subtype.value.entries.map(
+                (e) => convertFilesystemEntries(dir, e, thisPath)
+            );
+            return dir;
         case 'fileEntry':
             return {
                 type: 'file',
                 name: entry.name,
                 path: thisPath,
+                parent: parent!,
                 uri: vscode.Uri.file(thisPath),
                 positions: entry.data?.filePositionsData?.positions ?? []
             };
@@ -88,11 +95,9 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     rootResults: SearchResult[] = [];
 
     constructor(private channel: IpcChannel) {
-        // TODO: Store context for case sensitivity, stored it to workspace memento etc
-        // TODO: Populate case sensitivity context for when clauses 
     }
 
-    // TODO: Remove first layer of tree if there's only one project/directory 
+    // TODO: Remove first layer of tree if there's only one project/directory ?
     public populate(r: ipcResponses.SearchCodeResponse) {
         if (r.requestId < this.currentRequestId) {
             return;
@@ -101,7 +106,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
         this.rootResults = [];
         if (r.searchResults.subtype.case === 'directoryEntry') {
             this.rootResults = r.searchResults.subtype.value.entries.map(
-                (e) => convertFilesystemEntries(e)
+                (e) => convertFilesystemEntries(undefined, e)
             );
         }
         this._onDidChangeTreeData.fire();
@@ -121,12 +126,6 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                 const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
                 item.resourceUri = element.uri;
                 item.iconPath = vscode.ThemeIcon.File;
-                let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: true };
-                item.command = {
-                    command: "vscode.open",
-                    arguments: [item.resourceUri, showOptions],
-                    title: `Open ${item.resourceUri}`
-                };
                 return item;
             }
             case 'extract': {
@@ -161,9 +160,9 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
             }
         }
     }
-    // getParent?(element: SearchResult) {
-    //     throw new Error('Method not implemented.');
-    // }
+    public getParent(element: SearchResult): SearchResult | undefined {
+        return element.parent;
+    }
     // public resolveTreeItem?(item: vscode.TreeItem, element: SearchResult, token: vscode.CancellationToken): vscode.ProviderResult<vscode.TreeItem> {
     //     throw new Error('Method not implemented.');
     // }
@@ -214,16 +213,17 @@ export class SearchManager {
     }
 
     private onTreeViewSelectionChanged(event: vscode.TreeViewSelectionChangeEvent<SearchResult>) {
-        // assert(event.selection.length < 2);
-        // if (event.selection.length > 0) {
-        //     let result = event.selection[0];
-        //     switch (result.type) {
-        //         case 'extract':
-        //             // Reveal the relevant file preview 
-        //             let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: true, selection: result.range };
-        //             vscode.commands.executeCommand("vscode.open", result.parent.uri, showOptions);
-        //             break;
-        //     }
-        // }
+        assert(event.selection.length < 2);
+        if (event.selection.length > 0) {
+            let result = event.selection[0];
+            switch (result.type) {
+                case 'file':
+                    // Reveal the relevant file preview 
+                    let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: true };
+                    vscode.commands.executeCommand("vscode.open", result.uri, showOptions);
+                    this.treeView.reveal(result, { select: true, focus: true, expand: true });
+                    break;
+            }
+        }
     }
 }
