@@ -20,11 +20,15 @@
 - [ ] Search time stats 
 - [x] 'Whole word' for search 
 - [ ] Pause/resume/refresh index 
-- [ ] Key bindings for cycling through search results 
-- [ ] Key binding to navigate to search window 
 - [ ] Add tooltips to controls
 - [ ] Preview document when highlighting search result 
     seems impossible with current treeview api 
+
+- [ ] Configuration options
+    - [ ] Whether to reveal search results on query commands
+- [ ] Keybindings 
+    - [ ] Key bindings for cycling through search results 
+    - [ ] Key binding to navigate to search window 
 
 - [ ] Build own treeview to get focus events 
 - [ ] Implement proposed 'FileSearchProvider' 

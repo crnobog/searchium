@@ -170,7 +170,6 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 }
 
 export class SearchManager {
-    // TODO: Set badge on treeView
     constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
         treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this);
     }
@@ -200,9 +199,13 @@ export class SearchManager {
             .then((r: ipcResponses.SearchCodeResponse) => {
                 getLogger().log`Search request complete`;
                 // TODO: compare num results vs max to message truncation 
+                let prefix = "";
                 if (r.hitCount >= maxResults) {
                     vscode.window.showInformationMessage("Search results exceeded configured maximum. Search results will be truncated.");
+                    prefix = "More than ";
                 }
+                this.treeView.badge = { tooltip: `${prefix}${r.hitCount.toLocaleString()} search results`, value: Number(r.hitCount) };
+
                 this.provider.populate(r);
                 // TODO: Focus view 
                 vscode.commands.executeCommand('searchium-results.focus');
