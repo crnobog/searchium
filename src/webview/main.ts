@@ -86,6 +86,8 @@ window.addEventListener("load", () => {
     tagNumFiles = document.getElementById("tag-num-files")!;
     tagMemory = document.getElementById("tag-memory-usage")!;
     tagState = document.getElementById("tag-index-state")!;
+
+    vscode.postMessage({ command: 'ready' });
 });
 window.addEventListener("message", (event: any) => {
     let msg = event.data as any;

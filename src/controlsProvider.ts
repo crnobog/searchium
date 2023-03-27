@@ -3,7 +3,7 @@ import { getLogger } from './logger';
 import { SearchOptions } from './search';
 import { IndexState } from './indexState';
 import { GetDatabaseStatisticsResponse } from './ipcResponses';
-import { IndexingServerStatus } from './gen/searchium_pb';
+import { GetDatabaseDetailsRequest, GetDatabaseDetailsResponse, IndexingServerStatus } from './gen/searchium_pb';
 
 export function getNonce() {
     let text = "";
@@ -51,12 +51,19 @@ function html(strings: TemplateStringsArray, ...insertions: any[]) {
 
 export class ControlsProvider implements vscode.WebviewViewProvider {
     webview?: vscode.Webview;
+    databaseStats?: GetDatabaseStatisticsResponse;
 
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly extensionUri: vscode.Uri,
         private readonly indexState: IndexState
-    ) { }
+    ) {
+        this.indexState.on('updated', (response: GetDatabaseStatisticsResponse) => {
+            this.databaseStats = response;
+            this.sendStatsToWebview();
+        });
+    }
+
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         _resolveContext: vscode.WebviewViewResolveContext<unknown>,
@@ -70,32 +77,6 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this.getWebViewContent(webviewView.webview, this.extensionUri, this.getControlsState());
         webviewView.webview.onDidReceiveMessage(this.onMessage, this);
-
-        let indexStateListener = (response: GetDatabaseStatisticsResponse) => {
-            let mem = Number(response.serverNativeMemoryUsage) / 1024.0 / 1024.0;
-            let state = "Idle";
-            switch (response.serverStatus) {
-                case IndexingServerStatus.IDLE:
-                    state = 'Idle';
-                    break;
-                case IndexingServerStatus.BUSY:
-                    state = 'Busy';
-                    break;
-                case IndexingServerStatus.PAUSED:
-                    state = 'Paused';
-                    break;
-                case IndexingServerStatus.YIELD:
-                    state = 'Yield';
-                    break;
-            }
-            webviewView.webview.postMessage({
-                type: 'status',
-                numFiles: `${response.searchableFileCount.toLocaleString()} files`,
-                memory: `${mem.toFixed(1)} MB`,
-                state
-            });
-        };
-        this.indexState.on('updated', indexStateListener);
     }
 
     public onEnableCaseSensitive() {
@@ -110,6 +91,32 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         this.webview = undefined;
     }
 
+    private sendStatsToWebview() {
+        if (this.databaseStats && this.webview) {
+            let mem = Number(this.databaseStats.serverNativeMemoryUsage) / 1024.0 / 1024.0;
+            let state = "Idle";
+            switch (this.databaseStats.serverStatus) {
+                case IndexingServerStatus.IDLE:
+                    state = 'Idle';
+                    break;
+                case IndexingServerStatus.BUSY:
+                    state = 'Busy';
+                    break;
+                case IndexingServerStatus.PAUSED:
+                    state = 'Paused';
+                    break;
+                case IndexingServerStatus.YIELD:
+                    state = 'Yield';
+                    break;
+            }
+            this.webview.postMessage({
+                type: 'status',
+                numFiles: `${this.databaseStats.searchableFileCount.toLocaleString()} files`,
+                memory: `${mem.toFixed(1)} MB`,
+                state
+            });
+        }
+    }
     private getControlsState(): SearchOptions {
         return this.context.workspaceState.get("SEARCH_OPTIONS", DEFAULT_SEARCH_OPTIONS) as any;
     }
@@ -124,6 +131,9 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     private onMessage(msg: any) {
         getLogger().log`webview message: ${msg}`;
         switch (msg.command) {
+            case 'ready':
+                this.sendStatsToWebview();
+                break;
             case 'execute':
                 let state = this.getControlsState();
                 vscode.commands.executeCommand("searchium.query", msg);
