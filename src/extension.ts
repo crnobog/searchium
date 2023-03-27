@@ -192,8 +192,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand("searchium.newSearch", searchManager.onNewSearch, searchManager),
             vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
             vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", searchManager.onSearchCurrentToken, searchManager),
-            vscode.commands.registerCommand("searchium.enableCaseSensitivity", searchManager.onEnableCaseSensitive, searchManager),
-            vscode.commands.registerCommand("searchium.disableCaseSensitivity", searchManager.onDisableCaseSensitive, searchManager),
+            vscode.commands.registerCommand("searchium.enableCaseSensitivity", controlsProvider.onEnableCaseSensitive, searchManager),
+            vscode.commands.registerCommand("searchium.disableCaseSensitivity", controlsProvider.onDisableCaseSensitive, searchManager),
         );
     } catch (err: any) {
 

@@ -6,6 +6,7 @@ import * as ipcResponses from "./ipcResponses";
 import { getLogger } from "./logger";
 import * as searchium_pb from "./gen/searchium_pb";
 import * as path from "path";
+import assert = require("assert");
 
 export interface SearchOptions {
     query: string,
@@ -26,6 +27,7 @@ interface FileResult {
     type: 'file';
     name: string;
     path: string;
+    uri: vscode.Uri;
     positions: PlainMessage<searchium_pb.FilePositionSpan>[];
     // TODO: cache extracts?
 }
@@ -56,6 +58,7 @@ function convertFilesystemEntries(entry: PlainMessage<searchium_pb.FileSystemEnt
                 type: 'file',
                 name: entry.name,
                 path: thisPath,
+                uri: vscode.Uri.file(thisPath),
                 positions: entry.data?.filePositionsData?.positions ?? []
             };
         case undefined: throw new Error("Unknown filesystementr type");
@@ -116,7 +119,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                     label: `${element.name} (${element.positions.length} results)`,
                 };
                 const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
-                item.resourceUri = vscode.Uri.file(element.path);
+                item.resourceUri = element.uri;
                 item.iconPath = vscode.ThemeIcon.File;
                 let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: true };
                 item.command = {
@@ -132,10 +135,10 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                     highlights: element.highlights,
                 };
                 let item = new vscode.TreeItem(label);
-                let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: false, selection: element.range };
+                let showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection: element.range };
                 item.command = {
                     command: "vscode.open",
-                    arguments: [vscode.Uri.file(element.parent.path), showOptions],
+                    arguments: [element.parent.uri, showOptions],
                     title: `Open ${item.resourceUri}`
                 };
                 return item;
@@ -169,6 +172,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 export class SearchManager {
     // TODO: Set badge on treeView
     constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
+        treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this);
     }
     public async onNewSearch() {
         // TODO: cancel previous tasks/deal with spamming search requests 
@@ -198,14 +202,6 @@ export class SearchManager {
         }
     }
 
-    // TODO: this is not ideal, seems no easy way to highlight/underline using current theme 
-    public onEnableCaseSensitive() {
-        vscode.commands.executeCommand('setContext', 'searchium.caseSensitivityEnabled', true);
-    }
-    public onDisableCaseSensitive() {
-        vscode.commands.executeCommand('setContext', 'searchium.caseSensitivityEnabled', false);
-    }
-
     private executeSearch(options: Partial<SearchOptions>): Promise<void> {
         const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
         return this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
@@ -229,5 +225,19 @@ export class SearchManager {
                 vscode.commands.executeCommand('searchium-results.focus');
             })
             .catch((err) => getLogger().log`Search request failed: ${err}`);
+    }
+
+    private onTreeViewSelectionChanged(event: vscode.TreeViewSelectionChangeEvent<SearchResult>) {
+        // assert(event.selection.length < 2);
+        // if (event.selection.length > 0) {
+        //     let result = event.selection[0];
+        //     switch (result.type) {
+        //         case 'extract':
+        //             // Reveal the relevant file preview 
+        //             let showOptions: vscode.TextDocumentShowOptions = { preview: true, preserveFocus: true, selection: result.range };
+        //             vscode.commands.executeCommand("vscode.open", result.parent.uri, showOptions);
+        //             break;
+        //     }
+        // }
     }
 }

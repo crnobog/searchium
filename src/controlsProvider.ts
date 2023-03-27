@@ -98,6 +98,14 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         this.indexState.on('updated', indexStateListener);
     }
 
+    public onEnableCaseSensitive() {
+        // todo: update ui 
+        this.updateControlsState({ matchCase: true });
+    }
+    public onDisableCaseSensitive() {
+        // todo: update ui
+        this.updateControlsState({ matchCase: false });
+    }
     private onViewDisposed(webviewView: vscode.WebviewView) {
         this.webview = undefined;
     }
@@ -162,27 +170,22 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     <section id="query-form">
         <vscode-text-field class="search-input" id="query-input" value="${initialState.query}">
             <span slot="start" class="codicon codicon-search"></span>
-            
-            <input type="checkbox" id="check-case-sensitive" 
-                   slot="end" class="search-inline-check monaco-custom-toggle" ${initialState.matchCase ? "checked" : ""} />
-            <label for="check-case-sensitive" slot="end" 
-                   class="codicon codicon-case-sensitive search-inline-check-label">
+
+            <input type="checkbox" id="check-case-sensitive" slot="end" class="search-inline-check monaco-custom-toggle"
+                ${initialState.matchCase ? "checked" : "" } />
+            <label for="check-case-sensitive" slot="end" class="codicon codicon-case-sensitive search-inline-check-label">
             </label>
 
-            <input type="checkbox" id="check-whole-word" slot="end" ${initialState.wholeWord ? "checked" : ""}
-                   class="search-inline-check" />
-            <label for="check-whole-word" slot="end" 
-                   class="codicon codicon-whole-word search-inline-check-label">
+            <input type="checkbox" id="check-whole-word" slot="end" ${initialState.wholeWord ? "checked" : "" }
+                class="search-inline-check" />
+            <label for="check-whole-word" slot="end" class="codicon codicon-whole-word search-inline-check-label">
             </label>
 
-            <input type="checkbox" id="check-regex" slot="end" ${initialState.regex ? "checked" : ""}
-                   class="search-inline-check" />
-            <label for="check-regex" slot="end" 
-                   class="codicon codicon-regex search-inline-check-label">
+            <input type="checkbox" id="check-regex" slot="end" ${initialState.regex ? "checked" : "" } class="search-inline-check" />
+            <label for="check-regex" slot="end" class="codicon codicon-regex search-inline-check-label">
             </label>
         </vscode-text-field>
-        <vscode-text-field class="search-input" id="filter-input"
-            value="${initialState.pathFilter}">
+        <vscode-text-field class="search-input" id="filter-input" value="${initialState.pathFilter}">
             <span slot="start" class="codicon codicon-folder" />
         </vscode-text-field>
         <div class="control-row">
