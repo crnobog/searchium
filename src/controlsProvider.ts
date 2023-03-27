@@ -81,9 +81,9 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     private onMessage(msg: any) {
         getLogger().log`webview message: ${msg}`;
         switch (msg.command) {
-            case 'query':
+            case 'execute':
                 let state = this.getControlsState();
-                vscode.commands.executeCommand("searchium.query", { ...state, query: msg.text });
+                vscode.commands.executeCommand("searchium.query", msg);
                 break;
             case 'setQuery':
                 this.updateControlsState({ query: msg.text });
@@ -150,6 +150,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             value="${initialState.pathFilter}">
             <span slot="start" class="codicon codicon-folder" />
         </vscode-text-field>
+        <vscode-button appearance="primary" id="query-execute">Search</vscode-button>
     </section>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
 </body>

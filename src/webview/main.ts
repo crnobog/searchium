@@ -59,6 +59,7 @@ let filterInput: HTMLInputElement;
 let matchCaseInput: HTMLInputElement;
 let wholeWordInput: HTMLInputElement;
 let regexInput: HTMLInputElement;
+let searchButton: HTMLInputElement;
 
 const vscode = acquireVsCodeApi();
 window.addEventListener("load", main);
@@ -77,6 +78,8 @@ function main() {
     wholeWordInput.addEventListener('change', onWholeWordChange);
     regexInput = document.getElementById("check-regex") as HTMLInputElement;
     regexInput.addEventListener('change', onRegexChange);
+    searchButton = document.getElementById("query-execute") as HTMLInputElement;
+    searchButton.addEventListener('click', onExecuteClick);
 }
 
 function onQueryChange() {
@@ -94,11 +97,25 @@ function onWholeWordChange() {
 function onRegexChange() {
     vscode.postMessage({ command: "setRegex", value: regexInput.checked });
 }
-
+function onExecuteClick() {
+    vscode.postMessage(createQueryCommand());
+}
 function onFormKeyUp(e: KeyboardEvent) {
     if (e.key === "Enter") {
-        vscode.postMessage({ command: "query", text: queryInput.value });
+        vscode.postMessage(createQueryCommand());
     }
 }
+
+function createQueryCommand() {
+    return {
+        command: "execute",
+        query: queryInput.value,
+        pathFilter: filterInput.value,
+        matchCase: matchCaseInput.checked,
+        wholeWord: wholeWordInput.checked,
+        regex: regexInput.checked
+    };
+}
+
 
 export { };

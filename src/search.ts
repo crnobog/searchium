@@ -167,6 +167,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 }
 
 export class SearchManager {
+    // TODO: Set badge on treeView
     constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
     }
     public async onNewSearch() {
