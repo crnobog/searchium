@@ -8,12 +8,13 @@
  - [x] Is it possible to contribute to the existing search view container? 
     No
 - [x] Search for selected text/token under edit cursor
-- [ ] Enable/disable regular expression syntax
+- [x] Enable/disable regular expression syntax
 - [ ] Path filter for search 
 - [x] Progress for indexing 
 - [ ] Index stats
 - [ ] Search time stats 
-- [ ] 'Whole word' for search 
+- [x] 'Whole word' for search 
 - [ ] Pause/resume/refresh index 
 - [ ] Change enter/click on file items to reveal?
 - [ ] Key bindings for cycling through search results 
+- [ ] Add tooltips to controls
