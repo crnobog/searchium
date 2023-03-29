@@ -22,8 +22,8 @@ import {
     vsCodeTextArea,
     vsCodeTextField,
 } from "@vscode/webview-ui-toolkit";
-import * as vscodeUi from "@vscode/webview-ui-toolkit";
-import { match } from "assert";
+import * as FromWebView from '../shared/fromWebView';
+import * as ToWebView from '../shared/toWebView';
 
 // In order to use the Webview UI Toolkit web components they
 // must be registered with the browser (i.e. webview) using the
@@ -91,8 +91,8 @@ window.addEventListener("load", () => {
     queryInput.focus();
     vscode.postMessage({ command: 'ready' });
 });
-window.addEventListener("message", (event: any) => {
-    let msg = event.data as any;
+window.addEventListener("message", (event: { data: ToWebView.Message }) => {
+    let msg = event.data;
     switch (msg.type) {
         case 'nostatus':
             queryForm.classList.remove("db-available");
@@ -104,11 +104,19 @@ window.addEventListener("message", (event: any) => {
             tagState.textContent = msg.state;
             break;
         case 'setQuery':
-            console.log(`Set query input to: ${msg.value}`);
-            queryInput.value = msg.value;
+            queryInput.value = msg.query;
             break;
         case 'focus':
             queryInput.focus();
+            break;
+        case 'setMatchCase':
+            matchCaseInput.checked = msg.matchCase;
+            break;
+        case 'setWholeWord':
+            wholeWordInput.checked = msg.wholeWord;
+            break;
+        case 'setRegex':
+            regexInput.checked = msg.regex;
             break;
     }
 });

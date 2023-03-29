@@ -15,19 +15,23 @@
 - [x] Path filter for search 
 - [x] Progress for indexing 
 - [x] 'Whole word' for search 
+- [x] Redo search when options are toggled 
 - [ ] Detailed index stats
 - [ ] Search time stats 
-- [ ] Redo search when options are toggled 
 - [ ] Pause/resume/refresh index 
 - [ ] Add tooltips to controls
 - [ ] Preview document when highlighting search result 
     seems impossible with current treeview api 
+- [ ] Control focusing search results based on what triggered search 
+    hitting enter - focus 
+    toggling options - do not focus 
 
 - [ ] Configuration options
     - [ ] Max search results 
 - [ ] Keybindings 
     - [x] Key bindings for cycling through search results 
     - [x] Key binding to navigate to search window 
+    - [x] Change search settings (when focused) 
 
 - [ ] Build own treeview to get focus events 
 - [ ] Implement proposed 'FileSearchProvider' 

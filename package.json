@@ -53,18 +53,6 @@
       ]
     },
     "menus": {
-      "view/title": [
-        {
-          "command": "searchium.enableCaseSensitivity",
-          "when": "view == searchium-results && !searchium.caseSensitivityEnabled",
-          "group": "navigation"
-        },
-        {
-          "command": "searchium.disableCaseSensitivity",
-          "when": "view == searchium-results && searchium.caseSensitivityEnabled",
-          "group": "navigation"
-        }
-      ]
     },
     "commands": [
       {
@@ -73,29 +61,58 @@
         "category": "Searchium"
       },
       {
+        "command": "searchium.focusSearch",
+        "title": "Focus Search",
+        "category": "Searchium"
+      },
+      {
         "command": "searchium.searchCurrentToken",
         "title": "Search Current Token",
         "category": "Searchium"
       },
       {
-        "command": "searchium.enableCaseSensitivity",
-        "title": "Enable Case Sensitive Search",
+        "command": "searchium.toggleCaseSensitivity",
         "category": "Searchium",
-        "enablement": "!searchium.caseSensitivityEnabled",
-        "icon": "$(case-sensitive)"
+        "title": "Toggle Case Sensitivity"
       },
       {
-        "command": "searchium.disableCaseSensitivity",
-        "title": "Disable Case Sensitive Search",
+        "command": "searchium.toggleWholeWord",
         "category": "Searchium",
-        "enablement": "searchium.caseSensitivityEnabled",
-        "icon": "$(case-sensitive)"
+        "title": "Toggle Whole Word"
+      },
+      {
+        "command": "searchium.toggleRegex",
+        "category": "Searchium",
+        "title": "Toggle Regex"
       }
     ],
     "keybindings": [
       {
         "command": "searchium.searchCurrentToken",
         "key": "ctrl+shift+;"
+      },
+      {
+        "command": "searchium.focusSearch",
+        "key": "ctrl+shift+'"
+      },
+      {
+        "command": "searchium.searchCurrentToken",
+        "key": "ctrl+shift+;"
+      },
+      {
+        "command": "searchium.toggleCaseSensitivity",
+        "key": "alt+c",
+        "when": "focusedView == 'searchium-controls'"
+      },
+      {
+        "command": "searchium.toggleWholeWord",
+        "key": "alt+w",
+        "when": "focusedView == 'searchium-controls'"
+      },
+      {
+        "command": "searchium.toggleRegex",
+        "key": "alt+r",
+        "when": "focusedView == 'searchium-controls'"
       }
     ]
   },

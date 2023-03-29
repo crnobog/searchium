@@ -3,8 +3,9 @@ import { getLogger } from './logger';
 import { SearchOptions } from './search';
 import { IndexState } from './indexState';
 import { GetDatabaseStatisticsResponse } from './ipcResponses';
-import { Search } from '@microsoft/fast-foundation';
 import { IndexingServerStatus } from './gen/searchium_pb';
+import * as ToWebView from './shared/toWebView';
+import * as FromWebView from './shared/fromWebView';
 
 export function getNonce() {
     let text = "";
@@ -110,15 +111,31 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     }
     public async onJumpToSearchInput() {
         await vscode.commands.executeCommand("searchium-controls.focus");
-        this.webview?.postMessage({ type: 'focus' });
+        this.sendMessage(<ToWebView.FocusMessage>{ type: "focus" });
     }
-    public onEnableCaseSensitive() {
-        // todo: update ui 
-        this.updateControlsState({ matchCase: true });
+    public onToggleCaseSensitivity() {
+        let matchCase = !this.getControlsState().matchCase;
+        this.updateControlsState({ matchCase });
+        this.sendMessage({
+            type: "setMatchCase",
+            matchCase
+        });
     }
-    public onDisableCaseSensitive() {
-        // todo: update ui
-        this.updateControlsState({ matchCase: false });
+    public onToggleWholeWord() {
+        let wholeWord = !this.getControlsState().wholeWord;
+        this.updateControlsState({ wholeWord });
+        this.sendMessage({
+            type: "setWholeWord",
+            wholeWord
+        });
+    }
+    public onToggleRegex() {
+        let regex = !this.getControlsState().regex;
+        this.updateControlsState({ regex });
+        this.sendMessage({
+            type: "setRegex",
+            regex
+        });
     }
     private onViewDisposed(webviewView: vscode.WebviewView) {
         this.webview = undefined;
@@ -126,18 +143,13 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     private setQueryString(query: string) {
         // Set state in case webview is not created yet 
         this.updateControlsState({ query });
-        this.webview?.postMessage({
-            type: "setQuery",
-            value: query
-        });
+        this.sendMessage({ type: "setQuery", query });
     }
 
     private sendStatsToWebview() {
         if (this.databaseStats && this.webview) {
             if (this.databaseStats.projectCount === 0) {
-                this.webview.postMessage({
-                    type: 'nostatus'
-                });
+                this.sendMessage(<ToWebView.NoStatusMessage>{ type: "nostatus" });
                 return;
             }
             let mem = Number(this.databaseStats.serverNativeMemoryUsage) / 1024.0 / 1024.0;
@@ -156,7 +168,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                     state = 'Yield';
                     break;
             }
-            this.webview.postMessage({
+            this.sendMessage(<ToWebView.StatusMessage>{
                 type: 'status',
                 numFiles: `${this.databaseStats.searchableFileCount.toLocaleString()} files`,
                 memory: `${mem.toFixed(1)} MB`,
@@ -175,7 +187,11 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private onMessage(msg: any) {
+    private sendMessage(msg: ToWebView.Message) {
+        this.webview?.postMessage(msg);
+    }
+
+    private onMessage(msg: FromWebView.Message) {
         getLogger().log`webview message: ${msg}`;
         switch (msg.command) {
             case 'ready':
@@ -193,12 +209,15 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 break;
             case 'setMatchCase':
                 this.updateControlsState({ matchCase: msg.value });
+                vscode.commands.executeCommand("searchium.query", this.getControlsState());
                 break;
             case 'setWholeWord':
                 this.updateControlsState({ wholeWord: msg.value });
+                vscode.commands.executeCommand("searchium.query", this.getControlsState());
                 break;
             case 'setRegex':
                 this.updateControlsState({ regex: msg.value });
+                vscode.commands.executeCommand("searchium.query", this.getControlsState());
                 break;
         }
     }
