@@ -75,7 +75,7 @@ function convertFileResult(
         case 'directoryEntry':
             throw new Error("Unexpected directory entry");
         case 'fileEntry':
-            let file: FileResult & { _extracts: ExtractResult[] | undefined } = {
+            let file: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
                 type: 'file',
                 name: entry.name,
                 path: thisPath,
@@ -84,8 +84,8 @@ function convertFileResult(
                 positions: entry.data?.filePositionsData?.positions ?? [],
                 _extracts: undefined,
                 extracts: async function (): Promise<ExtractResult[]> {
-                    if (this._extracts) { return Promise.resolve(this._extracts); }
-                    this._extracts = await getFileExtracts(channel, this);
+                    if (this._extracts) { this._extracts; }
+                    this._extracts = getFileExtracts(channel, this);
                     return this._extracts;
                 }
             };
