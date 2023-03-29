@@ -173,6 +173,7 @@ export async function activate(context: vscode.ExtensionContext) {
             // vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager),
 
             // todo: rename commands 
+            vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),
             vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
             vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
             vscode.commands.registerCommand("searchium.enableCaseSensitivity", controlsProvider.onEnableCaseSensitive, controlsProvider),

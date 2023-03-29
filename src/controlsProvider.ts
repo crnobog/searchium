@@ -108,6 +108,10 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             });
         }
     }
+    public async onJumpToSearchInput() {
+        await vscode.commands.executeCommand("searchium-controls.focus");
+        this.webview?.postMessage({ type: 'focus' });
+    }
     public onEnableCaseSensitive() {
         // todo: update ui 
         this.updateControlsState({ matchCase: true });
@@ -119,7 +123,6 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     private onViewDisposed(webviewView: vscode.WebviewView) {
         this.webview = undefined;
     }
-
     private setQueryString(query: string) {
         // Set state in case webview is not created yet 
         this.updateControlsState({ query });

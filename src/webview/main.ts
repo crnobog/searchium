@@ -88,6 +88,7 @@ window.addEventListener("load", () => {
     tagMemory = document.getElementById("tag-memory-usage")!;
     tagState = document.getElementById("tag-index-state")!;
 
+    queryInput.focus();
     vscode.postMessage({ command: 'ready' });
 });
 window.addEventListener("message", (event: any) => {
@@ -105,6 +106,9 @@ window.addEventListener("message", (event: any) => {
         case 'setQuery':
             console.log(`Set query input to: ${msg.value}`);
             queryInput.value = msg.value;
+            break;
+        case 'focus':
+            queryInput.focus();
             break;
     }
 });

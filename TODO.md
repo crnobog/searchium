@@ -7,8 +7,6 @@
 - [x] Set query input box from 'search for current token'
 - [x] Expand file item when selecting
 - [x] Remove statusbar item 
-- [ ] Search file paths - with quick pick?
-- [ ] Search file paths - side view?
 - [x] Search code - quick pick, then open window? 
  - [x] Is it possible to contribute to the existing search view container? 
     No
@@ -16,9 +14,9 @@
 - [x] Enable/disable regular expression syntax
 - [x] Path filter for search 
 - [x] Progress for indexing 
+- [x] 'Whole word' for search 
 - [ ] Detailed index stats
 - [ ] Search time stats 
-- [x] 'Whole word' for search 
 - [ ] Redo search when options are toggled 
 - [ ] Pause/resume/refresh index 
 - [ ] Add tooltips to controls
@@ -31,7 +29,7 @@
     - [ ] Whether to loop when navigating next/prev result 
     - [ ] Max search results 
 - [ ] Keybindings 
-    - [ ] Key bindings for cycling through search results 
+    - [x] Key bindings for cycling through search results 
     - [ ] Key binding to navigate to search window 
 
 - [ ] Build own treeview to get focus events 
@@ -39,3 +37,5 @@
 - [x] Search progress indicator?
     withProgress using treeview view id?
 - [ ] Rewrite-modify server - token suggestions 
+- [ ] Search file paths - with quick pick?
+- [ ] Search file paths - side view?
