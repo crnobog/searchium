@@ -24,13 +24,10 @@
     seems impossible with current treeview api 
 
 - [ ] Configuration options
-    - [ ] Whether to reveal search results on query commands
-    - [ ] Whether to collapse tree when navigating next/prev result
-    - [ ] Whether to loop when navigating next/prev result 
     - [ ] Max search results 
 - [ ] Keybindings 
     - [x] Key bindings for cycling through search results 
-    - [ ] Key binding to navigate to search window 
+    - [x] Key binding to navigate to search window 
 
 - [ ] Build own treeview to get focus events 
 - [ ] Implement proposed 'FileSearchProvider' 

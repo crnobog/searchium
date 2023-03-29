@@ -10,7 +10,8 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/vs-chromium-project.txt"
+    "workspaceContains:**/vs-chromium-project.txt",
+    "onCommand:searchium.focusSearch"
   ],
   "main": "./out/extension.js",
   "contributes": {
