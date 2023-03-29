@@ -73,7 +73,24 @@ export class GetDatabaseStatisticsRequest {
                     forceGarbageCollection: false
                 }
             }
-        }
+        };
+    }
+}
+
+export class SearchFilePathsRequest {
+    constructor(
+        private searchParams: PlainMessage<searchium_pb.SearchParams>
+    ) { }
+
+    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+        return {
+            subtype: {
+                case: 'searchFilePathsRequest',
+                value: {
+                    searchParams: this.searchParams
+                }
+            }
+        };
     }
 }
 
@@ -81,4 +98,5 @@ export type Request = RegisterFileRequest
     | UnregisterFileRequest
     | SearchCodeRequest
     | GetFileExtractsRequest
-    | GetDatabaseStatisticsRequest;
+    | GetDatabaseStatisticsRequest
+    | SearchFilePathsRequest;

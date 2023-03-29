@@ -274,6 +274,15 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     serverStatus: data.subtype.value.serverStatus,
                 };
             }
+            case 'searchFilePathsResponse': {
+                return {
+                    requestId,
+                    responseType: "searchFilePaths",
+                    hitCount: data.subtype.value.hitCount,
+                    totalCount: data.subtype.value.totalCount,
+                    searchResult: data.subtype.value.searchResult!, // todo: handle empty
+                };
+            }
         }
         throw new Error("TODO");
     }

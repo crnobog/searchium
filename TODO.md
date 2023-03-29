@@ -19,6 +19,7 @@
 - [ ] Detailed index stats
 - [ ] Search time stats 
 - [x] 'Whole word' for search 
+- [ ] Redo search when options are toggled 
 - [ ] Pause/resume/refresh index 
 - [ ] Add tooltips to controls
 - [ ] Preview document when highlighting search result 
@@ -28,6 +29,7 @@
     - [ ] Whether to reveal search results on query commands
     - [ ] Whether to collapse tree when navigating next/prev result
     - [ ] Whether to loop when navigating next/prev result 
+    - [ ] Max search results 
 - [ ] Keybindings 
     - [ ] Key bindings for cycling through search results 
     - [ ] Key binding to navigate to search window 
@@ -36,3 +38,4 @@
 - [ ] Implement proposed 'FileSearchProvider' 
 - [x] Search progress indicator?
     withProgress using treeview view id?
+- [ ] Rewrite-modify server - token suggestions 

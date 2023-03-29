@@ -12,6 +12,7 @@ import * as searchium_pb from './gen/searchium_pb';
 import { SearchResultsProvider, SearchManager } from './search';
 import { ControlsProvider } from './controlsProvider';
 import { IndexState } from './indexState';
+import { FileSearchManager } from './fileSearch';
 
 class ServerProxy implements vscode.Disposable {
     listener?: Server;
@@ -161,11 +162,17 @@ export async function activate(context: vscode.ExtensionContext) {
         let reporter = new IndexProgressReporter(channel);
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
 
+        // const fileSearchManager = new FileSearchManager(channel);
+
         context.subscriptions.push(
             vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
             vscode.commands.registerCommand('searchium.nextResult', searchManager.navigateToNextResult, searchManager),
             vscode.commands.registerCommand('searchium.previousResult', searchManager.navigateToPreviousResult, searchManager),
 
+            // Not working very well with chromium server
+            // vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager),
+
+            // todo: rename commands 
             vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
             vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
             vscode.commands.registerCommand("searchium.enableCaseSensitivity", controlsProvider.onEnableCaseSensitive, controlsProvider),

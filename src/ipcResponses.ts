@@ -35,7 +35,15 @@ export interface GetDatabaseStatisticsResponse extends ResponseBase {
     serverStatus: searchium_pb.IndexingServerStatus;
 }
 
+export interface SearchFilePathsResponse extends ResponseBase {
+    responseType: "searchFilePaths";
+    searchResult: PlainMessage<searchium_pb.FileSystemEntry>;
+    hitCount: bigint;
+    totalCount: bigint;
+}
+
 export type Response = DoneResponse
     | SearchCodeResponse
     | GetFileExtractsResponse
-    | GetDatabaseStatisticsResponse;
+    | GetDatabaseStatisticsResponse
+    | SearchFilePathsResponse;
