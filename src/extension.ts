@@ -90,44 +90,88 @@ class ServerProxy implements vscode.Disposable {
     }
 }
 
-class IndexProgressReporter {
-    constructor(private channel: IpcChannel) {
-        this.channel.once('event', this.onIpcEvent.bind(this));
+class IndexProgressInstance {
+    total: number;
+    completed: number;
+    listener?: (e: ipcEvents.TypedEvent) => void;
+
+    constructor(event: ipcEvents.ProgressReportEvent, private channel: IpcChannel) {
+        this.total = event.total;
+        this.completed = event.completed;
     }
 
-    public onIpcEvent(event: ipcEvents.TypedEvent) {
+    public async run(event: ipcEvents.ProgressReportEvent) {
+        let options: vscode.ProgressOptions = {
+            location: vscode.ProgressLocation.Notification,
+            cancellable: false,
+            title: "Searchium Indexing"
+        };
+        await vscode.window.withProgress(options, this.progress.bind(this));
+    }
+
+    private async progress(progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> {
+        progress.report({ increment: this.completed / this.total * 100, message: "" });
+        return new Promise<void>((resolve, reject) => {
+            this.listener = (e) => {
+                if (e.eventType !== 'progressReport') { return; }
+
+                // If total changed, start a new progress window
+                if (e.total !== this.total) {
+                    reject();
+                    return;
+                }
+
+                progress.report({ increment: (this.completed - e.completed) / e.total * 100, message: e.displayText });
+                this.completed = e.completed;
+                if (e.completed === e.total) {
+                    resolve();
+                }
+            };
+            this.channel.on('event', this.listener!);
+        })
+            .then(() => {
+                this.channel.off('event', this.listener!);
+            })
+            .catch((err) => {
+                this.channel.off('event', this.listener!);
+            });
+    }
+}
+
+class IndexProgressReporter {
+    listener: (event: ipcEvents.TypedEvent) => void;
+    constructor(private channel: IpcChannel) {
+        this.listener = this.onIpcEvent.bind(this);
+        this.startListening();
+    }
+
+    private onIpcEvent(event: ipcEvents.TypedEvent) {
         if (event.eventType === 'progressReport') {
             this.startProgress(event);
         }
     }
 
-    private startProgress(event: ipcEvents.ProgressReportEvent) {
-        let options: vscode.ProgressOptions = {
-            location: vscode.ProgressLocation.Notification,
-            cancellable: false,
-            title: event.displayText
-        };
-        let task = (progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken) => {
-            let total = event.total;
-            let completed = 0;
-            progress.report({ increment: event.completed / event.total * 100, message: "" });
-            completed = event.completed;
-            return new Promise<void>((resolve, reject) => {
-                this.channel.on('event', (e) => {
-                    if (e.eventType !== 'progressReport') { return; }
+    private startListening() {
+        getLogger().log`IndexProgressReporter: start listening`;
+        this.channel.on('event', this.listener);
+    }
+    private stopListening() {
+        getLogger().log`IndexProgressReporter: stop listening`;
+        this.channel.off('event', this.listener);
+    }
 
-                    // If total changed, start a new progress window
-                    if (event.total !== total) { reject(); this.startProgress(event); return; }
-
-                    progress.report({ increment: (completed - event.completed) / event.total * 100, message: event.displayText });
-                    completed = event.completed;
-                    if (event.completed === event.total) {
-                        resolve();
-                    }
-                });
+    private async startProgress(event: ipcEvents.ProgressReportEvent) {
+        getLogger().log`IndexProgressReporter: starting progress report total ${event.total}`;
+        let reporter = new IndexProgressInstance(event, this.channel);
+        this.stopListening();
+        await reporter.run(event)
+            .then(() => {
+                getLogger().log`IndexProgressReporter: progress for total ${event.total} complete`;
+            })
+            .catch((err: any) => {
+                getLogger().log`IndexProgressReporter: progress for total ${event.total} cancelled`;
             });
-        };
-        vscode.window.withProgress(options, task);
+        this.startListening();
     }
 }
 

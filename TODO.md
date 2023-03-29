@@ -41,3 +41,7 @@
 - [ ] Rewrite-modify server - token suggestions 
 - [ ] Search file paths - with quick pick?
 - [ ] Search file paths - side view?
+
+# Server rewrite
+
+https://swtch.com/~rsc/regexp/regexp4.html
