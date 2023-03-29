@@ -122,7 +122,7 @@
   "scripts": {
     "vscode:prepublish": "npm run build",
     "build": "ts-node ./build.ts",
-    "watch": "ts-node ./built.ts --watch",
+    "watch": "ts-node ./build.ts --watch",
     "pretest": "npm run build && npm run lint",
     "lint": "tsc --noEmit && tsc --noEmit -p ./tsconfig.webview.json && eslint src --ext ts",
     "test": "node ./out/test/runTest.js"

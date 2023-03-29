@@ -36,37 +36,22 @@ const webviewConfig: esbuild.BuildOptions = {
     ],
 };
 
-const watchConfig = {
-    watch: {
-        onRebuild(error: any, result: any) {
-            console.log("[watch] build started");
-            if (error) {
-                error.errors.forEach((error: any) =>
-                    console.error(
-                        `> ${error.location.file}:${error.location.line}:${error.location.column}: error: ${error.text}`
-                    )
-                );
-            } else {
-                console.log("[watch] build finished");
-            }
-        },
-    },
-};
-
 (async () => {
     const args = process.argv.slice(2);
     try {
         if (args.includes("--watch")) {
             // Build and watch extension and webview code
             console.log("[watch] build started");
-            await esbuild.build({
+            let ctx1 = await esbuild.context({
                 ...extensionConfig,
-                ...watchConfig,
             });
-            await esbuild.build({
+            let ctx2 = await esbuild.context({
                 ...webviewConfig,
-                ...watchConfig,
             });
+            await Promise.all(
+                [ctx1.watch(),
+                ctx2.watch()]
+            );
             console.log("[watch] build finished");
         } else {
             // Build extension and webview code
