@@ -26,6 +26,8 @@
 
 - [ ] Configuration options
     - [ ] Whether to reveal search results on query commands
+    - [ ] Whether to collapse tree when navigating next/prev result
+    - [ ] Whether to loop when navigating next/prev result 
 - [ ] Keybindings 
     - [ ] Key bindings for cycling through search results 
     - [ ] Key binding to navigate to search window 
