@@ -3,5 +3,6 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+*.zip
 bin/
 bin-debug/

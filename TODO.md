@@ -16,6 +16,7 @@
 - [x] Progress for indexing 
 - [x] 'Whole word' for search 
 - [x] Redo search when options are toggled 
+- [ ] Setup bundling 
 - [ ] Detailed index stats
 - [ ] Search time stats 
 - [ ] Pause/resume/refresh index 

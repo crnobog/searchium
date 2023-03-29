@@ -2,6 +2,10 @@
   "name": "searchium",
   "displayName": "searchium",
   "description": "local indexing process for accelerated search",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crnobog/searchium.git"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.76.0"
@@ -10,8 +14,7 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/vs-chromium-project.txt",
-    "onCommand:searchium.focusSearch"
+    "workspaceContains:**/vs-chromium-project.txt"
   ],
   "main": "./out/extension.js",
   "contributes": {

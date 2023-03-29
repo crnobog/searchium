@@ -1,7 +1,5 @@
 # searchium README
 
-This is the README for your extension "searchium". After writing up a brief description, we recommend including the following sections.
-
 ## Features
 
 Searchium is a port of the search engine daemon from VsChromium[https://chromium.github.io/vs-chromium/] to VS Code.
