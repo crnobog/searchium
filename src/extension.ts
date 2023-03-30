@@ -13,6 +13,7 @@ import { SearchResultsProvider, SearchManager } from './search';
 import { ControlsProvider } from './controlsProvider';
 import { IndexState } from './indexState';
 import { FileSearchManager } from './fileSearch';
+import { DetailsPanelProvider } from './detailsPanel';
 
 class ServerProxy implements vscode.Disposable {
     listener?: Server;
@@ -210,6 +211,7 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(new DocumentRegistrationService(context, channel));
 
         // const fileSearchManager = new FileSearchManager(channel);
+        const detailsPanelProvider = new DetailsPanelProvider(context, channel);
 
         context.subscriptions.push(
             vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
@@ -218,6 +220,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
             // Not working very well with chromium server
             // vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager),
+
+            vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
 
             // todo: rename commands 
             vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),

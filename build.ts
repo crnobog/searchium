@@ -21,16 +21,16 @@ const webviewConfig: esbuild.BuildOptions = {
     ...baseConfig,
     target: "es2020",
     format: "esm",
-    entryPoints: ["./src/webview/main.ts"],
+    entryPoints: ["./src/webview/controls.ts", "./src/webview/details.ts"],
     external: ["acquireVsCodeApi"],
-    outfile: "./out/webview.js",
+    outdir: "./out/webview",
     plugins: [
         // Copy webview css and ttf files to `out` directory unaltered
         copy({
             resolveFrom: "cwd",
             assets: {
                 from: ["./src/webview/*.css", "./src/webview/*.ttf"],
-                to: ["./out"],
+                to: ["./out/webview"],
             },
         }),
     ],

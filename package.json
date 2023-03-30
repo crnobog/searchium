@@ -87,6 +87,11 @@
         "command": "searchium.toggleRegex",
         "category": "Searchium",
         "title": "Toggle Regex"
+      },
+      {
+        "command": "searchium.openDetails",
+        "category": "Searchium",
+        "title": "Open Index Details"
       }
     ],
     "keybindings": [

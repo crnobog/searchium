@@ -1,3 +1,4 @@
+/* controls view */
 #query-form {
     display: flex;
     flex-direction: column;
@@ -45,4 +46,19 @@
 
 .db-available #tag-no-db {
     display: none;
+}
+/* details view */
+#progress-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.progress-ring {
+    margin: 40px;
+}
+
+.progress-text {
+    font-size: large;
 }
