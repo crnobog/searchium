@@ -111,6 +111,9 @@ class IndexProgressInstance {
 
     private async progress(progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> {
         progress.report({ increment: this.completed / this.total * 100, message: "" });
+        if (this.completed === this.total) {
+            return Promise.resolve();
+        }
         return new Promise<void>((resolve, reject) => {
             this.listener = (e) => {
                 if (e.eventType !== 'progressReport') { return; }
