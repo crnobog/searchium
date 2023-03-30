@@ -42,8 +42,14 @@ export interface SearchFilePathsResponse extends ResponseBase {
     totalCount: bigint;
 }
 
+export interface GetDatabaseDetailsResponse extends ResponseBase {
+    responseType: "getDatabaseDetails";
+    projects: PlainMessage<searchium_pb.ProjectDetails>[]
+}
+
 export type Response = DoneResponse
     | SearchCodeResponse
     | GetFileExtractsResponse
     | GetDatabaseStatisticsResponse
-    | SearchFilePathsResponse;
+    | SearchFilePathsResponse
+    | GetDatabaseDetailsResponse;

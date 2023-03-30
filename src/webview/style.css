@@ -1,3 +1,8 @@
+@layer {
+    .hidden {
+        display: none;
+    }
+}
 /* controls view */
 #query-form {
     display: flex;
@@ -61,4 +66,13 @@
 
 .progress-text {
     font-size: large;
+}
+.project-details {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.details-element {
+    flex-grow: 1;
 }

@@ -94,9 +94,30 @@ export class SearchFilePathsRequest {
     }
 }
 
+export class GetDatabaseDetailsRequest {
+    constructor(
+        private maxFilesByExtensionDetails: number,
+        private maxLargeFilesDetailsCount: number
+    ) {
+    }
+
+    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+        return {
+            subtype: {
+                case: 'getDatabaseDetailsRequest',
+                value: {
+                    maxFilesByExtensionDetailsCount: this.maxFilesByExtensionDetails,
+                    maxLargeFilesDetailsCount: this.maxLargeFilesDetailsCount,
+                }
+            }
+        };
+    }
+}
+
 export type Request = RegisterFileRequest
     | UnregisterFileRequest
     | SearchCodeRequest
     | GetFileExtractsRequest
     | GetDatabaseStatisticsRequest
-    | SearchFilePathsRequest;
+    | SearchFilePathsRequest
+    | GetDatabaseDetailsRequest;

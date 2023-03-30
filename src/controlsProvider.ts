@@ -4,8 +4,8 @@ import { SearchOptions } from './search';
 import { IndexState } from './indexState';
 import { GetDatabaseStatisticsResponse } from './ipcResponses';
 import { IndexingServerStatus } from './gen/searchium_pb';
-import * as ToWebView from './shared/toWebView';
-import * as FromWebView from './shared/fromWebView';
+import * as ToWebView from './shared/toControlsWebview';
+import * as FromWebView from './shared/fromControlsWebview';
 import { getUri, getNonce } from './webviewUtils';
 
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
@@ -191,8 +191,6 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         const webviewUri = getUri(webview, extensionUri, ["out", "webview", "controls.js"]);
         const codiconsUri = getUri(webview, extensionUri, ['node_modules', '@vscode/codicons', 'dist', 'codicon.css']);
         const stylesheetUri = getUri(webview, extensionUri, ["out", "webview", "style.css"]);
-
-        const commandUri = vscode.Uri.parse("command:searchium.query");
 
         const nonce = getNonce();
         let content = /*html*/ `

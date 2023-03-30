@@ -283,6 +283,13 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     searchResult: data.subtype.value.searchResult!, // todo: handle empty
                 };
             }
+            case 'getDatabaseDetailsResponse': {
+                return {
+                    requestId,
+                    responseType: "getDatabaseDetails",
+                    projects: data.subtype.value.projectDetails,
+                };
+            }
         }
         throw new Error("TODO");
     }
