@@ -115,10 +115,6 @@
         "key": "ctrl+shift+'"
       },
       {
-        "command": "searchium.searchCurrentToken",
-        "key": "ctrl+shift+;"
-      },
-      {
         "command": "searchium.toggleCaseSensitivity",
         "key": "alt+c",
         "when": "focusedView == 'searchium-controls'"
