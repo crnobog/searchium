@@ -16,6 +16,9 @@
 - [x] Progress for indexing 
 - [x] 'Whole word' for search 
 - [x] Redo search when options are toggled 
+- [ ] Keybinding for searching for token under cursor seems not to be updating UI 
+- [ ] Search history
+- [ ] Last/next search history keybinds 
 - [ ] Setup bundling 
 - [ ] Detailed index stats
 - [ ] Search time stats 
