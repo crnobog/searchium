@@ -17,8 +17,8 @@
 - [x] 'Whole word' for search 
 - [x] Redo search when options are toggled 
 - [x] Add logging level setting 
-- [ ] Add line number to search results
-- [ ] Strip leading whitespace from search results
+- [x] Add line number to search results
+- [x] Strip leading whitespace from search results
 - [x] Keybinding for searching for token under cursor seems not to be updating UI 
     seems to be when webview is hidden in bottom panel 
 - [ ] Search history
