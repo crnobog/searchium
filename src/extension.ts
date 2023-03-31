@@ -14,6 +14,7 @@ import { ControlsProvider } from './controlsProvider';
 import { IndexState } from './indexState';
 import { FileSearchManager } from './fileSearch';
 import { DetailsPanelProvider } from './detailsPanel';
+import { SearchHistory } from './history';
 
 class ServerProxy implements vscode.Disposable {
     listener?: Server;
@@ -196,14 +197,15 @@ export async function activate(context: vscode.ExtensionContext) {
         channel.on('event', (e) => getLogger().logDebug`event: ${e}`);
 
         let indexState = new IndexState(channel);
-        const searchResultsProvider = new SearchResultsProvider(channel);
+        const history = new SearchHistory(context);
 
+        const searchResultsProvider = new SearchResultsProvider(channel);
         context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
         const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
             { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
-        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel);
+        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel, history);
 
-        let controlsProvider = new ControlsProvider(context, context.extensionUri, indexState);
+        const controlsProvider = new ControlsProvider(context, context.extensionUri, indexState, history);
         context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
 
         let reporter = new IndexProgressReporter(channel);
@@ -229,7 +231,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
             vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
             vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),
-            vscode.commands.registerCommand("searchium.toggleRegex", controlsProvider.onToggleRegex, controlsProvider)
+            vscode.commands.registerCommand("searchium.toggleRegex", controlsProvider.onToggleRegex, controlsProvider),
+            vscode.commands.registerCommand("searchium.previousQuery", controlsProvider.onPreviousQuery, controlsProvider),
+            vscode.commands.registerCommand("searchium.nextQuery", controlsProvider.onNextQuery, controlsProvider),
         );
     } catch (err: any) {
 

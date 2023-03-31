@@ -7,6 +7,7 @@ import { IndexingServerStatus } from './gen/searchium_pb';
 import * as ToWebView from './shared/toControlsWebview';
 import * as FromWebView from './shared/fromControlsWebview';
 import { getUri, getNonce } from './webviewUtils';
+import { SearchHistory } from './history';
 
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
     query: "",
@@ -23,7 +24,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly extensionUri: vscode.Uri,
-        private readonly indexState: IndexState
+        private readonly indexState: IndexState,
+        private readonly history: SearchHistory
     ) {
         this.indexState.on('updated', (response: GetDatabaseStatisticsResponse) => {
             this.databaseStats = response;
@@ -54,6 +56,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             prompt: "Search term",
         });
         if (!query) { return; }
+        getLogger().logInformation`New search for '${query}'`;
         this.setQueryString(query);
         vscode.commands.executeCommand("searchium.query", {
             ... this.getControlsState(), query
@@ -87,6 +90,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     }
     public onToggleCaseSensitivity() {
         let matchCase = !this.getControlsState().matchCase;
+        getLogger().logInformation`ToggleCaseSensitive to ${matchCase}`;
         this.updateControlsState({ matchCase });
         this.sendMessage({
             type: "setMatchCase",
@@ -95,6 +99,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     }
     public onToggleWholeWord() {
         let wholeWord = !this.getControlsState().wholeWord;
+        getLogger().logInformation`ToggleWholeWord to ${wholeWord}`;
         this.updateControlsState({ wholeWord });
         this.sendMessage({
             type: "setWholeWord",
@@ -103,11 +108,38 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     }
     public onToggleRegex() {
         let regex = !this.getControlsState().regex;
+        getLogger().logInformation`ToggleRegex to ${regex}`;
         this.updateControlsState({ regex });
         this.sendMessage({
             type: "setRegex",
             regex
         });
+    }
+    public onPreviousQuery() {
+        let query = this.history.prev();
+        if (query !== undefined) {
+            getLogger().logInformation`QueryPrev: '${query}'`;
+            this.setQueryString(query);
+            vscode.commands.executeCommand("searchium.query", {
+                ... this.getControlsState(), query
+            }, "history");
+        }
+        else {
+            getLogger().logInformation`QueryPrev: at oldest item`;
+        }
+    }
+    public onNextQuery() {
+        let query = this.history.next();
+        if (query !== undefined) {
+            getLogger().logInformation`QueryNext: '${query}'`;
+            this.setQueryString(query);
+            vscode.commands.executeCommand("searchium.query", {
+                ... this.getControlsState(), query
+            }, "history");
+        }
+        else {
+            getLogger().logInformation`QueryNext: at newest item`;
+        }
     }
     private onViewDisposed(webviewView: vscode.WebviewView) {
         getLogger().logDebug`Webview disposed`;
@@ -177,6 +209,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 break;
             case 'execute':
                 let state = this.getControlsState();
+                getLogger().logInformation`Executing query from controls: '${msg.query}'`;
                 vscode.commands.executeCommand("searchium.query", msg);
                 break;
             case 'setQuery':

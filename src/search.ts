@@ -8,6 +8,7 @@ import * as searchium_pb from "./gen/searchium_pb";
 import * as path from "path";
 import assert = require("assert");
 import './extensionsMethods';
+import { SearchHistory } from "./history";
 
 export interface SearchOptions {
     query: string,
@@ -174,7 +175,6 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
             );
         }
         this._onDidChangeTreeData.fire(undefined);
-        treeView.reveal(this.rootResults[0], { select: true, focus: false, expand: false });
     }
     public getTreeItem(element: SearchResult): vscode.TreeItem | Thenable<vscode.TreeItem> {
         switch (element.type) {
@@ -249,24 +249,32 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 
 export class SearchManager {
     private currentNavOperation: Promise<void>;
-    constructor(private provider: SearchResultsProvider, private treeView: vscode.TreeView<SearchResult>, private channel: IpcChannel) {
+    constructor(
+        private readonly provider: SearchResultsProvider,
+        private readonly treeView: vscode.TreeView<SearchResult>,
+        private readonly channel: IpcChannel,
+        private readonly history: SearchHistory
+    ) {
         treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this);
         this.currentNavOperation = Promise.resolve();
     }
 
-    public async onQuery(options: SearchOptions | undefined) {
+    public async onQuery(options: SearchOptions | undefined, type: "history" | undefined) {
         if (options) {
-            return await this.executeSearch(options);
+            return await this.executeSearch(options, type);
         }
         else {
             getLogger().logError`Undefined query string`;
         }
     }
 
-    public async executeSearch(options: Partial<SearchOptions>): Promise<void> {
+    public async executeSearch(options: Partial<SearchOptions>, type: "history" | undefined): Promise<void> {
         // TODO: cancel previous tasks/deal with spamming search requests
         const maxResults = vscode.workspace.getConfiguration("searchium").get<number>("maxResults", 10000);
         this.treeView.badge = undefined;
+        if (type !== "history" && options.query) {
+            this.history.add(options.query);
+        }
         vscode.commands.executeCommand('searchium-results.focus'); // Reveal first to show progress spinner
         await vscode.window.withProgress({ location: { viewId: 'searchium-results' }, cancellable: false, title: "Searching..." },
             async (progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
@@ -282,7 +290,6 @@ export class SearchManager {
                 }))
                     .then((r: ipcResponses.SearchCodeResponse) => {
                         getLogger().logDebug`Search request complete`;
-                        // TODO: compare num results vs max to message truncation 
                         let prefix = "";
                         if (r.hitCount >= maxResults) {
                             vscode.window.showInformationMessage("Search results exceeded configured maximum. Search results will be truncated.");
@@ -290,7 +297,9 @@ export class SearchManager {
                         }
                         this.treeView.badge = { tooltip: `${prefix}${r.hitCount.toLocaleString()} search results`, value: Number(r.hitCount) };
                         this.provider.populate(r, this.treeView);
-                        // TODO: Focus view 
+                        if (type !== "history") {
+                            this.treeView.reveal(this.provider.rootResults[0], { select: true, focus: false, expand: false });
+                        }
                     })
                     .catch((err) => getLogger().logError`Search request failed: ${err}`);
             });

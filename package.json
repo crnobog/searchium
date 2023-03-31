@@ -133,6 +133,16 @@
         "command": "searchium.toggleRegex",
         "key": "alt+r",
         "when": "focusedView == 'searchium-controls'"
+      },
+      {
+        "command": "searchium.previousQuery",
+        "key": "alt+left",
+        "when": "(focusedView == 'searchium-controls') || (focusedView == 'searchium-results')"
+      },
+      {
+        "command": "searchium.nextQuery",
+        "key": "alt+right",
+        "when": "(focusedView == 'searchium-controls') || (focusedView == 'searchium-results')"
       }
     ]
   },

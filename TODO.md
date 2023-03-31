@@ -23,6 +23,7 @@
     seems to be when webview is hidden in bottom panel 
 - [ ] Search history
 - [ ] Last/next search history keybinds 
+- [ ] Changing search options seems to be broken after using history 
 - [ ] Setup bundling 
 - [ ] Detailed index stats
 - [ ] Search time stats 
