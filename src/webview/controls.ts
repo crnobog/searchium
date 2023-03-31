@@ -88,7 +88,6 @@ window.addEventListener("load", () => {
     tagMemory = document.getElementById("tag-memory-usage")!;
     tagState = document.getElementById("tag-index-state")!;
 
-    queryInput.focus();
     console.log("Controls view ready");
     vscode.postMessage({ command: 'ready' });
 });

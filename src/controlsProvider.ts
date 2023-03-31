@@ -220,7 +220,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 
 <body>
     <section id="query-form">
-        <vscode-text-field class="search-input" id="query-input" value="${initialState.query}">
+        <vscode-text-field class="search-input" id="query-input" value="${initialState.query}" autofocus="true">
             <span slot="start" class="codicon codicon-search"></span>
 
             <input type="checkbox" id="check-case-sensitive" slot="end" class="search-inline-check monaco-custom-toggle"
