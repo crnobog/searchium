@@ -16,6 +16,8 @@
 - [x] Progress for indexing 
 - [x] 'Whole word' for search 
 - [x] Redo search when options are toggled 
+- [ ] Add line number to search results
+- [ ] Strip leading whitespace from search results
 - [ ] Keybinding for searching for token under cursor seems not to be updating UI 
 - [ ] Search history
 - [ ] Last/next search history keybinds 
