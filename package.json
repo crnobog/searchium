@@ -67,8 +67,7 @@
         }
       ]
     },
-    "menus": {
-    },
+    "menus": {},
     "commands": [
       {
         "command": "searchium.newSearch",
@@ -147,7 +146,7 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "rimraf out && ts-node ./build.ts --prod",
     "build": "ts-node ./build.ts",
     "watch": "ts-node ./build.ts --watch",
     "pretest": "npm run build && npm run lint",
@@ -168,6 +167,7 @@
     "eslint": "^8.34.0",
     "glob": "^8.1.0",
     "mocha": "^10.2.0",
+    "rimraf": "^4.4.1",
     "ts-node": "^10.9.1",
     "typescript": "~4.7.4"
   },

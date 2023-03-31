@@ -9,3 +9,7 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 bin-debug/**
+node_modules/**
+*.zip
+*.vsix
+proto/**

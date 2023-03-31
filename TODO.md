@@ -21,10 +21,10 @@
 - [x] Strip leading whitespace from search results
 - [x] Keybinding for searching for token under cursor seems not to be updating UI 
     seems to be when webview is hidden in bottom panel 
-- [ ] Search history
-- [ ] Last/next search history keybinds 
+- [x] Search history
+- [x] Last/next search history keybinds 
 - [ ] Changing search options seems to be broken after using history 
-- [ ] Setup bundling 
+- [x] Setup bundling 
 - [ ] Detailed index stats
 - [ ] Search time stats 
 - [ ] Pause/resume/refresh index 

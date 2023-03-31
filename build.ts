@@ -1,10 +1,12 @@
 import * as esbuild from "esbuild";
 import { copy } from "esbuild-plugin-copy";
 
+let prod = process.argv.indexOf('--prod') >= 0;
+
 const baseConfig: esbuild.BuildOptions = {
     bundle: true,
-    minify: process.env.NODE_ENV === 'PRODUCTION',
-    sourcemap: true
+    minify: prod,
+    sourcemap: !prod,
 };
 
 const extensionConfig: esbuild.BuildOptions = {
