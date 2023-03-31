@@ -22,6 +22,13 @@ export class Logger {
         let level = config.get<LoggingLevel>("loggingLevel", "Warning");
         this.outputChannel = vscode.window.createOutputChannel('searchium');
         this.setLogLevel(level);
+
+        vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
+            if (event.affectsConfiguration('seachium')) {
+                let level = config.get<LoggingLevel>("loggingLevel", "Warning");
+                this.setLogLevel(level);
+            }
+        });
     }
 
     public logDebug(strings: TemplateStringsArray, ...insertions: any[]) {
@@ -80,5 +87,7 @@ export class Logger {
             case 'None':
                 break;
         }
+        console.log(`logging level change to ${level}`);
+        this.outputChannel.appendLine(`logging level change to ${level}`);
     }
 }

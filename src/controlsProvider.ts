@@ -36,11 +36,13 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         _resolveContext: vscode.WebviewViewResolveContext<unknown>,
         _token: vscode.CancellationToken): void | Thenable<void> {
 
+        getLogger().logDebug`Starting controls webview`;
         this.webview = webviewView.webview;
         webviewView.webview.options = {
             enableScripts: true
         };
         webviewView.onDidDispose(() => this.onViewDisposed(webviewView));
+        webviewView.onDidChangeVisibility(() => this.sendMessage({ type: "options", ... this.getControlsState() }));
 
         webviewView.webview.html = this.getWebViewContent(webviewView.webview, this.extensionUri, this.getControlsState());
         webviewView.webview.onDidReceiveMessage(this.onMessage, this);
@@ -63,15 +65,20 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             : editor.selection;
         let query = editor.document.getText(range);
         if (query) {
-            this.setQueryString(query);
-            // TODO: Should upate ui state to match these settings?
-            vscode.commands.executeCommand("searchium.query", <SearchOptions>{
-                query,
+            let options = {
                 matchCase: true,
-                pathFilter: "", // TODO: Should inherit path filter or not?
+                pathFilter: "",
+                query,
                 regex: false,
-                wholeWord: editor.selection.isEmpty // Only do whole-word search if we selected the token ourselves 
+                wholeWord: editor.selection.isEmpty
+            };
+            this.updateControlsState(options);
+            this.sendMessage({
+                type: "options",
+                ...options
             });
+            getLogger().logDebug`Executing current-token search for '${options.query}'`;
+            vscode.commands.executeCommand("searchium.query", options);
         }
     }
     public async onJumpToSearchInput() {
@@ -103,6 +110,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         });
     }
     private onViewDisposed(webviewView: vscode.WebviewView) {
+        getLogger().logDebug`Webview disposed`;
         this.webview = undefined;
     }
     private setQueryString(query: string) {
@@ -153,11 +161,16 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     }
 
     private sendMessage(msg: ToWebView.Message) {
-        this.webview?.postMessage(msg);
+        if (this.webview) {
+            this.webview.postMessage(msg);
+        }
+        else {
+            getLogger().logDebug`Dropping message of type ${msg.type} because there is no live webview`;
+        }
     }
 
     private onMessage(msg: FromWebView.Message) {
-        getLogger().log`webview message: ${msg}`;
+        getLogger().logDebug`webview message: ${msg}`;
         switch (msg.command) {
             case 'ready':
                 this.sendStatsToWebview();

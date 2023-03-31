@@ -63,13 +63,13 @@ export class DocumentRegistrationService implements vscode.Disposable {
 
     private registerPath(path: string) {
         this.channel.sendSequentialRequest(new ipcRequests.RegisterFileRequest(path))
-            .then(() => getLogger().log`Completed register for ${path}`)
-            .catch((e) => getLogger().log`Error registering file ${path}: ${e}`);
+            .then(() => getLogger().logDebug`Completed register for ${path}`)
+            .catch((e) => getLogger().logError`Error registering file ${path}: ${e}`);
     }
     // TODO: Refcount for multiple openings of documents? 
     private unregisterPath(path: string) {
         this.channel.sendSequentialRequest(new ipcRequests.UnregisterFileRequest(path))
-            .then(() => getLogger().log`Completed unregister for ${path}`)
-            .catch((e) => getLogger().log`Error unregistering file ${path}: ${e}`);
+            .then(() => getLogger().logDebug`Completed unregister for ${path}`)
+            .catch((e) => getLogger().logError`Error unregistering file ${path}: ${e}`);
     }
 }

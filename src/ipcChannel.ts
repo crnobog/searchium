@@ -44,7 +44,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                 this.dispatchMessage(rawMessage);
             }
             catch (err: any) {
-                getLogger().log`Error dispatching raw message ${rawMessage}: ${err}`;
+                getLogger().logError`Error dispatching raw message ${rawMessage}: ${err}`;
             }
         }
     }

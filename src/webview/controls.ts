@@ -89,33 +89,49 @@ window.addEventListener("load", () => {
     tagState = document.getElementById("tag-index-state")!;
 
     queryInput.focus();
+    console.log("Controls view ready");
     vscode.postMessage({ command: 'ready' });
 });
 window.addEventListener("message", (event: { data: ToWebView.Message }) => {
     let msg = event.data;
     switch (msg.type) {
         case 'nostatus':
+            console.log(`Received nostatus`);
             queryForm.classList.remove("db-available");
             break;
         case 'status':
+            console.log(`Received status`);
             queryForm.classList.add("db-available");
             tagNumFiles.textContent = msg.numFiles;
             tagMemory.textContent = msg.memory;
             tagState.textContent = msg.state;
             break;
+        case "options":
+            console.log(`Received full options with qiuery ${msg.query}`);
+            queryInput.value = msg.query;
+            filterInput.value = msg.pathFilter;
+            matchCaseInput.checked = msg.matchCase;
+            wholeWordInput.checked = msg.wholeWord;
+            regexInput.checked = msg.regex;
+            break; 
         case 'setQuery':
+            console.log("Received setQuery");
             queryInput.value = msg.query;
             break;
         case 'focus':
+            console.log("Received focus");
             queryInput.focus();
             break;
         case 'setMatchCase':
+            console.log("Received setMatchCase");
             matchCaseInput.checked = msg.matchCase;
             break;
         case 'setWholeWord':
+            console.log("Received setWholeWord");
             wholeWordInput.checked = msg.wholeWord;
             break;
         case 'setRegex':
+            console.log("Received setRegex");
             regexInput.checked = msg.regex;
             break;
     }

@@ -26,10 +26,19 @@ export interface SetRegex {
     type: "setRegex",
     regex: boolean;
 }
+export interface SetOptions {
+    type: "options",
+    matchCase: boolean,
+    pathFilter: string,
+    query: string,
+    regex: boolean,
+    wholeWord: boolean,
+}
 export type Message = NoStatusMessage
     | StatusMessage
     | SetQueryMessage
     | FocusMessage
     | SetMatchCase
     | SetWholeWord
-    | SetRegex;
+    | SetRegex
+    | SetOptions;

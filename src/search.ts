@@ -251,7 +251,7 @@ export class SearchManager {
             return await this.executeSearch(options);
         }
         else {
-            getLogger().log`Undefined query string`;
+            getLogger().logError`Undefined query string`;
         }
     }
 
@@ -273,7 +273,7 @@ export class SearchManager {
                     useRe2Engine: false
                 }))
                     .then((r: ipcResponses.SearchCodeResponse) => {
-                        getLogger().log`Search request complete`;
+                        getLogger().logDebug`Search request complete`;
                         // TODO: compare num results vs max to message truncation 
                         let prefix = "";
                         if (r.hitCount >= maxResults) {
@@ -284,7 +284,7 @@ export class SearchManager {
                         this.provider.populate(r, this.treeView);
                         // TODO: Focus view 
                     })
-                    .catch((err) => getLogger().log`Search request failed: ${err}`);
+                    .catch((err) => getLogger().logError`Search request failed: ${err}`);
             });
     }
 
