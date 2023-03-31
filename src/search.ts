@@ -37,13 +37,16 @@ interface FileResult {
     next?: FileResult;
     prev?: FileResult;
 }
-type ExtractResult = PlainMessage<searchium_pb.FileExtract> & {
+type ExtractResult = {
     type: 'extract';
     highlights: [number, number][];
     range: vscode.Range;
     parent: FileResult;
     next?: ExtractResult;
     prev?: ExtractResult;
+    text: string;
+    lineNumber: number;
+    columnNumber: number;
 };
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
@@ -128,16 +131,20 @@ function convertDirectoryResult(
 }
 
 function convertFileExtracts(parent: FileResult, extract: PlainMessage<searchium_pb.FileExtract>, info: PlainMessage<searchium_pb.FilePositionSpan>): ExtractResult {
+    let text = extract.text.trimStart();
+    let trimmed = extract.text.length - text.length;
     let start = info.position - extract.offset;
     let end = start + info.length;
     let range =
         new vscode.Range(extract.lineNumber, extract.columnNumber, extract.lineNumber, extract.columnNumber + end - start);
     return {
         type: "extract",
-        highlights: [[start, end]],
+        highlights: [[start - trimmed, end - trimmed]],
         parent,
         range,
-        ...extract,
+        text: text.trimEnd(),
+        columnNumber: extract.columnNumber,
+        lineNumber: extract.lineNumber
     };
 }
 
@@ -194,6 +201,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                     highlights: element.highlights,
                 };
                 let item = new vscode.TreeItem(label);
+                item.description = `line ${element.lineNumber}`;
                 let showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection: element.range };
                 item.command = {
                     command: "vscode.open",
