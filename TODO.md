@@ -16,9 +16,11 @@
 - [x] Progress for indexing 
 - [x] 'Whole word' for search 
 - [x] Redo search when options are toggled 
+- [ ] Add logging level setting 
 - [ ] Add line number to search results
 - [ ] Strip leading whitespace from search results
 - [ ] Keybinding for searching for token under cursor seems not to be updating UI 
+    seems to be when webview is hidden in bottom panel 
 - [ ] Search history
 - [ ] Last/next search history keybinds 
 - [ ] Setup bundling 

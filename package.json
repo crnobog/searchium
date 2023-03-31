@@ -26,6 +26,18 @@
             "type": "number",
             "default": 10000,
             "description": "Maximum number of search results to return."
+          },
+          "searchium.loggingLevel": {
+            "type": "string",
+            "default": "Error",
+            "enum": [
+              "Debug",
+              "Information",
+              "Warning",
+              "Error",
+              "None"
+            ],
+            "scope": "window"
           }
         }
       }

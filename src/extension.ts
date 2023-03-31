@@ -43,16 +43,16 @@ class ServerProxy implements vscode.Disposable {
         });
         this.listener?.listen();
         const port = await portTask;
-        getLogger().log`Listening on port ${port}`;
+        getLogger().logInformation`Listening on port ${port}`;
 
         let hostExePath = path.join(context.extensionPath, "bin", "VSChromium.Host.exe");
         let serverExePath = path.join(context.extensionPath, "bin", "VSChromium.Server.exe");
         this.proc = child_process.spawn(hostExePath, [serverExePath, `${port}`], { detached: true });
 
         const c = await pendingSocket;
-        getLogger().log`Received connection from search server`;
+        getLogger().logInformation`Received connection from search server`;
         c.on('end', () => {
-            getLogger().log`Search server disconnected`;
+            getLogger().logInformation`Search server disconnected`;
         });
 
         const channel = new IpcChannel(c);
@@ -77,17 +77,17 @@ class ServerProxy implements vscode.Disposable {
 
         try {
             await handshake;
-            getLogger().log`Handshaking successful!`;
+            getLogger().logInformation`Handshaking successful!`;
         }
         catch (err: any) {
             vscode.window.showErrorMessage("Error handshaking with search server process.");
-            getLogger().log`Handshake error: ${err}`;
+            getLogger().logError`Handshake error: ${err}`;
         }
         return channel;
     }
 
     private onError(err: Error) {
-        getLogger().log`Connection error: ${err}`;
+        getLogger().logError`Connection error: ${err}`;
     }
 }
 
@@ -156,45 +156,44 @@ class IndexProgressReporter {
     }
 
     private startListening() {
-        getLogger().log`IndexProgressReporter: start listening`;
+        getLogger().logDebug`IndexProgressReporter: start listening`;
         this.channel.on('event', this.listener);
     }
     private stopListening() {
-        getLogger().log`IndexProgressReporter: stop listening`;
+        getLogger().logDebug`IndexProgressReporter: stop listening`;
         this.channel.off('event', this.listener);
     }
 
     private async startProgress(event: ipcEvents.ProgressReportEvent) {
-        getLogger().log`IndexProgressReporter: starting progress report total ${event.total}`;
+        getLogger().logDebug`IndexProgressReporter: starting progress report total ${event.total}`;
         let reporter = new IndexProgressInstance(event, this.channel);
         this.stopListening();
         await reporter.run(event)
             .then(() => {
-                getLogger().log`IndexProgressReporter: progress for total ${event.total} complete`;
+                getLogger().logDebug`IndexProgressReporter: progress for total ${event.total} complete`;
             })
             .catch((err: any) => {
-                getLogger().log`IndexProgressReporter: progress for total ${event.total} cancelled`;
+                getLogger().logDebug`IndexProgressReporter: progress for total ${event.total} cancelled`;
             });
         this.startListening();
     }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-    getLogger().log`Initializing searchium`;
-
     try {
+        getLogger().logInformation`Initializing searchium`;
         const proxy = new ServerProxy();
         let channel = await proxy.startServer(context);
 
         channel.on('response', (r) => {
             switch (r.responseType) {
                 default:
-                    getLogger().log`response: ${r}`;
+                    getLogger().logDebug`response: ${r}`;
                 case 'searchCode':
                     break;
             }
         });
-        channel.on('event', (e) => getLogger().log`event: ${e}`);
+        channel.on('event', (e) => getLogger().logDebug`event: ${e}`);
 
         let indexState = new IndexState(channel);
         const searchResultsProvider = new SearchResultsProvider(channel);
