@@ -35,7 +35,8 @@
     toggling options - do not focus 
 
 - [ ] Configuration options
-    - [ ] Max search results 
+    - [x] Max search results 
+    - [ ] Max number of extracts per file 
 - [ ] Keybindings 
     - [x] Key bindings for cycling through search results 
     - [x] Key binding to navigate to search window 
