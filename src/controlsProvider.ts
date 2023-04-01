@@ -235,7 +235,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
 
     private getWebViewContent(webview: vscode.Webview, extensionUri: vscode.Uri, initialState: SearchOptions): string {
         const webviewUri = getUri(webview, extensionUri, ["out", "webview", "controls.js"]);
-        const codiconsUri = getUri(webview, extensionUri, ['node_modules', '@vscode/codicons', 'dist', 'codicon.css']);
+        const codiconsUri = getUri(webview, extensionUri, ["out", "webview", 'codicon.css']);
         const stylesheetUri = getUri(webview, extensionUri, ["out", "webview", "style.css"]);
 
         const nonce = getNonce();

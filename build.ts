@@ -27,11 +27,17 @@ const webviewConfig: esbuild.BuildOptions = {
     external: ["acquireVsCodeApi"],
     outdir: "./out/webview",
     plugins: [
-        // Copy webview css and ttf files to `out` directory unaltered
         copy({
             resolveFrom: "cwd",
             assets: {
                 from: ["./src/webview/*.css", "./src/webview/*.ttf"],
+                to: ["./out/webview"],
+            },
+        }),
+        copy({
+            resolveFrom: "cwd",
+            assets: {
+                from: ["./node_modules/@vscode/codicons/dist/*.css"],
                 to: ["./out/webview"],
             },
         }),
@@ -62,6 +68,8 @@ const webviewConfig: esbuild.BuildOptions = {
             console.log("build complete");
         }
     } catch (err: any) {
+        console.error(err.toString());
+        console.error(err.stack);
         process.stderr.write(err.stderr);
         process.exit(1);
     }
