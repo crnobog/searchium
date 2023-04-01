@@ -76,12 +76,18 @@ export class DetailsPanelProvider {
     <section id="details-container" class="hidden">
         <vscode-dropdown id="projects-dropdown"></vscode-dropdown>
         <section id="project-details" class="project-details">
-            <div class="details-element">Number of files scanned:<span id="details-num-files" class="details-element"></span></div>
-            <div class="details-element">Number of directories scanned:<span id="details-num-directories" class="details-element"></span></div>
-            <div class="details-element">Number of searchable files:<span id="details-num-searchable-files" class="details-element"></span></div>
-            <div class="details-element">Total size of searchable files:<span id="details-size-searchable-files" class="details-element"></span></div>
-            <div class="details-element">Number of binary files scanned:<span id="details-num-binary-files" class="details-element"></span></div>
-            <div class="details-element">Total size of binary files:<span id="details-size-binary-files" class="details-element"></span></div>
+            <div class="details-label">Number of files scanned:</div>
+            <span class="details-value" id="details-num-files"></span>
+            <div class="details-label">Number of directories scanned:</div>
+            <span class="details-value" id="details-num-directories"></span>
+            <div class="details-label">Number of searchable files:</div>
+            <span class="details-value" id="details-num-searchable-files"></span>
+            <div class="details-label">Total size of searchable files:</div>
+            <span class="details-value" id="details-size-searchable-files"></span>
+            <div class="details-label">Number of binary files scanned:</div>
+            <span class="details-value" id="details-num-binary-files"></span>
+            <div class="details-label">Total size of binary files:</div>
+            <span class="details-value" id="details-size-binary-files"></span>
         </section>
         <vscode-panels class="details-panels">
             <vscode-panel-tab id="tab-extensions">Types</vscode-panel-tab>
