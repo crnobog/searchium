@@ -115,6 +115,14 @@
         "key": "ctrl+shift+'"
       },
       {
+        "command": "searchium.nextResult",
+        "key": "ctrl+shift+."
+      },
+      {
+        "command": "searchium.previousResult",
+        "key": "ctrl+shift+,"
+      },
+      {
         "command": "searchium.toggleCaseSensitivity",
         "key": "alt+c",
         "when": "focusedView == 'searchium-controls'"
