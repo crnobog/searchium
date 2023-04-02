@@ -13,3 +13,6 @@ node_modules/**
 *.zip
 *.vsix
 proto/**
+tsconfig.*
+buf.gen.yaml
+TODO.md
