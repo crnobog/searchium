@@ -6,7 +6,7 @@ Searchium is a port of the search engine daemon from VsChromium[https://chromium
 
 ## Demo
 
-https://user-images.githubusercontent.com/791661/229328943-034baa3c-8909-4bfe-8cca-e4d3da5668a1.mp4
+<video src="https://user-images.githubusercontent.com/791661/229328943-034baa3c-8909-4bfe-8cca-e4d3da5668a1.mp4"></video>
 
 ## Requirements
 
