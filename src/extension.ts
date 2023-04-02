@@ -227,6 +227,7 @@ export async function activate(context: vscode.ExtensionContext) {
             // todo: rename commands 
             vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),
             vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
+            vscode.commands.registerCommand("searchium.clearHistory", controlsProvider.onClearHistory, controlsProvider),
             vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
 
             vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),

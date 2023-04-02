@@ -34,6 +34,11 @@ export interface SetOptions {
     regex: boolean,
     wholeWord: boolean,
 }
+export interface SetHistoryControls {
+    type: "setHistoryControls",
+    prevEnabled: boolean,
+    nextEnabled: boolean,
+}
 export type Message = NoStatusMessage
     | StatusMessage
     | SetQueryMessage
@@ -41,4 +46,5 @@ export type Message = NoStatusMessage
     | SetMatchCase
     | SetWholeWord
     | SetRegex
-    | SetOptions;
+    | SetOptions
+    | SetHistoryControls;

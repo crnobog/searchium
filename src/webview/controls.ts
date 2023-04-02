@@ -25,6 +25,7 @@ import {
 } from "@vscode/webview-ui-toolkit";
 import * as FromWebView from '../shared/fromControlsWebview';
 import * as ToWebView from '../shared/toControlsWebview';
+import { assertUnreachable } from '../utils';
 
 // In order to use the Webview UI Toolkit web components they
 // must be registered with the browser (i.e. webview) using the
@@ -141,6 +142,12 @@ window.addEventListener("message", (event: { data: ToWebView.Message }) => {
             console.log("Received setRegex");
             regexInput.checked = msg.regex;
             break;
+        case 'setHistoryControls':
+            prevButton.disabled = !msg.prevEnabled;
+            nextButton.disabled = !msg.nextEnabled;
+            break;
+        default:
+            assertUnreachable(msg);
     }
 });
 

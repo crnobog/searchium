@@ -61,7 +61,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         this.setQueryString(query);
         vscode.commands.executeCommand("searchium.query", {
             ... this.getControlsState(), query
-        });
+        }).then(() => this.updateHistoryControls());
     }
     public async onSearchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
         let range = editor.selection.isEmpty
@@ -82,12 +82,16 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 ...options
             });
             getLogger().logDebug`Executing current-token search for '${options.query}'`;
-            vscode.commands.executeCommand("searchium.query", options);
+            vscode.commands.executeCommand("searchium.query", options).then(() => this.updateHistoryControls());
         }
     }
     public async onJumpToSearchInput() {
         await vscode.commands.executeCommand("searchium-controls.focus");
         this.sendMessage(<ToWebView.FocusMessage>{ type: "focus" });
+    }
+    public onClearHistory() {
+        this.history.clearHistory();
+        this.updateHistoryControls();
     }
     public onToggleCaseSensitivity() {
         let matchCase = !this.getControlsState().matchCase;
@@ -128,6 +132,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         else {
             getLogger().logInformation`QueryPrev: at oldest item`;
         }
+        this.updateHistoryControls();
     }
     public onNextQuery() {
         let query = this.history.next();
@@ -141,6 +146,14 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         else {
             getLogger().logInformation`QueryNext: at newest item`;
         }
+        this.updateHistoryControls();
+    }
+    private updateHistoryControls() {
+        this.sendMessage({
+            type: "setHistoryControls",
+            nextEnabled: this.history.canNavigateNext(),
+            prevEnabled: this.history.canNavigatePrev(),
+        });
     }
     private onViewDisposed(webviewView: vscode.WebviewView) {
         getLogger().logDebug`Webview disposed`;
@@ -206,12 +219,13 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         getLogger().logDebug`webview message: ${msg}`;
         switch (msg.command) {
             case 'ready':
+                this.updateHistoryControls();
                 this.sendStatsToWebview();
                 break;
             case 'execute':
                 let state = this.getControlsState();
                 getLogger().logInformation`Executing query from controls: '${msg.query}'`;
-                vscode.commands.executeCommand("searchium.query", msg);
+                vscode.commands.executeCommand("searchium.query", msg).then(() => this.updateHistoryControls());
                 break;
             case 'setQuery':
                 this.updateControlsState({ query: msg.text });
