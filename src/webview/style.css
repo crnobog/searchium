@@ -96,3 +96,24 @@
 .details-panels {
     margin-top: 20px;
 }
+
+.config-details {
+    display: flex;
+    flex-flow: row wrap;
+}
+
+.config-file-path {
+    width: 100%;
+}
+
+.config-section-name {
+    width: 100%;
+}
+
+.config-contents {
+    width: 100%;
+}
+
+.config-details>section {
+    margin: 1rem;
+}

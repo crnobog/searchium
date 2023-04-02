@@ -5,6 +5,8 @@ import * as ipcRequests from './ipcRequests';
 import * as ipcResponses from './ipcResponses';
 import * as FromWebview from './shared/fromDetailsWebview';
 import * as ToWebview from './shared/toDetailsWebview';
+import * as searchium_pb from "./gen/searchium_pb";
+import { PlainMessage } from "@bufbuild/protobuf";
 
 export class DetailsPanelProvider {
     webview?: vscode.Webview;
@@ -17,22 +19,42 @@ export class DetailsPanelProvider {
         const panel = vscode.window.createWebviewPanel('searchium-details', "Searchium Index Details", vscode.ViewColumn.Active, {
             enableScripts: true
         });
-        let ready = new Promise<void>((resolve, reject) => {
-            panel.webview.onDidReceiveMessage((msg) => {
-                resolve();
-            });
-        });
+        panel.webview.onDidReceiveMessage(this.onReceiveMessage.bind(this));
         this.webview = panel.webview;
         panel.webview.html = this.getWebViewContent(panel.webview, this.context.extensionUri);
 
+    }
+
+    private async onReceiveMessage(msg: FromWebview.Message) {
         let response = await this.channel.sendRequest(new ipcRequests.GetDatabaseDetailsRequest(
             100, 100
         )) as ipcResponses.GetDatabaseDetailsResponse;
 
-        await ready;
         this.sendMessage({
             type: "details",
             projects: response.projects.map((p): ToWebview.ProjectDetails => {
+                let toMbString = (value: bigint) =>
+                    `${(Number(value / 1024n) / 1024.0).toFixed(2)} MB`;
+                let mapByExtension = (details: PlainMessage<searchium_pb.FileByExtensionDetails>) => {
+                    return {
+                        extension: details.fileExtension,
+                        count: details.fileCount.toLocaleString(),
+                        size: toMbString(details.fileByteLength)
+                    };
+                };
+                let mapLarge = (details: PlainMessage<searchium_pb.LargeFileDetails>) => {
+                    return {
+                        path: details.relativePath,
+                        size: toMbString(details.byteLength)
+                    };
+                };
+                let mapConfig = (details: PlainMessage<searchium_pb.ProjectConfigurationSectionDetails> | undefined) => {
+                    return {
+                        path: details?.containingFilePath ?? "",
+                        name: details?.name ?? "",
+                        contents: details?.contents ?? "",
+                    };
+                };
                 return {
                     rootPath: p.rootPath,
                     numFiles: (p.directoryDetails?.fileCount ?? 0).toLocaleString(),
@@ -41,6 +63,13 @@ export class DetailsPanelProvider {
                     searchableFilesMB: Number((p.directoryDetails?.searchableFilesByteLength ?? 0n) / 1024n) / 1024.0,
                     numBinaryFiles: (p.directoryDetails?.binaryFilesCount ?? 0).toLocaleString(),
                     binaryFilesMB: Number((p.directoryDetails?.binaryFilesByteLength ?? 0n) / 1024n) / 1024.0,
+                    searchableByExtension: p.directoryDetails?.searchableFilesByExtensionDetails.map(mapByExtension) ?? [],
+                    largeFiles: p.directoryDetails?.largeSearchableFileDetails.map(mapLarge) ?? [],
+                    binaryByExtension: p.directoryDetails?.binaryFilesByExtensionDetails.map(mapByExtension) ?? [],
+                    largeBinaries: p.directoryDetails?.largeBinaryFilesDetails.map(mapLarge) ?? [],
+                    ignorePaths: mapConfig(p.projectConfigurationDetails?.ignorePathsSection),
+                    ignoreFiles: mapConfig(p.projectConfigurationDetails?.ignoreSearchableFilesSection),
+                    includeFiles: mapConfig(p.projectConfigurationDetails?.includeSearchableFilesSection),
                 };
             })
         });
@@ -97,14 +126,69 @@ export class DetailsPanelProvider {
             <vscode-panel-tab id="tab-configuration">Configuration</vscode-panel-tab>
             
             <vscode-panel-view id="view-extensions">
+                <vscode-data-grid id="grid-extensions"
+                grid-template-columns="1fr 1fr 1fr"
+                generate-header="sticky"
+                >
+                </vscode-data-grid>
             </vscode-panel-view>
-            <vscode-panel-view id="view-larger-files">
+            <vscode-panel-view id="view-large-files">
+                <vscode-data-grid id="grid-large-files"
+                grid-template-columns="4fr 1fr"
+                generate-header="sticky"
+                >
+                </vscode-data-grid>
             </vscode-panel-view>
             <vscode-panel-view id="view-binary-extensions">
+                <vscode-data-grid id="grid-binary-extensions"
+                grid-template-columns="1fr 1fr 1fr"
+                generate-header="sticky"
+                >
+                </vscode-data-grid>
             </vscode-panel-view>
             <vscode-panel-view id="view-large-binaries">
+                <vscode-data-grid id="grid-large-binaries"
+                grid-template-columns="4fr 1fr"
+                generate-header="sticky"
+                >
+                </vscode-data-grid>
             </vscode-panel-view>
             <vscode-panel-view id="view-configuration">
+                <section class="config-details">
+                    <section class="ignore-paths">
+                        Ignore Paths
+                        <vscode-divider role="separator"></vscode-divider>
+                        <vscode-text-field class="config-file-path" id="ignore-paths-path" readonly>Config File Path</vscode-text-field>
+                        <vscode-text-field class="config-section-name" id="ignore-paths-name" readonly>Section Name</vscode-text-field>
+                        <vscode-text-area class="config-contents" id="ignore-paths-contents"
+                            rows=10
+                            readonly>
+                            Contents
+                        </vscode-text-area>
+                    </section>
+                    <section class="ignore-files">
+                        Ignore Files
+                        <vscode-divider role="separator"></vscode-divider>
+                        <vscode-text-field class="config-file-path" id="ignore-files-path" readonly>Config File Path</vscode-text-field>
+                        <vscode-text-field class="config-section-name" id="ignore-files-name" readonly>Section Name</vscode-text-field>
+                        <vscode-text-area class="config-contents" id="ignore-files-contents"
+                            rows=10
+                            readonly>
+                            Contents
+                        </vscode-text-area>
+                    </section>
+                    <section class="include-files">
+                        Include Files
+                        <vscode-divider role="separator"></vscode-divider>
+                        <vscode-text-field class="config-file-path" id="include-files-path" readonly>Config File Path</vscode-text-field>
+                        <vscode-text-field class="config-section-name" id="include-files-name" readonly>Section Name</vscode-text-field>
+                        <vscode-text-area class="config-contents" id="include-files-contents"
+                            rows=10
+                            readonly>
+                            Contents
+                        </vscode-text-area>
+                    </section>
+                </section>
             </vscode-panel-view>
         </vscode-panels>
     </section>

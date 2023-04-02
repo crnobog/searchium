@@ -23,9 +23,11 @@
     seems to be when webview is hidden in bottom panel 
 - [x] Search history
 - [x] Last/next search history keybinds 
-- [ ] Changing search options seems to be broken after using history 
+- [x] Changing search options seems to be broken after using history 
 - [x] Setup bundling 
-- [ ] Detailed index stats
+- [x] Detailed index stats
+- [x] Fix moving index stats window
+- [ ] Add buttons for prev/next search 
 - [ ] Search time stats 
 - [ ] Pause/resume/refresh index 
 - [ ] Add tooltips to controls
