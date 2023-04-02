@@ -37,7 +37,7 @@ const webviewConfig: esbuild.BuildOptions = {
         copy({
             resolveFrom: "cwd",
             assets: {
-                from: ["./node_modules/@vscode/codicons/dist/*.css"],
+                from: ["./node_modules/@vscode/codicons/dist/*.css", "./node_modules/@vscode/codicons/dist/*.ttf"],
                 to: ["./out/webview"],
             },
         }),
