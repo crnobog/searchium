@@ -27,7 +27,7 @@
 - [x] Setup bundling 
 - [x] Detailed index stats
 - [x] Fix moving index stats window
-- [ ] Add buttons for prev/next search 
+- [x] Add buttons for prev/next search 
 - [ ] Search time stats 
 - [ ] Pause/resume/refresh index 
 - [ ] Add tooltips to controls
