@@ -21,6 +21,7 @@ import {
     vsCodeTag,
     vsCodeTextArea,
     vsCodeTextField,
+    Button
 } from "@vscode/webview-ui-toolkit";
 import * as FromWebView from '../shared/fromControlsWebview';
 import * as ToWebView from '../shared/toControlsWebview';
@@ -60,7 +61,10 @@ let filterInput: HTMLInputElement;
 let matchCaseInput: HTMLInputElement;
 let wholeWordInput: HTMLInputElement;
 let regexInput: HTMLInputElement;
-let searchButton: HTMLInputElement;
+
+let prevButton: Button;
+let nextButton: Button;
+let searchButton: Button;
 
 let tagNumFiles: HTMLElement;
 let tagMemory: HTMLElement;
@@ -81,8 +85,12 @@ window.addEventListener("load", () => {
     wholeWordInput.addEventListener('change', onWholeWordChange);
     regexInput = document.getElementById("check-regex") as HTMLInputElement;
     regexInput.addEventListener('change', onRegexChange);
-    searchButton = document.getElementById("query-execute") as HTMLInputElement;
+    searchButton = document.getElementById("query-execute") as Button;
     searchButton.addEventListener('click', onExecuteClick);
+    prevButton = document.getElementById("query-prev") as Button;
+    prevButton.addEventListener('click', onPrevClick);
+    nextButton = document.getElementById("query-next") as Button;
+    nextButton.addEventListener('click', onNextClick);
 
     tagNumFiles = document.getElementById("tag-num-files")!;
     tagMemory = document.getElementById("tag-memory-usage")!;
@@ -136,26 +144,33 @@ window.addEventListener("message", (event: { data: ToWebView.Message }) => {
     }
 });
 
-function main() {
+function postMessage(msg: FromWebView.Message) {
+    vscode.postMessage(msg);
 }
 
 function onQueryChange() {
-    vscode.postMessage({ command: "setQuery", text: queryInput.value });
+    postMessage({ command: "setQuery", text: queryInput.value });
 }
 function onFilterChange() {
-    vscode.postMessage({ command: "setFilter", text: filterInput.value });
+    postMessage({ command: "setFilter", text: filterInput.value });
 }
 function onMatchCaseChange() {
-    vscode.postMessage({ command: "setMatchCase", value: matchCaseInput.checked });
+    postMessage({ command: "setMatchCase", value: matchCaseInput.checked });
 }
 function onWholeWordChange() {
-    vscode.postMessage({ command: "setWholeWord", value: wholeWordInput.checked });
+    postMessage({ command: "setWholeWord", value: wholeWordInput.checked });
 }
 function onRegexChange() {
-    vscode.postMessage({ command: "setRegex", value: regexInput.checked });
+    postMessage({ command: "setRegex", value: regexInput.checked });
 }
 function onExecuteClick() {
-    vscode.postMessage(createQueryCommand());
+    postMessage(createQueryCommand());
+}
+function onPrevClick() {
+    postMessage({ command: "prevQuery" });
+}
+function onNextClick() {
+    postMessage({ command: "nextQuery" });
 }
 function onFormKeyUp(e: KeyboardEvent) {
     if (e.key === "Enter") {
@@ -163,7 +178,7 @@ function onFormKeyUp(e: KeyboardEvent) {
     }
 }
 
-function createQueryCommand() {
+function createQueryCommand(): FromWebView.Execute {
     return {
         command: "execute",
         query: queryInput.value,

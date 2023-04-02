@@ -11,8 +11,6 @@
 }
 
 .search-input {
-    /* margin-bottom: 0.5rem;
-                                margin-top: 0.5rem; */
     margin-top: 5px;
     width: 100%;
 }
@@ -39,6 +37,10 @@
     width: 100%;
     margin-top: 5px;
     justify-content: space-between;
+}
+
+.control-buttons {
+    justify-items: right;
 }
 
 .db-needed {

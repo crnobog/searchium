@@ -29,10 +29,19 @@ export interface Execute {
     wholeWord: boolean;
     regex: boolean;
 }
+export interface PrevQuery {
+    command: "prevQuery"
+}
+export interface NextQuery {
+    command: "nextQuery"
+}
 export type Message = Ready
     | QueryChanged
     | FilterChanged
     | MatchCaseChanged
     | WholeWordChanged
     | RegexChanged
-    | Execute;
+    | Execute
+    | PrevQuery
+    | NextQuery
+    ;

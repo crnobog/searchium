@@ -8,6 +8,7 @@ import * as ToWebView from './shared/toControlsWebview';
 import * as FromWebView from './shared/fromControlsWebview';
 import { getUri, getNonce } from './webviewUtils';
 import { SearchHistory } from './history';
+import { assertUnreachable } from './utils';
 
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
     query: "",
@@ -230,6 +231,14 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 this.updateControlsState({ regex: msg.value });
                 vscode.commands.executeCommand("searchium.query", this.getControlsState());
                 break;
+            case 'nextQuery':
+                this.onNextQuery();
+                break;
+            case 'prevQuery':
+                this.onPreviousQuery();
+                break;
+            default:
+                assertUnreachable(msg);
         }
     }
 
@@ -280,7 +289,15 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 <vscode-tag class="db-needed" id="tag-index-state"></vscode-tag>
                 <vscode-tag  id="tag-no-db">No DB</vscode-tag>
             </span>
-            <vscode-button appearance="primary" id="query-execute">Search</vscode-button>
+            <span class="control-buttons">
+                <vscode-button appearance="icon" id="query-prev">
+                    <span class="codicon codicon-arrow-left"></span>
+                </vscode-button>
+                <vscode-button appearance="icon" id="query-next">
+                    <span class="codicon codicon-arrow-right"></span>
+                </vscode-button>
+                <vscode-button appearance="primary" id="query-execute">Search</vscode-button>
+            </span>
         </div>
     </section>
     <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
