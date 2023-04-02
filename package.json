@@ -2,6 +2,7 @@
   "name": "searchium",
   "displayName": "searchium",
   "description": "local indexing process for accelerated search",
+  "icon": "media/search-bolt-rounded.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/crnobog/searchium.git"
