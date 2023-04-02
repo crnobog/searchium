@@ -23,8 +23,10 @@ export class SearchHistory {
 
     public prev(): string | undefined {
         if (this.index < this.items.length) {
-            ++this.index;
             let string = this.items[this.index];
+            if (this.index < (this.items.length - 1)) {
+                this.index = ++this.index;
+            }
             getLogger().logDebug`HistoryPrev new index ${this.index}`;
             return string;
         }
