@@ -35,10 +35,6 @@ export class DocumentRegistrationService implements vscode.Disposable {
             }
             this.registerPath(uri.fsPath);
         }
-        this.context.subscriptions.push(
-            vscode.workspace.onDidOpenTextDocument(this.onTextDocumentOpened, this),
-            vscode.workspace.onDidCloseTextDocument(this.onTextDocumentClosed, this)
-        );
     }
 
     private onWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent) {
@@ -52,13 +48,6 @@ export class DocumentRegistrationService implements vscode.Disposable {
                 this.unregisterPath(removed.uri.fsPath);
             }
         }
-    }
-
-    private onTextDocumentOpened(doc: vscode.TextDocument) {
-        if (doc.uri.scheme === 'file') { this.registerPath(doc.uri.fsPath); }
-    }
-    private onTextDocumentClosed(doc: vscode.TextDocument) {
-        if (doc.uri.scheme === 'file') { this.unregisterPath(doc.uri.fsPath); }
     }
 
     private registerPath(path: string) {
