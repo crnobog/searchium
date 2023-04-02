@@ -2,7 +2,7 @@
 
 ## Features
 
-Searchium is a port of the search engine daemon from VsChromium[https://chromium.github.io/vs-chromium/] to VS Code.
+Searchium is a port of the search engine daemon from [VsChromium](https://chromium.github.io/vs-chromium/) to VS Code.
 
 ## Demo
 
