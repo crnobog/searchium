@@ -8,13 +8,29 @@ import * as ipcEvents from './ipcEvents';
 import * as ipc from './ipc';
 import { IpcChannel } from './ipcChannel';
 import { getLogger } from './logger';
-import * as searchium_pb from './gen/searchium_pb';
+import * as searchium_pb from './gen/searchium';
 import { SearchResultsProvider, SearchManager } from './search';
 import { ControlsProvider } from './controlsProvider';
 import { IndexState } from './indexState';
 import { FileSearchManager } from './fileSearch';
 import { DetailsPanelProvider } from './detailsPanel';
 import { SearchHistory } from './history';
+
+class ServerProcess implements vscode.Disposable {
+    proc?: child_process.ChildProcessWithoutNullStreams;
+    constructor() {
+    }
+
+    public dispose() {
+        this.proc?.kill();
+    }
+
+    public async startServer(context: vscode.ExtensionContext) {
+        // let serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
+        // this.proc = child_process.spawn(serverExePath, [], { detached: true });
+
+    }
+}
 
 class ServerProxy implements vscode.Disposable {
     listener?: Server;
@@ -61,10 +77,10 @@ class ServerProxy implements vscode.Disposable {
         const handshake = new Promise<void>((resolve, reject) => {
             channel.once('raw', (r: searchium_pb.IpcMessage) => {
                 if (!r.data) { return reject("Empty initial response"); }
-                if (r.data.subtype.case !== 'ipcStringData') {
+                if (r.data.subtype.oneofKind !== 'ipcStringData') {
                     return reject(new Error("Expected initial response to contain string data"));
                 }
-                let message = r.data.subtype.value.text;
+                let message = r.data.subtype.ipcStringData.text;
                 if (message !== 'Hello!') {
                     return reject(new Error("Expected initial response string to be 'Hello!'"));
                 }
@@ -185,6 +201,13 @@ export async function activate(context: vscode.ExtensionContext) {
         getLogger().logInformation`Initializing searchium`;
         const proxy = new ServerProxy();
         let channel = await proxy.startServer(context);
+
+        const process = new ServerProcess(); // v2 rust server 
+        try {
+            await process.startServer(context);
+        } catch (error) {
+            getLogger().logError`Error starting v2 server ${error}`;
+        }
 
         channel.on('response', (r) => {
             switch (r.responseType) {

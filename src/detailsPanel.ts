@@ -5,8 +5,7 @@ import * as ipcRequests from './ipcRequests';
 import * as ipcResponses from './ipcResponses';
 import * as FromWebview from './shared/fromDetailsWebview';
 import * as ToWebview from './shared/toDetailsWebview';
-import * as searchium_pb from "./gen/searchium_pb";
-import { PlainMessage } from "@bufbuild/protobuf";
+import * as searchium_pb from "./gen/searchium";
 
 export class DetailsPanelProvider {
     webview?: vscode.Webview;
@@ -35,20 +34,20 @@ export class DetailsPanelProvider {
             projects: response.projects.map((p): ToWebview.ProjectDetails => {
                 let toMbString = (value: bigint) =>
                     `${(Number(value / 1024n) / 1024.0).toFixed(2)} MB`;
-                let mapByExtension = (details: PlainMessage<searchium_pb.FileByExtensionDetails>) => {
+                let mapByExtension = (details: searchium_pb.FileByExtensionDetails) => {
                     return {
                         extension: details.fileExtension,
                         count: details.fileCount.toLocaleString(),
                         size: toMbString(details.fileByteLength)
                     };
                 };
-                let mapLarge = (details: PlainMessage<searchium_pb.LargeFileDetails>) => {
+                let mapLarge = (details: searchium_pb.LargeFileDetails) => {
                     return {
                         path: details.relativePath,
                         size: toMbString(details.byteLength)
                     };
                 };
-                let mapConfig = (details: PlainMessage<searchium_pb.ProjectConfigurationSectionDetails> | undefined) => {
+                let mapConfig = (details: searchium_pb.ProjectConfigurationSectionDetails | undefined) => {
                     return {
                         path: details?.containingFilePath ?? "",
                         name: details?.name ?? "",

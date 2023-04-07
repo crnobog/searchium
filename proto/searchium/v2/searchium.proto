@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package searchium.v2;
+
+// import "google/type/datetime.proto"
+
+message HelloRequest {
+  string id = 1;  
+}
+message HelloResponse {
+  string id = 1;
+}
+
+service SearchiumService { 
+  rpc Hello(HelloRequest) returns (HelloResponse);
+}

@@ -1,10 +1,9 @@
-import { PlainMessage } from "@bufbuild/protobuf";
 import * as vscode from "vscode";
 import { IpcChannel } from "./ipcChannel";
 import * as ipcRequests from "./ipcRequests";
 import * as ipcResponses from "./ipcResponses";
 import { getLogger } from "./logger";
-import * as searchium_pb from "./gen/searchium_pb";
+import * as searchium_pb from "./gen/searchium";
 import * as path from "path";
 import assert = require("assert");
 import './extensionsMethods';
@@ -32,7 +31,7 @@ interface FileResult {
     name: string;
     path: string;
     uri: vscode.Uri;
-    positions: PlainMessage<searchium_pb.FilePositionSpan>[];
+    positions: searchium_pb.FilePositionSpan[];
     extracts: () => Promise<ExtractResult[]>;
     parent: DirectoryResult,
     next?: FileResult;
@@ -72,10 +71,10 @@ async function getFileExtracts(channel: IpcChannel, file: FileResult) {
 function convertFileResult(
     channel: IpcChannel,
     parent: DirectoryResult,
-    entry: PlainMessage<searchium_pb.FileSystemEntry>,
+    entry: searchium_pb.FileSystemEntry,
     parentPath?: string): FileResult {
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
-    switch (entry.subtype.case) {
+    switch (entry.subtype.oneofKind) {
         case 'directoryEntry':
             throw new Error("Unexpected directory entry");
         case 'fileEntry':
@@ -100,11 +99,11 @@ function convertFileResult(
 
 function convertDirectoryResult(
     channel: IpcChannel,
-    entry: PlainMessage<searchium_pb.FileSystemEntry>,
+    entry: searchium_pb.FileSystemEntry,
     parentPath?: string
 ): DirectoryResult {
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
-    switch (entry.subtype.case) {
+    switch (entry.subtype.oneofKind) {
         case 'directoryEntry':
             let dir: DirectoryResult = {
                 type: 'directory',
@@ -113,7 +112,7 @@ function convertDirectoryResult(
                 parent: undefined,
                 children: []
             };
-            dir.children = entry.subtype.value.entries.map((e) =>
+            dir.children = entry.subtype.directoryEntry.entries.map((e) =>
                 convertFileResult(channel, dir, e, thisPath)
             );
             for (let i = 0; i < dir.children.length; ++i) {
@@ -131,7 +130,7 @@ function convertDirectoryResult(
     }
 }
 
-function convertFileExtracts(parent: FileResult, extract: PlainMessage<searchium_pb.FileExtract>, info: PlainMessage<searchium_pb.FilePositionSpan>): ExtractResult {
+function convertFileExtracts(parent: FileResult, extract: searchium_pb.FileExtract, info: searchium_pb.FilePositionSpan): ExtractResult {
     let text = extract.text.trimStart();
     let trimmed = extract.text.length - text.length;
     let start = info.position - extract.offset;
@@ -169,8 +168,8 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
         this.treeView = treeView;
         this.currentRequestId = r.requestId;
         this.rootResults = [];
-        if (r.searchResults.subtype.case === 'directoryEntry') {
-            this.rootResults = r.searchResults.subtype.value.entries.map((e) =>
+        if (r.searchResults.subtype.oneofKind === 'directoryEntry') {
+            this.rootResults = r.searchResults.subtype.directoryEntry.entries.map((e) =>
                 convertDirectoryResult(this.channel, e)
             );
         }

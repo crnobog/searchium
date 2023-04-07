@@ -77,16 +77,16 @@ export class FileSearchManager {
             return [];
         }
 
-        if (results.searchResult.subtype.case !== 'directoryEntry') {
+        if (results.searchResult.subtype.oneofKind !== 'directoryEntry') {
             return []; // TODO error 
         }
-        let root = results.searchResult.subtype.value;
+        let root = results.searchResult.subtype.directoryEntry;
         let files = [];
         for (let dir of root.entries) {
-            if (dir.subtype.case !== 'directoryEntry') { continue; }
+            if (dir.subtype.oneofKind !== 'directoryEntry') { continue; }
             // TODO: dividor/group per directory/project 
-            for (let file of dir.subtype.value.entries) {
-                if (file.subtype.case !== 'fileEntry') { continue; }
+            for (let file of dir.subtype.directoryEntry.entries) {
+                if (file.subtype.oneofKind !== 'fileEntry') { continue; }
                 files.push(new FileResult(file.name));
             }
         }

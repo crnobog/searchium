@@ -3,7 +3,7 @@ import { getLogger } from './logger';
 import { SearchOptions } from './search';
 import { IndexState } from './indexState';
 import { GetDatabaseStatisticsResponse } from './ipcResponses';
-import { IndexingServerStatus } from './gen/searchium_pb';
+import { IndexingServerStatus } from './gen/searchium';
 import * as ToWebView from './shared/toControlsWebview';
 import * as FromWebView from './shared/fromControlsWebview';
 import { getUri, getNonce } from './webviewUtils';

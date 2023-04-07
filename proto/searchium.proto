@@ -2,6 +2,8 @@ syntax = "proto3";
 
 import "protobuf-net/bcl.proto";
 
+package searchium.v1;
+
 message IpcMessage {
   int64 request_id = 1;
   string protocol = 2;

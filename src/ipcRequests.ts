@@ -1,13 +1,12 @@
-import * as searchium_pb from './gen/searchium_pb';
-import { PlainMessage } from '@bufbuild/protobuf';
+import * as searchium_pb from './gen/searchium';
 
 export class RegisterFileRequest {
     constructor(public fileName: string) { }
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: "registerFileRequest",
-                value: { fileName: this.fileName }
+                oneofKind: "registerFileRequest",
+                registerFileRequest: { fileName: this.fileName }
             }
         };
     }
@@ -16,11 +15,11 @@ export class RegisterFileRequest {
 export class UnregisterFileRequest {
     constructor(public fileName: string) { }
 
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: "unregisterFileRequest",
-                value: { fileName: this.fileName }
+                oneofKind: "unregisterFileRequest",
+                unregisterFileRequest: { fileName: this.fileName }
             }
         };
     }
@@ -28,14 +27,14 @@ export class UnregisterFileRequest {
 
 export class SearchCodeRequest {
     constructor(
-        public searchParams: PlainMessage<searchium_pb.SearchParams>) {
+        public searchParams: searchium_pb.SearchParams) {
     }
 
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: "searchCodeRequest",
-                value: { searchParams: this.searchParams }
+                oneofKind: "searchCodeRequest",
+                searchCodeRequest: { searchParams: this.searchParams }
             }
         };
     }
@@ -44,15 +43,15 @@ export class SearchCodeRequest {
 export class GetFileExtractsRequest {
     constructor(
         public fileName: string,
-        public positions: PlainMessage<searchium_pb.FilePositionSpan>[],
+        public positions: searchium_pb.FilePositionSpan[],
         public maxExtractLength: number) {
     }
 
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: "getFileExtractsRequest",
-                value: {
+                oneofKind: "getFileExtractsRequest",
+                getFileExtractsRequest: {
                     fileName: this.fileName,
                     positions: this.positions,
                     maxExtractLength: this.maxExtractLength,
@@ -65,11 +64,11 @@ export class GetFileExtractsRequest {
 export class GetDatabaseStatisticsRequest {
     constructor() { }
 
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: 'getDatabaseStatisticsRequest',
-                value: {
+                oneofKind: 'getDatabaseStatisticsRequest',
+                getDatabaseStatisticsRequest: {
                     forceGarbageCollection: false
                 }
             }
@@ -79,14 +78,14 @@ export class GetDatabaseStatisticsRequest {
 
 export class SearchFilePathsRequest {
     constructor(
-        private searchParams: PlainMessage<searchium_pb.SearchParams>
+        private searchParams: searchium_pb.SearchParams
     ) { }
 
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: 'searchFilePathsRequest',
-                value: {
+                oneofKind: 'searchFilePathsRequest',
+                searchFilePathsRequest: {
                     searchParams: this.searchParams
                 }
             }
@@ -101,11 +100,11 @@ export class GetDatabaseDetailsRequest {
     ) {
     }
 
-    public toProto(): PlainMessage<searchium_pb.TypedRequest> {
+    public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {
-                case: 'getDatabaseDetailsRequest',
-                value: {
+                oneofKind: 'getDatabaseDetailsRequest',
+                getDatabaseDetailsRequest: {
                     maxFilesByExtensionDetailsCount: this.maxFilesByExtensionDetails,
                     maxLargeFilesDetailsCount: this.maxLargeFilesDetailsCount,
                 }

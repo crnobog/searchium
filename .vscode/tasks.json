@@ -22,9 +22,12 @@
 				"kind": "build",
 				"isDefault": true
 			},
-			"problemMatcher": [],
-			"label": "npm: compile",
-			"detail": "tsc -p ./"
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"label": "npm: build",
+			"detail": "build extension"
 		},
 		{
 			"type": "npm",

@@ -1,5 +1,4 @@
-import { PlainMessage } from '@bufbuild/protobuf';
-import * as searchium_pb from './gen/searchium_pb';
+import * as searchium_pb from './gen/searchium';
 
 export interface ResponseBase {
     requestId: bigint;
@@ -12,7 +11,7 @@ export interface DoneResponse extends ResponseBase {
 
 export interface SearchCodeResponse extends ResponseBase {
     responseType: "searchCode";
-    searchResults: PlainMessage<searchium_pb.FileSystemEntry>; // should always be a DirectoryEntry
+    searchResults: searchium_pb.FileSystemEntry; // should always be a DirectoryEntry
     hitCount: bigint;
     searchedFileCount: bigint;
     totalFileCount: bigint;
@@ -21,7 +20,7 @@ export interface SearchCodeResponse extends ResponseBase {
 export interface GetFileExtractsResponse extends ResponseBase {
     responseType: "getFileExtracts";
     fileName: string;
-    fileExtracts: PlainMessage<searchium_pb.FileExtract>[];
+    fileExtracts: searchium_pb.FileExtract[];
 }
 
 export interface GetDatabaseStatisticsResponse extends ResponseBase {
@@ -37,14 +36,14 @@ export interface GetDatabaseStatisticsResponse extends ResponseBase {
 
 export interface SearchFilePathsResponse extends ResponseBase {
     responseType: "searchFilePaths";
-    searchResult: PlainMessage<searchium_pb.FileSystemEntry>;
+    searchResult: searchium_pb.FileSystemEntry;
     hitCount: bigint;
     totalCount: bigint;
 }
 
 export interface GetDatabaseDetailsResponse extends ResponseBase {
     responseType: "getDatabaseDetails";
-    projects: PlainMessage<searchium_pb.ProjectDetails>[]
+    projects: searchium_pb.ProjectDetails[]
 }
 
 export type Response = DoneResponse

@@ -162,6 +162,7 @@ function setProjectDetails(p: ToWebView.ProjectDetails) {
     detailsNumBinaryFiles.textContent = p.numBinaryFiles;
     detailsSizeBinaryFiles.textContent = `${p.binaryFilesMB.toFixed(2)} MB`;
 
+    /* eslint-disable @typescript-eslint/naming-convention */
     extensionsGrid.rowsData = p.searchableByExtension.map((x: ToWebView.FileByExtensionDetails) => {
         return {
             "File Extension": x.extension,
@@ -181,13 +182,14 @@ function setProjectDetails(p: ToWebView.ProjectDetails) {
             "Count": x.count,
             "Total Size": x.size,
         };
-    })
+    });
     largeBinariesGrid.rowsData = p.largeBinaries.map((x: ToWebView.LargeFileDetails) => {
         return {
             "Path": x.path,
             "Size": x.size
         };
     });
+    /* eslint-enable @typescript-eslint/naming-convention */
 
     ignorePathsPath.value = p.ignorePaths.path;
     ignorePathsSectionName.value = p.ignorePaths.name;

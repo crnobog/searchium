@@ -1,5 +1,5 @@
 import { ErrorResponse } from "./ipc";
-import * as searchium_pb from './gen/searchium_pb';
+import * as searchium_pb from './gen/searchium';
 
 export interface Event {
     requestId: bigint;
