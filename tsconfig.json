@@ -21,7 +21,7 @@
 		"src/*"
 	],
 	"exclude": [
-		"src/webview/*",
+		"src/views/*",
 		"node_modules"
 	]
 }
