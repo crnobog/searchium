@@ -12,6 +12,9 @@ import { ControlsProvider } from './controlsProvider';
 import { IndexState } from './indexState';
 import { DetailsPanelProvider } from './detailsPanel';
 import { SearchHistory } from './history';
+import { GrpcTransport } from "@protobuf-ts/grpc-transport";
+import { ChannelCredentials } from "@grpc/grpc-js";
+import { SearchiumServiceClient } from './gen/searchium/v2/searchium.client';
 
 class ServerProcess implements vscode.Disposable {
     proc?: child_process.ChildProcessWithoutNullStreams;
@@ -20,9 +23,37 @@ class ServerProcess implements vscode.Disposable {
         this.proc?.kill();
     }
 
-    public async startServer(_context: vscode.ExtensionContext): Promise<void> {
-        // let serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
-        // this.proc = child_process.spawn(serverExePath, [], { detached: true });
+    public async startServer(context: vscode.ExtensionContext): Promise<void> {
+        const serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
+        const proc = child_process.spawn(serverExePath, [], { detached: true });
+        this.proc = proc;
+        const host: string = await new Promise((resolve, _reject) => {
+            let msg = "";
+            const listener = (s: string): void => {
+                msg += s;
+                const i = msg.indexOf('\n');
+                if (i !== -1) {
+                    proc.stdout.off('data', listener);
+                    resolve(msg.substring(0, i));
+                }
+            };
+            proc.stdout.on('data', listener);
+            // TODO: Error conditions
+        });
+        const transport = new GrpcTransport({
+            host,
+            channelCredentials: ChannelCredentials.createInsecure(),
+        });
+
+        const client = new SearchiumServiceClient(transport);
+        client.hello({ id: "node" })
+            .then((resp) => {
+                const r = resp.response;
+                getLogger().logInformation`grpc response ${JSON.stringify(r)}`;
+            })
+            .catch((err: Error) => {
+                getLogger().logError`Error ${err}`;
+            });
 
     }
 }
