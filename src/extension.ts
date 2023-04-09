@@ -1,139 +1,15 @@
-import * as child_process from 'child_process';
-import { AddressInfo, createServer, Server, Socket } from 'net';
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { DocumentRegistrationService } from './documentRegistrationService';
 import * as ipcEvents from './ipcEvents';
 import { IpcChannel } from './ipcChannel';
 import { getLogger } from './logger';
-import * as searchium_pb from './gen/searchium';
 import { SearchResultsProvider, SearchManager } from './search';
 import { ControlsProvider } from './controlsProvider';
 import { IndexState } from './indexState';
 import { DetailsPanelProvider } from './detailsPanel';
 import { SearchHistory } from './history';
-import { GrpcTransport } from "@protobuf-ts/grpc-transport";
-import { ChannelCredentials } from "@grpc/grpc-js";
-import { SearchiumServiceClient } from './gen/searchium/v2/searchium.client';
-
-class ServerProcess implements vscode.Disposable {
-    proc?: child_process.ChildProcessWithoutNullStreams;
-
-    public dispose(): void {
-        this.proc?.kill();
-    }
-
-    public async startServer(context: vscode.ExtensionContext): Promise<void> {
-        const serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
-        const proc = child_process.spawn(serverExePath, [], { detached: true });
-        this.proc = proc;
-        const host: string = await new Promise((resolve, _reject) => {
-            let msg = "";
-            const listener = (s: string): void => {
-                msg += s;
-                const i = msg.indexOf('\n');
-                if (i !== -1) {
-                    proc.stdout.off('data', listener);
-                    resolve(msg.substring(0, i));
-                }
-            };
-            proc.stdout.on('data', listener);
-            // TODO: Error conditions
-        });
-        const transport = new GrpcTransport({
-            host,
-            channelCredentials: ChannelCredentials.createInsecure(),
-        });
-
-        const client = new SearchiumServiceClient(transport);
-        client.hello({ id: "node" })
-            .then((resp) => {
-                const r = resp.response;
-                getLogger().logInformation`grpc response ${JSON.stringify(r)}`;
-            })
-            .catch((err: Error) => {
-                getLogger().logError`Error ${err}`;
-            });
-
-    }
-}
-
-class ServerProxy implements vscode.Disposable {
-    listener?: Server;
-    proc?: child_process.ChildProcessWithoutNullStreams;
-
-    public dispose(): void {
-        this.listener?.close();
-        this.proc?.kill();
-    }
-
-    public async startServer(context: vscode.ExtensionContext): Promise<IpcChannel> {
-        const pendingSocket = new Promise<Socket>((resolve, reject) => {
-            try {
-                this.listener = createServer((c) => resolve(c));
-            } catch (error) {
-                reject(error);
-            }
-        });
-        this.listener?.on('error', this.onError.bind(this));
-        context.subscriptions.push(this);
-
-        const portTask = new Promise<number>((resolve, reject) => {
-            this.listener?.on('error', (e) => { reject(e); });
-            this.listener?.on('listening', () => {
-                const port = (this.listener?.address() as AddressInfo).port;
-                resolve(port);
-            });
-        });
-        this.listener?.listen();
-        const port = await portTask;
-        getLogger().logInformation`Listening on port ${port}`;
-
-        const hostExePath = path.join(context.extensionPath, "bin", "VSChromium.Host.exe");
-        const serverExePath = path.join(context.extensionPath, "bin", "VSChromium.Server.exe");
-        this.proc = child_process.spawn(hostExePath, [serverExePath, `${port}`], { detached: true });
-
-        const c = await pendingSocket;
-        getLogger().logInformation`Received connection from search server`;
-        c.on('end', () => {
-            getLogger().logInformation`Search server disconnected`;
-        });
-
-        const channel = new IpcChannel(c);
-        context.subscriptions.push(channel);
-        const handshake = new Promise<void>((resolve, reject) => {
-            channel.once('raw', (r: searchium_pb.IpcMessage) => {
-                if (!r.data) { return reject("Empty initial response"); }
-                if (r.data.subtype.oneofKind !== 'ipcStringData') {
-                    return reject(new Error("Expected initial response to contain string data"));
-                }
-                const message = r.data.subtype.ipcStringData.text;
-                if (message !== 'Hello!') {
-                    return reject(new Error("Expected initial response string to be 'Hello!'"));
-                }
-                resolve();
-            });
-        });
-
-        process.nextTick(async () => {
-            await channel.drainDispatch();
-        });
-
-        try {
-            await handshake;
-            getLogger().logInformation`Handshaking successful!`;
-        }
-        catch (err) {
-            vscode.window.showErrorMessage("Error handshaking with search server process.");
-            getLogger().logError`Handshake error: ${err}`;
-        }
-        return channel;
-    }
-
-    private onError(err: Error): void {
-        getLogger().logError`Connection error: ${err}`;
-    }
-}
+import { startServer } from './index/indexServerProcess';
+import { startLegacyServer } from './index/legacy/legacyServerProcess';
 
 class IndexProgressInstance {
     total: number;
@@ -226,67 +102,70 @@ class IndexProgressReporter implements vscode.Disposable {
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     try {
         getLogger().logInformation`Initializing searchium`;
-        const proxy = new ServerProxy();
-        const channel = await proxy.startServer(context);
+        const config = vscode.workspace.getConfiguration("searchium");
+        const useLegacyServer = config.get<boolean>("useLegacyServer", true);
 
-        const process = new ServerProcess(); // v2 rust server 
-        try {
-            await process.startServer(context);
-        } catch (error) {
-            getLogger().logError`Error starting v2 server ${error}`;
+        if (useLegacyServer) {
+            const [proxy, channel, client] = await startLegacyServer(context);
+            context.subscriptions.push(proxy);
+
+            channel.on('response', (r) => {
+                switch (r.responseType) {
+                    default:
+                        getLogger().logDebug`response: ${r}`;
+                        break;
+                    case 'searchCode':
+                        break;
+                }
+            });
+            channel.on('event', (e) => getLogger().logDebug`event: ${e}`);
+
+            const indexState = new IndexState(channel);
+            const history = new SearchHistory(context);
+
+            const searchResultsProvider = new SearchResultsProvider(channel);
+            context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
+            const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
+                { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
+            const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel, history);
+
+            const controlsProvider = new ControlsProvider(context, context.extensionUri, indexState, history);
+            context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
+
+            context.subscriptions.push(new IndexProgressReporter(channel));
+            context.subscriptions.push(new DocumentRegistrationService(context, client));
+
+            // const fileSearchManager = new FileSearchManager(channel);
+            const detailsPanelProvider = new DetailsPanelProvider(context, channel);
+
+            context.subscriptions.push(
+                vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
+                vscode.commands.registerCommand('searchium.nextResult', searchManager.navigateToNextResult, searchManager),
+                vscode.commands.registerCommand('searchium.previousResult', searchManager.navigateToPreviousResult, searchManager),
+
+                // Not working very well with chromium server
+                // vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager),
+
+                vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
+
+                // todo: rename commands 
+                vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),
+                vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
+                vscode.commands.registerCommand("searchium.clearHistory", controlsProvider.onClearHistory, controlsProvider),
+                vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
+
+                vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
+                vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),
+                vscode.commands.registerCommand("searchium.toggleRegex", controlsProvider.onToggleRegex, controlsProvider),
+                vscode.commands.registerCommand("searchium.previousQuery", controlsProvider.onPreviousQuery, controlsProvider),
+                vscode.commands.registerCommand("searchium.nextQuery", controlsProvider.onNextQuery, controlsProvider),
+            );
         }
-
-        channel.on('response', (r) => {
-            switch (r.responseType) {
-                default:
-                    getLogger().logDebug`response: ${r}`;
-                    break;
-                case 'searchCode':
-                    break;
-            }
-        });
-        channel.on('event', (e) => getLogger().logDebug`event: ${e}`);
-
-        const indexState = new IndexState(channel);
-        const history = new SearchHistory(context);
-
-        const searchResultsProvider = new SearchResultsProvider(channel);
-        context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
-        const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
-            { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
-        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel, history);
-
-        const controlsProvider = new ControlsProvider(context, context.extensionUri, indexState, history);
-        context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
-
-        context.subscriptions.push(new IndexProgressReporter(channel));
-        context.subscriptions.push(new DocumentRegistrationService(context, channel));
-
-        // const fileSearchManager = new FileSearchManager(channel);
-        const detailsPanelProvider = new DetailsPanelProvider(context, channel);
-
-        context.subscriptions.push(
-            vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
-            vscode.commands.registerCommand('searchium.nextResult', searchManager.navigateToNextResult, searchManager),
-            vscode.commands.registerCommand('searchium.previousResult', searchManager.navigateToPreviousResult, searchManager),
-
-            // Not working very well with chromium server
-            // vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager),
-
-            vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
-
-            // todo: rename commands 
-            vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),
-            vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
-            vscode.commands.registerCommand("searchium.clearHistory", controlsProvider.onClearHistory, controlsProvider),
-            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
-
-            vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
-            vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),
-            vscode.commands.registerCommand("searchium.toggleRegex", controlsProvider.onToggleRegex, controlsProvider),
-            vscode.commands.registerCommand("searchium.previousQuery", controlsProvider.onPreviousQuery, controlsProvider),
-            vscode.commands.registerCommand("searchium.nextQuery", controlsProvider.onNextQuery, controlsProvider),
-        );
+        else {
+            const [process, client] = await startServer(context);
+            context.subscriptions.push(process);
+            context.subscriptions.push(new DocumentRegistrationService(context, client));
+        }
     } catch (err) {
         getLogger().logError`Unexpected error initializing extension: ${err}`;
     }

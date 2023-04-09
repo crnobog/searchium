@@ -1,17 +1,10 @@
 import { nextTick } from "process";
 import * as vscode from "vscode";
-import * as ipcRequests from './ipcRequests';
-import { IpcChannel } from "./ipcChannel";
 import { getLogger } from "./logger";
+import { IndexClient } from "./index/indexInterface";
 
 export class DocumentRegistrationService implements vscode.Disposable {
-    channel: IpcChannel;
-    context: vscode.ExtensionContext;
-
-    constructor(context: vscode.ExtensionContext, channel: IpcChannel) {
-        this.context = context;
-        this.channel = channel;
-
+    constructor(private context: vscode.ExtensionContext, private client: IndexClient) {
         nextTick(() => this.run());
     }
 
@@ -28,13 +21,6 @@ export class DocumentRegistrationService implements vscode.Disposable {
             }
         }
         vscode.workspace.onDidChangeWorkspaceFolders(this.onWorkspaceFoldersChanged, this);
-        for (const editor of vscode.window.visibleTextEditors) {
-            const uri = editor.document.uri;
-            if (uri.scheme !== 'file') {
-                continue;
-            }
-            this.registerPath(uri.fsPath);
-        }
     }
 
     private onWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
@@ -51,13 +37,12 @@ export class DocumentRegistrationService implements vscode.Disposable {
     }
 
     private registerPath(path: string): void {
-        this.channel.sendSequentialRequest(new ipcRequests.RegisterFileRequest(path))
+        this.client.registerWorkspaceFolder(path)
             .then(() => getLogger().logDebug`Completed register for ${path}`)
             .catch((e) => getLogger().logError`Error registering file ${path}: ${e}`);
     }
-    // TODO: Refcount for multiple openings of documents? 
     private unregisterPath(path: string): void {
-        this.channel.sendSequentialRequest(new ipcRequests.UnregisterFileRequest(path))
+        this.client.unregisterWorkspaceFolder(path)
             .then(() => getLogger().logDebug`Completed unregister for ${path}`)
             .catch((e) => getLogger().logError`Error unregistering file ${path}: ${e}`);
     }
