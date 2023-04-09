@@ -162,7 +162,7 @@
     "build": "ts-node ./build.ts",
     "watch": "ts-node ./build.ts --watch",
     "pretest": "npm run build && npm run lint",
-    "lint": "eslint . --ext .ts --ext .mts && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext .ts --ext .mts -f compact && tsc --noEmit -p tsconfig.json",
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {

@@ -5,7 +5,6 @@ import * as ipcResponses from "./ipcResponses";
 import { getLogger } from "./logger";
 import * as searchium_pb from "./gen/searchium";
 import * as path from "path";
-import assert = require("assert");
 import './extensionsMethods';
 import { SearchHistory } from "./history";
 
@@ -51,9 +50,9 @@ type ExtractResult = {
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
 
-async function getFileExtracts(channel: IpcChannel, file: FileResult) {
-    let extracts = (await channel.sendRequest(new ipcRequests.GetFileExtractsRequest(file.path, file.positions, 100))
-        .then((r: ipcResponses.GetFileExtractsResponse) =>
+async function getFileExtracts(channel: IpcChannel, file: FileResult): Promise<ExtractResult[]> {
+    const extracts = (await channel.sendRequest(new ipcRequests.GetFileExtractsRequest(file.path, file.positions, 100))
+        .then((r: ipcResponses.GetFileExtractsResponse): searchium_pb.FileExtract[] =>
             r.fileExtracts))
         .map((e, i) =>
             convertFileExtracts(file, e, file.positions[i]));
@@ -78,21 +77,23 @@ function convertFileResult(
         case 'directoryEntry':
             throw new Error("Unexpected directory entry");
         case 'fileEntry':
-            let file: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
-                type: 'file',
-                name: entry.name,
-                path: thisPath,
-                parent: parent,
-                uri: vscode.Uri.file(thisPath),
-                positions: entry.data?.filePositionsData?.positions ?? [],
-                _extracts: undefined,
-                extracts: async function (): Promise<ExtractResult[]> {
-                    if (this._extracts) { this._extracts; }
-                    this._extracts = getFileExtracts(channel, this);
-                    return this._extracts;
-                }
-            };
-            return file;
+            {
+                const file: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
+                    type: 'file',
+                    name: entry.name,
+                    path: thisPath,
+                    parent: parent,
+                    uri: vscode.Uri.file(thisPath),
+                    positions: entry.data?.filePositionsData?.positions ?? [],
+                    _extracts: undefined,
+                    extracts: async function (): Promise<ExtractResult[]> {
+                        if (this._extracts) { this._extracts; }
+                        this._extracts = getFileExtracts(channel, this);
+                        return this._extracts;
+                    }
+                };
+                return file;
+            }
         case undefined: throw new Error("Unknown filesystement type");
     }
 }
@@ -105,25 +106,27 @@ function convertDirectoryResult(
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
     switch (entry.subtype.oneofKind) {
         case 'directoryEntry':
-            let dir: DirectoryResult = {
-                type: 'directory',
-                name: entry.name,
-                path: thisPath,
-                parent: undefined,
-                children: []
-            };
-            dir.children = entry.subtype.directoryEntry.entries.map((e) =>
-                convertFileResult(channel, dir, e, thisPath)
-            );
-            for (let i = 0; i < dir.children.length; ++i) {
-                if (i !== 0) {
-                    dir.children[i].prev = dir.children[i - 1];
+            {
+                const dir: DirectoryResult = {
+                    type: 'directory',
+                    name: entry.name,
+                    path: thisPath,
+                    parent: undefined,
+                    children: []
+                };
+                dir.children = entry.subtype.directoryEntry.entries.map((e) =>
+                    convertFileResult(channel, dir, e, thisPath)
+                );
+                for (let i = 0; i < dir.children.length; ++i) {
+                    if (i !== 0) {
+                        dir.children[i].prev = dir.children[i - 1];
+                    }
+                    if (i !== dir.children.length - 1) {
+                        dir.children[i].next = dir.children[i + 1];
+                    }
                 }
-                if (i !== dir.children.length - 1) {
-                    dir.children[i].next = dir.children[i + 1];
-                }
+                return dir;
             }
-            return dir;
         case 'fileEntry':
             throw new Error("Unxpected file entry");
         case undefined: throw new Error("Unknown filesystement type");
@@ -131,11 +134,11 @@ function convertDirectoryResult(
 }
 
 function convertFileExtracts(parent: FileResult, extract: searchium_pb.FileExtract, info: searchium_pb.FilePositionSpan): ExtractResult {
-    let text = extract.text.trimStart();
-    let trimmed = extract.text.length - text.length;
-    let start = info.position - extract.offset;
-    let end = start + info.length;
-    let range =
+    const text = extract.text.trimStart();
+    const trimmed = extract.text.length - text.length;
+    const start = info.position - extract.offset;
+    const end = start + info.length;
+    const range =
         new vscode.Range(extract.lineNumber, extract.columnNumber, extract.lineNumber, extract.columnNumber + end - start);
     return {
         type: "extract",
@@ -153,7 +156,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     private _onDidChangeTreeData: vscode.EventEmitter<SearchResult | undefined | void> = new vscode.EventEmitter<SearchResult | undefined | void>();
     readonly onDidChangeTreeData: vscode.Event<SearchResult | undefined | void> = this._onDidChangeTreeData.event;
 
-    currentRequestId: bigint = 0n;
+    currentRequestId = 0n;
     rootResults: SearchResult[] = [];
     treeView?: vscode.TreeView<SearchResult>;
 
@@ -161,7 +164,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     }
 
     // TODO: Remove first layer of tree if there's only one project/directory ?
-    public populate(r: ipcResponses.SearchCodeResponse, treeView: vscode.TreeView<SearchResult>) {
+    public populate(r: ipcResponses.SearchCodeResponse, treeView: vscode.TreeView<SearchResult>): void {
         if (r.requestId < this.currentRequestId) {
             return;
         }
@@ -199,9 +202,9 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                     label: element.text,
                     highlights: element.highlights,
                 };
-                let item = new vscode.TreeItem(label);
+                const item = new vscode.TreeItem(label);
                 item.description = `line ${element.lineNumber}`;
-                let showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection: element.range };
+                const showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection: element.range };
                 item.command = {
                     command: "vscode.open",
                     arguments: [element.parent.uri, showOptions],
@@ -223,7 +226,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
             case 'extract': return undefined;
             case 'file': {
 
-                let extracts = (await this.channel.sendRequest(new ipcRequests.GetFileExtractsRequest(element.path, element.positions, 100))
+                const extracts = (await this.channel.sendRequest(new ipcRequests.GetFileExtractsRequest(element.path, element.positions, 100))
                     .then((r: ipcResponses.GetFileExtractsResponse) => r.fileExtracts))
                     .map((e, i) => convertFileExtracts(element, e, element.positions[i]));
                 for (let i = 0; i < extracts.length; ++i) {
@@ -258,7 +261,7 @@ export class SearchManager {
         this.currentNavOperation = Promise.resolve();
     }
 
-    public async onQuery(options: SearchOptions | undefined, type: "history" | undefined) {
+    public async onQuery(options: SearchOptions | undefined, type: "history" | undefined): Promise<void> {
         if (options) {
             return await this.executeSearch(options, type);
         }
@@ -276,7 +279,7 @@ export class SearchManager {
         }
         vscode.commands.executeCommand('searchium-results.focus'); // Reveal first to show progress spinner
         await vscode.window.withProgress({ location: { viewId: 'searchium-results' }, cancellable: false, title: "Searching..." },
-            async (progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
+            async (_progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
                 return await this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
                     searchString: options.query ?? "",
                     filePathPattern: options.pathFilter ?? "",
@@ -304,18 +307,18 @@ export class SearchManager {
             });
     }
 
-    public async navigateToNextResult() {
+    public async navigateToNextResult(): Promise<void> {
         this.addNavigationOperation(() => this.navigateToNextResultInternal());
     }
 
-    private async navigateToNextResultInternal() {
+    private async navigateToNextResultInternal(): Promise<void> {
         if (this.treeView.selection.length === 0) {
             if (this.provider.rootResults.length > 0) {
                 this.treeView.reveal(this.provider.rootResults[0]);
             }
         }
         else {
-            let current = this.treeView.selection[0];
+            const current = this.treeView.selection[0];
             switch (current.type) {
                 case 'directory':
                     {
@@ -349,18 +352,18 @@ export class SearchManager {
             }
         }
     }
-    public async navigateToPreviousResult() {
+    public async navigateToPreviousResult(): Promise<void> {
         this.addNavigationOperation(() => this.navigateToPreviousResultInternal());
     }
 
-    private async navigateToPreviousResultInternal() {
+    private async navigateToPreviousResultInternal(): Promise<void> {
         if (this.treeView.selection.length === 0) {
             if (this.provider.rootResults.length > 0) {
                 this.treeView.reveal(this.provider.rootResults[this.provider.rootResults.length - 1]);
             }
         }
         else {
-            let current = this.treeView.selection[0];
+            const current = this.treeView.selection[0];
             switch (current.type) {
                 case 'directory':
                     {
@@ -417,16 +420,16 @@ export class SearchManager {
             this.currentNavOperation = this.currentNavOperation.then(operation).then(resolve).catch(reject);
         });
     }
-    private revealAndPreviewResult(result: ExtractResult | undefined) {
+    private revealAndPreviewResult(result: ExtractResult | undefined): void {
         if (!result) { return; }
-        let options = { select: true, focus: true, expand: false };
+        const options = { select: true, focus: true, expand: false };
         this.treeView.reveal(result, options);
         vscode.commands.executeCommand('vscode.open', result.parent.uri, <vscode.TextDocumentShowOptions>{
             preview: true, preserveFocus: true, selection: result.range
         });
     }
 
-    private onTreeViewSelectionChanged(event: vscode.TreeViewSelectionChangeEvent<SearchResult>) {
+    private onTreeViewSelectionChanged(_event: vscode.TreeViewSelectionChangeEvent<SearchResult>): void {
         // assert(event.selection.length < 2);
         // if (event.selection.length > 0) {
         //     let result = event.selection[0];

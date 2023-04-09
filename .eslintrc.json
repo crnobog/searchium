@@ -1,16 +1,58 @@
 {
+    "env": {
+        "browser": false,
+        "es6": true,
+        "node": true
+    },
     "root": true,
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
-        "ecmaVersion": 6,
+        "project": "tsconfig.json",
+        "ecmaVersion": 2020,
         "sourceType": "module"
     },
     "plugins": [
         "@typescript-eslint"
     ],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "prettier"
+    ],
     "rules": {
         "@typescript-eslint/naming-convention": "warn",
         "@typescript-eslint/semi": "warn",
+        "@typescript-eslint/no-explicit-any": [
+            "error",
+            {
+                "ignoreRestArgs": true
+            }
+        ],
+        "@typescript-eslint/no-unused-vars": [
+            "warn",
+            {
+                "argsIgnorePattern": "^_"
+            }
+        ],
+        "@typescript-eslint/explicit-function-return-type": [
+            "warn",
+            {
+                "allowExpressions": true,
+                "allowTypedFunctionExpressions": true
+            }
+        ],
+        "no-unused-vars": [
+            "warn",
+            {
+                "argsIgnorePattern": "^_"
+            }
+        ],
+        "no-fallthrough": [
+            "error",
+            {
+                "commentPattern": "fallthrough"
+            }
+        ],
         "curly": "warn",
         "eqeqeq": "warn",
         "no-throw-literal": "warn",
@@ -18,7 +60,9 @@
     },
     "ignorePatterns": [
         "out",
+        "src/gen",
         "dist",
+        "build.ts",
         "**/*.d.ts"
     ]
 }

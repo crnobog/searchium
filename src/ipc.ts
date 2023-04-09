@@ -6,11 +6,7 @@ interface MessageBase {
     data: MessageData;
 }
 
-interface Request extends MessageBase {
-    runOnSequentialQueue?: boolean;
-}
-export interface Response extends MessageBase {
-}
+export type Response = MessageBase;
 
 export interface StringData {
     dataType: "stringData";

@@ -10,8 +10,13 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true, /* enable all strict type-checking options */
+		"alwaysStrict": true,
 		"isolatedModules": true,
-		"moduleResolution": "node"
+		"moduleResolution": "node",
+		"forceConsistentCasingInFileNames": true,
+		"noImplicitReturns": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
 		/* Additional Checks */
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
 		// "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */

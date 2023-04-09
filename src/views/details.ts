@@ -50,7 +50,7 @@ provideVSCodeDesignSystem().register(
 );
 
 declare function acquireVsCodeApi(): {
-    postMessage(msg: any): void,
+    postMessage(msg: FromWebView.Message): void,
 };
 
 const vscode = acquireVsCodeApi();
@@ -116,14 +116,14 @@ window.addEventListener("load", () => {
     includeFilesSectionName = document.getElementById("include-files-name") as TextField;
     includeFilesContents = document.getElementById("include-files-contents") as TextArea;
 
-    vscode.postMessage(<FromWebView.ReadyMessage>{ type: 'ready' });
+    vscode.postMessage({ type: 'ready' });
 
     if (projects.length > 0) {
         onProjectsAvailable();
     }
 });
 window.addEventListener("message", (event: { data: ToWebView.Message }) => {
-    let msg = event.data;
+    const msg = event.data;
     switch (msg.type) {
         case 'details':
             console.log("received details");
@@ -134,26 +134,26 @@ window.addEventListener("message", (event: { data: ToWebView.Message }) => {
 });
 
 
-function onProjectsAvailable() {
+function onProjectsAvailable(): void {
     console.log("adding hidden to progress container and removing it from details container");
     progressContainer.remove();
     detailsContainer.classList.remove("hidden");
 
-    let options: Node[] = [];
-    for (let p of projects) {
-        let option = new Option(p.rootPath);
+    const options: Node[] = [];
+    for (const p of projects) {
+        const option = new Option(p.rootPath);
         options.push(option);
     }
     projectsDropdown.replaceChildren(...options);
     setProjectDetails(projects[0]);
 }
 
-function onProjectChanged() {
-    let p = projects[projectsDropdown.selectedIndex];
+function onProjectChanged(): void {
+    const p = projects[projectsDropdown.selectedIndex];
     setProjectDetails(p);
 }
 
-function setProjectDetails(p: ToWebView.ProjectDetails) {
+function setProjectDetails(p: ToWebView.ProjectDetails): void {
     console.log(`Project changed to ${p.rootPath}`);
     detailsNumFiles.textContent = p.numFiles;
     detailsNumDirectories.textContent = p.numDirectories;

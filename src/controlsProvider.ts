@@ -51,8 +51,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(this.onMessage, this);
     }
 
-    public async onNewSearch() {
-        let query = await vscode.window.showInputBox({
+    public async onNewSearch(): Promise<void> {
+        const query = await vscode.window.showInputBox({
             title: "Searchium",
             prompt: "Search term",
         });
@@ -63,13 +63,13 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             ... this.getControlsState(), query
         }).then(() => this.updateHistoryControls());
     }
-    public async onSearchCurrentToken(editor: vscode.TextEditor, edit: vscode.TextEditorEdit) {
-        let range = editor.selection.isEmpty
+    public async onSearchCurrentToken(editor: vscode.TextEditor, _edit: vscode.TextEditorEdit): Promise<void> {
+        const range = editor.selection.isEmpty
             ? editor.document.getWordRangeAtPosition(editor.selection.start)
             : editor.selection;
-        let query = editor.document.getText(range);
+        const query = editor.document.getText(range);
         if (query) {
-            let options = {
+            const options = {
                 matchCase: true,
                 pathFilter: "",
                 query,
@@ -85,16 +85,16 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             vscode.commands.executeCommand("searchium.query", options).then(() => this.updateHistoryControls());
         }
     }
-    public async onJumpToSearchInput() {
+    public async onJumpToSearchInput() : Promise<void> {
         await vscode.commands.executeCommand("searchium-controls.focus");
         this.sendMessage(<ToWebView.FocusMessage>{ type: "focus" });
     }
-    public onClearHistory() {
+    public onClearHistory() : void {
         this.history.clearHistory();
         this.updateHistoryControls();
     }
-    public onToggleCaseSensitivity() {
-        let matchCase = !this.getControlsState().matchCase;
+    public onToggleCaseSensitivity() : void  {
+        const matchCase = !this.getControlsState().matchCase;
         getLogger().logInformation`ToggleCaseSensitive to ${matchCase}`;
         this.updateControlsState({ matchCase });
         this.sendMessage({
@@ -102,8 +102,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             matchCase
         });
     }
-    public onToggleWholeWord() {
-        let wholeWord = !this.getControlsState().wholeWord;
+    public onToggleWholeWord() : void {
+        const wholeWord = !this.getControlsState().wholeWord;
         getLogger().logInformation`ToggleWholeWord to ${wholeWord}`;
         this.updateControlsState({ wholeWord });
         this.sendMessage({
@@ -111,8 +111,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             wholeWord
         });
     }
-    public onToggleRegex() {
-        let regex = !this.getControlsState().regex;
+    public onToggleRegex() : void {
+        const regex = !this.getControlsState().regex;
         getLogger().logInformation`ToggleRegex to ${regex}`;
         this.updateControlsState({ regex });
         this.sendMessage({
@@ -120,8 +120,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             regex
         });
     }
-    public onPreviousQuery() {
-        let query = this.history.prev();
+    public onPreviousQuery() :void {
+        const query = this.history.prev();
         if (query !== undefined) {
             getLogger().logInformation`QueryPrev: '${query}'`;
             this.setQueryString(query);
@@ -134,8 +134,8 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }
         this.updateHistoryControls();
     }
-    public onNextQuery() {
-        let query = this.history.next();
+    public onNextQuery() :void {
+        const query = this.history.next();
         if (query !== undefined) {
             getLogger().logInformation`QueryNext: '${query}'`;
             this.setQueryString(query);
@@ -148,30 +148,30 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }
         this.updateHistoryControls();
     }
-    private updateHistoryControls() {
+    private updateHistoryControls() : void  {
         this.sendMessage({
             type: "setHistoryControls",
             nextEnabled: this.history.canNavigateNext(),
             prevEnabled: this.history.canNavigatePrev(),
         });
     }
-    private onViewDisposed(webviewView: vscode.WebviewView) {
+    private onViewDisposed(_webviewView: vscode.WebviewView) : void {
         getLogger().logDebug`Webview disposed`;
         this.webview = undefined;
     }
-    private setQueryString(query: string) {
+    private setQueryString(query: string) : void {
         // Set state in case webview is not created yet 
         this.updateControlsState({ query });
         this.sendMessage({ type: "setQuery", query });
     }
 
-    private sendStatsToWebview() {
+    private sendStatsToWebview() : void {
         if (this.databaseStats && this.webview) {
             if (this.databaseStats.projectCount === 0) {
                 this.sendMessage(<ToWebView.NoStatusMessage>{ type: "nostatus" });
                 return;
             }
-            let mem = Number(this.databaseStats.serverNativeMemoryUsage) / 1024.0 / 1024.0;
+            const mem = Number(this.databaseStats.serverNativeMemoryUsage) / 1024.0 / 1024.0;
             let state = "Idle";
             switch (this.databaseStats.serverStatus) {
                 case IndexingServerStatus.IDLE:
@@ -196,17 +196,17 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }
     }
     private getControlsState(): SearchOptions {
-        return this.context.workspaceState.get("SEARCH_OPTIONS", DEFAULT_SEARCH_OPTIONS) as any;
+        return this.context.workspaceState.get("SEARCH_OPTIONS", DEFAULT_SEARCH_OPTIONS) as SearchOptions;
     }
 
-    private updateControlsState(update: Partial<SearchOptions>) {
+    private updateControlsState(update: Partial<SearchOptions>): Thenable<void> {
         return this.context.workspaceState.update("SEARCH_OPTIONS", {
             ... this.getControlsState(),
             ...update
         });
     }
 
-    private sendMessage(msg: ToWebView.Message) {
+    private sendMessage(msg: ToWebView.Message): void {
         if (this.webview) {
             this.webview.postMessage(msg);
         }
@@ -215,7 +215,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private onMessage(msg: FromWebView.Message) {
+    private onMessage(msg: FromWebView.Message): void {
         getLogger().logDebug`webview message: ${msg}`;
         switch (msg.command) {
             case 'ready':
@@ -223,10 +223,9 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 this.sendStatsToWebview();
                 break;
             case 'execute':
-                let state = this.getControlsState();
-                getLogger().logInformation`Executing query from controls: '${msg.query}'`;
-                vscode.commands.executeCommand("searchium.query", msg).then(() => this.updateHistoryControls());
-                break;
+                    getLogger().logInformation`Executing query from controls: '${msg.query}'`;
+                    vscode.commands.executeCommand("searchium.query", msg).then(() => this.updateHistoryControls());
+                    break;
             case 'setQuery':
                 this.updateControlsState({ query: msg.text });
                 break;
@@ -262,7 +261,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         const stylesheetUri = getUri(webview, extensionUri, ["out", "webview", "style.css"]);
 
         const nonce = getNonce();
-        let content = /*html*/ `
+        const content = /*html*/ `
 <!DOCTYPE html>
 <html lang="en">
 

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-export function getNonce() {
+export function getNonce(): string {
     let text = "";
     const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     for (let i = 0; i < 32; i++) {
@@ -9,6 +9,6 @@ export function getNonce() {
     return text;
 }
 
-export function getUri(webview: vscode.Webview, extensionUri: vscode.Uri, pathList: string[]) {
+export function getUri(webview: vscode.Webview, extensionUri: vscode.Uri, pathList: string[]): vscode.Uri {
     return webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, ...pathList));
 }

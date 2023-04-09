@@ -2,7 +2,6 @@ import { IpcChannel } from "./ipcChannel";
 import * as vscode from "vscode";
 import { SearchFilePathsRequest } from "./ipcRequests";
 import { SearchFilePathsResponse } from "./ipcResponses";
-import { time } from "console";
 
 class FileResult implements vscode.QuickPickItem {
     kind?: vscode.QuickPickItemKind | undefined;
@@ -20,11 +19,11 @@ class FileResult implements vscode.QuickPickItem {
 export class FileSearchManager {
     constructor(private channel: IpcChannel) { }
 
-    public async onSearchFilePaths() {
+    public async onSearchFilePaths(): Promise<void> {
         const disposables: vscode.Disposable[] = [];
         try {
-            await new Promise<vscode.Uri | undefined>((resolve, reject) => {
-                let input = vscode.window.createQuickPick<FileResult>();
+            await new Promise<vscode.Uri | undefined>((_resolve, _reject) => {
+                const input = vscode.window.createQuickPick<FileResult>();
                 input.canSelectMany = false;
                 input.placeholder = "Type to search for files";
                 // TODO set busy when searching 
@@ -32,7 +31,7 @@ export class FileSearchManager {
                 let cancelSource = new vscode.CancellationTokenSource();
                 disposables.push(cancelSource);
                 let timeout: NodeJS.Timeout | undefined = undefined;
-                let debounceTime = 200;
+                const debounceTime = 200;
                 input.onDidChangeValue((value) => {
                     // todo: debounce searching  
                     if (!value || value === "") {
@@ -44,7 +43,7 @@ export class FileSearchManager {
                     cancelSource = new vscode.CancellationTokenSource();
                     timeout = setTimeout(async () => {
                         input.busy = true;
-                        let results = await this.searchForFiles(value, cancelSource.token);
+                        const results = await this.searchForFiles(value, cancelSource.token);
                         if (!results) { return; } // cancelled
                         input.busy = false;
                         input.items = results;
@@ -61,7 +60,7 @@ export class FileSearchManager {
     }
 
     private async searchForFiles(value: string, token: vscode.CancellationToken): Promise<FileResult[] | undefined> {
-        let results = await this.channel.sendRequest(new SearchFilePathsRequest({
+        const results = await this.channel.sendRequest(new SearchFilePathsRequest({
             searchString: value,
             includeSymLinks: false,
             matchCase: false,
@@ -80,12 +79,12 @@ export class FileSearchManager {
         if (results.searchResult.subtype.oneofKind !== 'directoryEntry') {
             return []; // TODO error 
         }
-        let root = results.searchResult.subtype.directoryEntry;
-        let files = [];
-        for (let dir of root.entries) {
+        const root = results.searchResult.subtype.directoryEntry;
+        const files = [];
+        for (const dir of root.entries) {
             if (dir.subtype.oneofKind !== 'directoryEntry') { continue; }
             // TODO: dividor/group per directory/project 
-            for (let file of dir.subtype.directoryEntry.entries) {
+            for (const file of dir.subtype.directoryEntry.entries) {
                 if (file.subtype.oneofKind !== 'fileEntry') { continue; }
                 files.push(new FileResult(file.name));
             }

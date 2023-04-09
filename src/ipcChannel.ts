@@ -16,8 +16,8 @@ interface IpcChannelEvents {
     // 'fatalError' : (e : Error) => void;
 }
 
-type RequestSuccess = (r: any) => void;
-type RequestFailure = (err: any) => void;
+type RequestSuccess = (r: ipcResponses.Response | string) => void;
+type RequestFailure = (err: Error | string | undefined) => void;
 type RequestCompletion = [RequestSuccess, RequestFailure];
 
 class IncomingData {
@@ -25,10 +25,10 @@ class IncomingData {
     private waiters: (() => void)[] = [];
     private index = 0; // current index into buffers[0] to pull data from 
 
-    constructor(private stream: Readable) {
+    constructor(stream: Readable) {
         stream.on('data', (chunk) => {
             this.buffers.push(chunk);
-            let takeWaiters = this.waiters;
+            const takeWaiters = this.waiters;
             this.waiters = [];
             takeWaiters.forEach((f) => f());
         });
@@ -41,7 +41,7 @@ class IncomingData {
     }
 
     private async waitForData(): Promise<void> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve,) => {
             this.waiters.push(resolve);
         });
     }
@@ -55,7 +55,7 @@ class IncomingData {
                 await this.waitForData();
                 this.index = 0;
             }
-            let currentBuffer = this.buffers[0];
+            const currentBuffer = this.buffers[0];
             if (this.index >= currentBuffer.byteLength) {
                 // move on to next buffer 
                 this.index = 0;
@@ -72,16 +72,16 @@ class IncomingData {
     }
 
     private async readBytes(numBytes: number): Promise<Uint8Array> {
-        let messageData = new Uint8Array(numBytes);
+        const messageData = new Uint8Array(numBytes);
         let targetIndex = 0;
         while (numBytes > 0) {
             if (this.buffers.length === 0) {
                 await this.waitForData();
             }
-            let currentBuffer = this.buffers[0];
+            const currentBuffer = this.buffers[0];
             const endReadIndex = Math.min(currentBuffer.byteLength, this.index + numBytes);
             const bytesRead = endReadIndex - this.index;
-            currentBuffer.copy(messageData, 0, this.index, endReadIndex);
+            currentBuffer.copy(messageData, targetIndex, this.index, endReadIndex);
             this.index = endReadIndex;
             numBytes -= bytesRead;
             targetIndex += bytesRead;
@@ -109,20 +109,20 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         this.data = new IncomingData(this.socket);
     }
 
-    public dispose() {
+    public dispose(): void {
         this.socket.end();
         this.socket.destroy();
     }
 
-    public async drainDispatch() {
-        while (true) {
-            let messageBytes = await this.data.readLengthPrefixedMessage();
+    public async drainDispatch(): Promise<void> {
+        for (; ;) {
+            const messageBytes = await this.data.readLengthPrefixedMessage();
             try {
-                let rawMessage = searchium_pb.IpcMessage.fromBinary(messageBytes);
+                const rawMessage = searchium_pb.IpcMessage.fromBinary(messageBytes);
                 this.emit('raw', rawMessage);
                 this.dispatchMessage(rawMessage);
             }
-            catch (err: any) {
+            catch (err) {
                 getLogger().logError`Error dispatching raw message: ${err}`;
             }
         }
@@ -130,20 +130,23 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
 
     // TODO: map request types to response types 
     public async sendSequentialRequest(payload: ipcRequests.Request): Promise<void> {
-        return await this.sendRequest(payload, true);
+        await this.sendRequest(payload, true);
     }
 
     // TODO: typing for responses 
-    public async sendRequest(payload: ipcRequests.Request, sequential?: boolean): Promise<any> {
-        return new Promise((resolve, reject) => {
-            let typedMessage: searchium_pb.TypedMessage = {
+    public async sendRequest(payload: ipcRequests.SearchCodeRequest): Promise<ipcResponses.SearchCodeResponse>;
+    public async sendRequest(payload: ipcRequests.GetFileExtractsRequest): Promise<ipcResponses.GetFileExtractsResponse>;
+    public async sendRequest(payload: ipcRequests.Request, sequential?: boolean): Promise<ipcResponses.Response | string>;
+    public async sendRequest(payload: ipcRequests.Request, sequential?: boolean): Promise<ipcResponses.Response | string> {
+        return new Promise((resolve: RequestSuccess, reject: RequestFailure) => {
+            const typedMessage: searchium_pb.TypedMessage = {
                 className: "Unknown",
                 subtype: {
                     oneofKind: "typedRequest",
                     typedRequest: payload.toProto(),
                 }
             };
-            let raw: searchium_pb.IpcMessage = {
+            const raw: searchium_pb.IpcMessage = {
                 protocol: "typed-message",
                 requestId: this.nextRequestId(),
                 data: {
@@ -161,7 +164,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
             let numBytes = messageBytes.length;
             const messagePrefix = [];
             do {
-                let byte = (numBytes & 0x7f);
+                const byte = (numBytes & 0x7f);
                 numBytes = numBytes >> 7;
                 if (numBytes === 0) {
                     messagePrefix.push(byte);
@@ -185,8 +188,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         return this.sequenceNum;
     }
 
-    private dispatchMessage(msg: searchium_pb.IpcMessage) {
-        let response: searchium_pb.IpcResponse;
+    private dispatchMessage(msg: searchium_pb.IpcMessage): void {
         switch (msg.requestResponse.oneofKind) {
             case undefined: throw new Error("Received unknown ipc message type");
             case "request": throw new Error("Received unexpected ipc request");
@@ -200,40 +202,44 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         }
     }
 
-    private dispatchEvent(msg: searchium_pb.IpcMessage) {
+    private dispatchEvent(msg: searchium_pb.IpcMessage): void {
         // TODO: Full translation for events 
         switch (msg.data?.subtype.oneofKind) {
             case undefined: throw new Error("Missing payload in event");
             case "errorResponse": throw new Error("Unexpected error response payload in event");
             case "ipcStringData": throw new Error("Unexpected string data payload in event");
             case "typedMessage":
-                let typedMessage = msg.data.subtype.typedMessage;
-                switch (typedMessage.subtype.oneofKind) {
-                    case undefined: throw new Error("Missing typed message payload in event");
-                    case "typedRequest": throw new Error("Unexpected request paylod in event");
-                    case "typedResponse": throw new Error("Unexpected response payload in event");
-                    case "typedEvent":
-                        let e: ipcEvents.TypedEvent = this.translateTypedEvent(msg.requestId, typedMessage.subtype.typedEvent);
-                        this.emit('event', e);
+                {
+                    const typedMessage = msg.data.subtype.typedMessage;
+                    switch (typedMessage.subtype.oneofKind) {
+                        case undefined: throw new Error("Missing typed message payload in event");
+                        case "typedRequest": throw new Error("Unexpected request paylod in event");
+                        case "typedResponse": throw new Error("Unexpected response payload in event");
+                        case "typedEvent":
+                            {
+                                const e: ipcEvents.TypedEvent = this.translateTypedEvent(msg.requestId, typedMessage.subtype.typedEvent);
+                                this.emit('event', e);
+                            }
+                    }
                 }
         }
     }
 
-    private dispatchResponse(msg: searchium_pb.IpcMessage) {
+    private dispatchResponse(msg: searchium_pb.IpcMessage): void {
         if (!msg.data) {
             throw new Error("Missing payload for response");
         }
-        let requestId = msg.requestId;
-        let completion = this.requestCompletions.get(requestId);
+        const requestId = msg.requestId;
+        const completion = this.requestCompletions.get(requestId);
         if (completion) {
             this.requestCompletions.delete(requestId);
         }
-        let [success, failure] = completion ?? [undefined, undefined];
+        const [success, failure] = completion ?? [undefined, undefined];
         switch (msg.data.subtype.oneofKind) {
             case undefined: throw new Error("Unknown payload for response");
             case "errorResponse": {
                 // complete with failure
-                let err = this.translateErrorResponse(msg.data.subtype.errorResponse);
+                const err = this.translateErrorResponse(msg.data.subtype.errorResponse);
                 if (failure) {
                     failure(err.message);
                 }
@@ -242,7 +248,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
             };
             case "ipcStringData": {
                 // complete with string response
-                let s = msg.data.subtype.ipcStringData.text;
+                const s = msg.data.subtype.ipcStringData.text;
                 if (success) {
                     success(s);
                 }
@@ -251,18 +257,20 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
             };
             case "typedMessage": {
                 // complete with structured message 
-                let typedMessage = msg.data.subtype.typedMessage;
+                const typedMessage = msg.data.subtype.typedMessage;
                 switch (typedMessage.subtype.oneofKind) {
                     case undefined: throw new Error("Undefined typed message type");
                     case 'typedEvent': throw new Error("Unexpected event payloda in response");
                     case 'typedRequest': throw new Error("Unexpected request payload in response");
                     case 'typedResponse':
-                        let r = this.translateTypedResponse(requestId, typedMessage.subtype.typedResponse);
-                        this.emit('response', r);
-                        if (success) {
-                            success(r);
+                        {
+                            const r = this.translateTypedResponse(requestId, typedMessage.subtype.typedResponse);
+                            this.emit('response', r);
+                            if (success) {
+                                success(r);
+                            }
+                            break;
                         }
-                        break;
                 }
                 // TODO: Emit global event 
                 break;
@@ -281,49 +289,51 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     serverStatus: data.subtype.indexingServerStateChangedEvent.serverStatus,
                 };
             case 'progressReportEvent':
-                return { 
+                return {
                     eventType: "progressReport",
                     requestId,
                     ...data.subtype.progressReportEvent,
                 };
             case 'pairedTypedEvent':
-                let paired: searchium_pb.PairedTypedEvent = data.subtype.pairedTypedEvent;
-                switch (paired.subtype.oneofKind) {
-                    case 'fileSystemScanStarted': return {
-                        eventType: "fileSystemScanStarted",
-                        error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
-                        operationId: paired.operationId,
-                        requestId,
-                    };
-                    case 'fileSystemScanFinished': return {
-                        eventType: "fileSystemScanFinished",
-                        requestId,
-                        operationId: paired.operationId,
-                        error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
-                        oldVersion: paired.subtype.fileSystemScanFinished.oldVersion,
-                        newVersion: paired.subtype.fileSystemScanFinished.newVersion,
-                    };
-                    case 'searchEngineFilesLoading': return {
-                        eventType: "searchEngineFilesLoading",
-                        operationId: paired.operationId,
-                        requestId,
-                        error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
-                    };
-                    case 'searchEngineFilesLoadingProgress': return {
-                        eventType: "searchEngineFilesLoadingProgress",
-                        operationId: paired.operationId,
-                        requestId,
-                        error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
-                    };
-                    case 'searchEngineFilesLoaded': return {
-                        eventType: "searchEngineFilesLoaded",
-                        operationId: paired.operationId,
-                        requestId,
-                        treeVersion: paired.subtype.searchEngineFilesLoaded.treeVersion,
-                        error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
-                    };
+                {
+                    const paired: searchium_pb.PairedTypedEvent = data.subtype.pairedTypedEvent;
+                    switch (paired.subtype.oneofKind) {
+                        case 'fileSystemScanStarted': return {
+                            eventType: "fileSystemScanStarted",
+                            error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
+                            operationId: paired.operationId,
+                            requestId,
+                        };
+                        case 'fileSystemScanFinished': return {
+                            eventType: "fileSystemScanFinished",
+                            requestId,
+                            operationId: paired.operationId,
+                            error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
+                            oldVersion: paired.subtype.fileSystemScanFinished.oldVersion,
+                            newVersion: paired.subtype.fileSystemScanFinished.newVersion,
+                        };
+                        case 'searchEngineFilesLoading': return {
+                            eventType: "searchEngineFilesLoading",
+                            operationId: paired.operationId,
+                            requestId,
+                            error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
+                        };
+                        case 'searchEngineFilesLoadingProgress': return {
+                            eventType: "searchEngineFilesLoadingProgress",
+                            operationId: paired.operationId,
+                            requestId,
+                            error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
+                        };
+                        case 'searchEngineFilesLoaded': return {
+                            eventType: "searchEngineFilesLoaded",
+                            operationId: paired.operationId,
+                            requestId,
+                            treeVersion: paired.subtype.searchEngineFilesLoaded.treeVersion,
+                            error: paired.error ? this.translateErrorResponse(paired.error) : undefined,
+                        };
+                    }
+                    break;
                 }
-                break;
         }
         throw new Error("Undefined event type");
     }
@@ -341,7 +351,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                 return {
                     responseType: "searchCode",
                     requestId,
-                    searchResults: data.subtype.searchCodeResponse.searchResults!, // todo: handle empty
+                    searchResults: data.subtype.searchCodeResponse.searchResults as searchium_pb.FileSystemEntry, // todo: handle empty
                     hitCount: data.subtype.searchCodeResponse.hitCount,
                     searchedFileCount: data.subtype.searchCodeResponse.searchedFileCount,
                     totalFileCount: data.subtype.searchCodeResponse.totalFileCount,
@@ -374,7 +384,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     responseType: "searchFilePaths",
                     hitCount: data.subtype.searchFilePathsResponse.hitCount,
                     totalCount: data.subtype.searchFilePathsResponse.totalCount,
-                    searchResult: data.subtype.searchFilePathsResponse.searchResult!, // todo: handle empty
+                    searchResult: data.subtype.searchFilePathsResponse.searchResult as searchium_pb.FileSystemEntry, // todo: handle empty
                 };
             }
             case 'getDatabaseDetailsResponse': {

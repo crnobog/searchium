@@ -36,7 +36,6 @@
 				"$tsc"
 			],
 			"label": "npm: lint",
-			"detail": "tsc --noEmit && eslint src --ext ts"
 		}
 	]
 }

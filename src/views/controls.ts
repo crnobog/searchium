@@ -1,7 +1,5 @@
 import {
     provideVSCodeDesignSystem,
-    Checkbox,
-    DataGrid,
     vsCodeBadge,
     vsCodeButton,
     vsCodeCheckbox,
@@ -53,7 +51,7 @@ provideVSCodeDesignSystem().register(
 );
 
 declare function acquireVsCodeApi(): {
-    postMessage(msg: any): void,
+    postMessage(msg: FromWebView.Message): void,
 };
 
 let queryForm: HTMLElement;
@@ -93,15 +91,15 @@ window.addEventListener("load", () => {
     nextButton = document.getElementById("query-next") as Button;
     nextButton.addEventListener('click', onNextClick);
 
-    tagNumFiles = document.getElementById("tag-num-files")!;
-    tagMemory = document.getElementById("tag-memory-usage")!;
-    tagState = document.getElementById("tag-index-state")!;
+    tagNumFiles = document.getElementById("tag-num-files") as HTMLElement;
+    tagMemory = document.getElementById("tag-memory-usage") as HTMLElement;
+    tagState = document.getElementById("tag-index-state") as HTMLElement;
 
     console.log("Controls view ready");
     vscode.postMessage({ command: 'ready' });
 });
 window.addEventListener("message", (event: { data: ToWebView.Message }) => {
-    let msg = event.data;
+    const msg = event.data;
     switch (msg.type) {
         case 'nostatus':
             console.log(`Received nostatus`);
@@ -151,35 +149,35 @@ window.addEventListener("message", (event: { data: ToWebView.Message }) => {
     }
 });
 
-function postMessage(msg: FromWebView.Message) {
+function postMessage(msg: FromWebView.Message): void {
     vscode.postMessage(msg);
 }
 
-function onQueryChange() {
+function onQueryChange(): void {
     postMessage({ command: "setQuery", text: queryInput.value });
 }
-function onFilterChange() {
+function onFilterChange(): void {
     postMessage({ command: "setFilter", text: filterInput.value });
 }
-function onMatchCaseChange() {
+function onMatchCaseChange(): void {
     postMessage({ command: "setMatchCase", value: matchCaseInput.checked });
 }
-function onWholeWordChange() {
+function onWholeWordChange(): void {
     postMessage({ command: "setWholeWord", value: wholeWordInput.checked });
 }
-function onRegexChange() {
+function onRegexChange(): void {
     postMessage({ command: "setRegex", value: regexInput.checked });
 }
-function onExecuteClick() {
+function onExecuteClick(): void {
     postMessage(createQueryCommand());
 }
-function onPrevClick() {
+function onPrevClick(): void {
     postMessage({ command: "prevQuery" });
 }
-function onNextClick() {
+function onNextClick(): void {
     postMessage({ command: "nextQuery" });
 }
-function onFormKeyUp(e: KeyboardEvent) {
+function onFormKeyUp(e: KeyboardEvent): void {
     if (e.key === "Enter") {
         vscode.postMessage(createQueryCommand());
     }

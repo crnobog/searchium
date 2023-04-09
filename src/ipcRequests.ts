@@ -62,8 +62,6 @@ export class GetFileExtractsRequest {
 }
 
 export class GetDatabaseStatisticsRequest {
-    constructor() { }
-
     public toProto(): searchium_pb.TypedRequest {
         return {
             subtype: {

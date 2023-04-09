@@ -15,7 +15,7 @@ export class IndexState extends TypedEmitter<IndexStateEvents> {
         channel.on('event', this.onEvent.bind(this));
     }
 
-    private onEvent(event: TypedEvent) {
+    private onEvent(event: TypedEvent): void {
         switch (event.eventType) {
             case 'indexingServerStateChanged':
                 this.updateIndexState();
@@ -23,8 +23,8 @@ export class IndexState extends TypedEmitter<IndexStateEvents> {
         }
     }
 
-    private async updateIndexState() {
-        let result = await this.channel.sendRequest(new ipcRequests.GetDatabaseStatisticsRequest()) as ipcResponses.GetDatabaseStatisticsResponse;
+    private async updateIndexState(): Promise<void> {
+        const result = await this.channel.sendRequest(new ipcRequests.GetDatabaseStatisticsRequest()) as ipcResponses.GetDatabaseStatisticsResponse;
         this.emit('updated', result);
     }
 }

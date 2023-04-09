@@ -14,7 +14,7 @@ export class DetailsPanelProvider {
         private channel: IpcChannel) {
     }
 
-    public async openDetails() {
+    public async openDetails(): Promise<void> {
         const panel = vscode.window.createWebviewPanel('searchium-details', "Searchium Index Details", vscode.ViewColumn.Active, {
             enableScripts: true
         });
@@ -24,30 +24,34 @@ export class DetailsPanelProvider {
 
     }
 
-    private async onReceiveMessage(msg: FromWebview.Message) {
-        let response = await this.channel.sendRequest(new ipcRequests.GetDatabaseDetailsRequest(
+    private async onReceiveMessage(msg: FromWebview.Message): Promise<void> {
+        if (msg.type !== "ready") {
+            return;
+        }
+
+        const response = await this.channel.sendRequest(new ipcRequests.GetDatabaseDetailsRequest(
             100, 100
         )) as ipcResponses.GetDatabaseDetailsResponse;
 
         this.sendMessage({
             type: "details",
             projects: response.projects.map((p): ToWebview.ProjectDetails => {
-                let toMbString = (value: bigint) =>
+                const toMbString = (value: bigint): string =>
                     `${(Number(value / 1024n) / 1024.0).toFixed(2)} MB`;
-                let mapByExtension = (details: searchium_pb.FileByExtensionDetails) => {
+                const mapByExtension = (details: searchium_pb.FileByExtensionDetails): ToWebview.FileByExtensionDetails => {
                     return {
                         extension: details.fileExtension,
                         count: details.fileCount.toLocaleString(),
                         size: toMbString(details.fileByteLength)
                     };
                 };
-                let mapLarge = (details: searchium_pb.LargeFileDetails) => {
+                const mapLarge = (details: searchium_pb.LargeFileDetails): ToWebview.LargeFileDetails => {
                     return {
                         path: details.relativePath,
                         size: toMbString(details.byteLength)
                     };
                 };
-                let mapConfig = (details: searchium_pb.ProjectConfigurationSectionDetails | undefined) => {
+                const mapConfig = (details: searchium_pb.ProjectConfigurationSectionDetails | undefined): ToWebview.ConfigSection => {
                     return {
                         path: details?.containingFilePath ?? "",
                         name: details?.name ?? "",
@@ -74,7 +78,7 @@ export class DetailsPanelProvider {
         });
     }
 
-    private sendMessage(msg: ToWebview.Message) {
+    private sendMessage(msg: ToWebview.Message): void {
         this.webview?.postMessage(msg);
     }
 
@@ -84,7 +88,7 @@ export class DetailsPanelProvider {
         const stylesheetUri = getUri(webview, extensionUri, ["out", "webview", "style.css"]);
 
         const nonce = getNonce();
-        let content =/*html*/ `
+        const content =/*html*/ `
 <!DOCTYPE html>
 <html lang="en">
 
