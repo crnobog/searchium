@@ -1,5 +1,7 @@
 import * as esbuild from "esbuild";
 import { copy } from "esbuild-plugin-copy";
+import * as child_process from "child_process";
+import * as fs from "fs/promises";
 
 let prod = process.argv.indexOf('--prod') >= 0;
 
@@ -46,6 +48,7 @@ const webviewConfig: esbuild.BuildOptions = {
 
 (async () => {
     const args = process.argv.slice(2);
+    let proc = child_process.exec("cargo build -r --manifest-path ./server/Cargo.toml");
     try {
         if (args.includes("--watch")) {
             // Build and watch extension and webview code
@@ -67,6 +70,10 @@ const webviewConfig: esbuild.BuildOptions = {
             await esbuild.build(webviewConfig);
             console.log("build complete");
         }
+        await new Promise<void>((resolve, reject) => {
+            proc.on('exit', () => resolve());
+        });
+        await fs.copyFile("./server/target/release/searchium-server.exe", "./bin/searchium-server.exe");
     } catch (err: any) {
         console.error(err.toString());
         console.error(err.stack);
