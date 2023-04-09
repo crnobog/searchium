@@ -41,12 +41,6 @@
                 "allowTypedFunctionExpressions": true
             }
         ],
-        "no-unused-vars": [
-            "warn",
-            {
-                "argsIgnorePattern": "^_"
-            }
-        ],
         "no-fallthrough": [
             "error",
             {
