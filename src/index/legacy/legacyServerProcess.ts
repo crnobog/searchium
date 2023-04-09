@@ -2,11 +2,11 @@ import * as vscode from "vscode";
 import * as child_process from 'child_process';
 import * as path from 'path';
 import { AddressInfo, createServer, Server, Socket } from 'net';
-import * as searchium_pb from "../../gen/searchium";
-import * as ipcRequests from "../../ipcRequests";
-import { IpcChannel } from "../../ipcChannel";
-import { IndexClient } from "../indexInterface";
-import { getLogger } from "../../logger";
+import * as searchium_pb from "gen/searchium";
+import * as ipcRequests from "ipcRequests";
+import { IpcChannel } from "ipcChannel";
+import { IndexClient } from "index/indexInterface";
+import { getLogger } from "logger";
 
 export async function startLegacyServer(context: vscode.ExtensionContext): Promise<[vscode.Disposable, IpcChannel, IndexClient]> {
     const proxy = new ServerProxy();

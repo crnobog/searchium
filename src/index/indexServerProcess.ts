@@ -3,8 +3,8 @@ import * as child_process from "child_process";
 import * as path from "path";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { ChannelCredentials } from "@grpc/grpc-js";
-import { ISearchiumServiceClient, SearchiumServiceClient } from '../gen/searchium/v2/searchium.client';
-import { getLogger } from '../logger';
+import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/v2/searchium.client';
+import { getLogger } from 'logger';
 import { IndexClient } from "./indexInterface";
 
 class IndexServerProcess implements vscode.Disposable {
