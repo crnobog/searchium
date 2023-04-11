@@ -37,10 +37,13 @@ export class DocumentRegistrationService implements vscode.Disposable {
     }
 
     private register(folder: vscode.WorkspaceFolder): void {
+        // TODO: Hook configuration changes 
+        const filesExclude: { [_: string]: boolean } = vscode.workspace.getConfiguration("files", folder).get("exclude", {});
+        const searchExclude: { [_: string]: boolean } = vscode.workspace.getConfiguration("search", folder).get("exclude", {});
         const request = {
             path: folder.uri.fsPath,
-            ignoreFileGlobs: [],
-            ignoreSearchGlobs: []
+            ignoreFileGlobs: Object.entries(filesExclude).filter(v => v[1]).map(v => v[0]),
+            ignoreSearchGlobs: Object.entries(searchExclude).filter(v => v[1]).map(v => v[0]),
         };
         this.client.registerWorkspaceFolder(request)
             .then(() => getLogger().logDebug`Completed register for ${folder.name}`)
