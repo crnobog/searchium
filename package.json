@@ -157,8 +157,8 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "rimraf out && ts-node ./build.ts --prod",
-    "prebuild": "npm run lint",
+    "vscode:prepublish": "rimraf out && cargo build -r && ts-node ./build.ts --prod",
+    "gen": "buf generate proto",
     "build": "ts-node ./build.ts",
     "watch": "ts-node ./build.ts --watch",
     "pretest": "npm run build && npm run lint",

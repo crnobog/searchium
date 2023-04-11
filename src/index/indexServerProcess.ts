@@ -3,6 +3,7 @@ import * as child_process from "child_process";
 import * as path from "path";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { ChannelCredentials } from "@grpc/grpc-js";
+import * as pb from "gen/searchium/v2/searchium";
 import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/v2/searchium.client';
 import { getLogger } from 'logger';
 import { IndexClient } from "./indexInterface";
@@ -22,11 +23,13 @@ class IndexServerProcess implements vscode.Disposable {
 
 class IndexServerClient implements IndexClient {
     constructor(private client: ISearchiumServiceClient) { }
-
-    public registerWorkspaceFolder(): Promise<void> {
-        throw new Error("Method not implemented.");
+    public async registerWorkspaceFolder(request: pb.FolderRegisterRequest): Promise<void> {
+        await this.client.registerFolder(request).response;
     }
-    public unregisterWorkspaceFolder(): Promise<void> {
+    public async unregisterWorkspaceFolder(request: pb.FolderUnregisterRequest): Promise<void> {
+        await this.client.unregisterFolder(request).response;
+    }
+    public getIndexProgress(): AsyncIterable<pb.IndexProgressUpdate> {
         throw new Error("Method not implemented.");
     }
 }

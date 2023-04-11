@@ -13,8 +13,6 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MESSAGE_TYPE } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
-// import "google/type/datetime.proto"
-
 /**
  * @generated from protobuf message searchium.v2.HelloRequest
  */
@@ -32,6 +30,76 @@ export interface HelloResponse {
      * @generated from protobuf field: string id = 1;
      */
     id: string;
+}
+/**
+ * @generated from protobuf message searchium.v2.EmptyRequest
+ */
+export interface EmptyRequest {
+}
+/**
+ * @generated from protobuf message searchium.v2.GenericResponse
+ */
+export interface GenericResponse {
+    /**
+     * @generated from protobuf field: searchium.v2.GenericError error = 1;
+     */
+    error: GenericError;
+    /**
+     * @generated from protobuf field: string log_message = 2;
+     */
+    logMessage: string;
+}
+/**
+ * @generated from protobuf message searchium.v2.FolderRegisterRequest
+ */
+export interface FolderRegisterRequest {
+    /**
+     * @generated from protobuf field: string path = 1;
+     */
+    path: string;
+    /**
+     * @generated from protobuf field: repeated string ignore_file_globs = 2;
+     */
+    ignoreFileGlobs: string[];
+    /**
+     * @generated from protobuf field: repeated string ignore_search_globs = 3;
+     */
+    ignoreSearchGlobs: string[];
+}
+/**
+ * @generated from protobuf message searchium.v2.FolderUnregisterRequest
+ */
+export interface FolderUnregisterRequest {
+    /**
+     * @generated from protobuf field: string path = 1;
+     */
+    path: string;
+}
+/**
+ * @generated from protobuf message searchium.v2.IndexProgressUpdate
+ */
+export interface IndexProgressUpdate {
+    /**
+     * @generated from protobuf field: string message = 1;
+     */
+    message: string;
+    /**
+     * @generated from protobuf field: uint32 completed = 2;
+     */
+    completed: number;
+    /**
+     * @generated from protobuf field: uint32 total = 3;
+     */
+    total: number;
+}
+/**
+ * @generated from protobuf enum searchium.v2.GenericError
+ */
+export enum GenericError {
+    /**
+     * @generated from protobuf enum value: GENERIC_ERROR_NONE = 0;
+     */
+    NONE = 0
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class HelloRequest$Type extends MessageType<HelloRequest> {
@@ -127,9 +195,261 @@ class HelloResponse$Type extends MessageType<HelloResponse> {
  * @generated MessageType for protobuf message searchium.v2.HelloResponse
  */
 export const HelloResponse = new HelloResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class EmptyRequest$Type extends MessageType<EmptyRequest> {
+    constructor() {
+        super("searchium.v2.EmptyRequest", []);
+    }
+    create(value?: PartialMessage<EmptyRequest>): EmptyRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<EmptyRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EmptyRequest): EmptyRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: EmptyRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.EmptyRequest
+ */
+export const EmptyRequest = new EmptyRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class GenericResponse$Type extends MessageType<GenericResponse> {
+    constructor() {
+        super("searchium.v2.GenericResponse", [
+            { no: 1, name: "error", kind: "enum", T: () => ["searchium.v2.GenericError", GenericError, "GENERIC_ERROR_"] },
+            { no: 2, name: "log_message", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<GenericResponse>): GenericResponse {
+        const message = { error: 0, logMessage: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<GenericResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GenericResponse): GenericResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* searchium.v2.GenericError error */ 1:
+                    message.error = reader.int32();
+                    break;
+                case /* string log_message */ 2:
+                    message.logMessage = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: GenericResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* searchium.v2.GenericError error = 1; */
+        if (message.error !== 0)
+            writer.tag(1, WireType.Varint).int32(message.error);
+        /* string log_message = 2; */
+        if (message.logMessage !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.logMessage);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.GenericResponse
+ */
+export const GenericResponse = new GenericResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FolderRegisterRequest$Type extends MessageType<FolderRegisterRequest> {
+    constructor() {
+        super("searchium.v2.FolderRegisterRequest", [
+            { no: 1, name: "path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "ignore_file_globs", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "ignore_search_globs", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<FolderRegisterRequest>): FolderRegisterRequest {
+        const message = { path: "", ignoreFileGlobs: [], ignoreSearchGlobs: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<FolderRegisterRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FolderRegisterRequest): FolderRegisterRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string path */ 1:
+                    message.path = reader.string();
+                    break;
+                case /* repeated string ignore_file_globs */ 2:
+                    message.ignoreFileGlobs.push(reader.string());
+                    break;
+                case /* repeated string ignore_search_globs */ 3:
+                    message.ignoreSearchGlobs.push(reader.string());
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FolderRegisterRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string path = 1; */
+        if (message.path !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.path);
+        /* repeated string ignore_file_globs = 2; */
+        for (let i = 0; i < message.ignoreFileGlobs.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.ignoreFileGlobs[i]);
+        /* repeated string ignore_search_globs = 3; */
+        for (let i = 0; i < message.ignoreSearchGlobs.length; i++)
+            writer.tag(3, WireType.LengthDelimited).string(message.ignoreSearchGlobs[i]);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.FolderRegisterRequest
+ */
+export const FolderRegisterRequest = new FolderRegisterRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FolderUnregisterRequest$Type extends MessageType<FolderUnregisterRequest> {
+    constructor() {
+        super("searchium.v2.FolderUnregisterRequest", [
+            { no: 1, name: "path", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
+        ]);
+    }
+    create(value?: PartialMessage<FolderUnregisterRequest>): FolderUnregisterRequest {
+        const message = { path: "" };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<FolderUnregisterRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FolderUnregisterRequest): FolderUnregisterRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string path */ 1:
+                    message.path = reader.string();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FolderUnregisterRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string path = 1; */
+        if (message.path !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.path);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.FolderUnregisterRequest
+ */
+export const FolderUnregisterRequest = new FolderUnregisterRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class IndexProgressUpdate$Type extends MessageType<IndexProgressUpdate> {
+    constructor() {
+        super("searchium.v2.IndexProgressUpdate", [
+            { no: 1, name: "message", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "completed", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 3, name: "total", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<IndexProgressUpdate>): IndexProgressUpdate {
+        const message = { message: "", completed: 0, total: 0 };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<IndexProgressUpdate>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IndexProgressUpdate): IndexProgressUpdate {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string message */ 1:
+                    message.message = reader.string();
+                    break;
+                case /* uint32 completed */ 2:
+                    message.completed = reader.uint32();
+                    break;
+                case /* uint32 total */ 3:
+                    message.total = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: IndexProgressUpdate, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string message = 1; */
+        if (message.message !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.message);
+        /* uint32 completed = 2; */
+        if (message.completed !== 0)
+            writer.tag(2, WireType.Varint).uint32(message.completed);
+        /* uint32 total = 3; */
+        if (message.total !== 0)
+            writer.tag(3, WireType.Varint).uint32(message.total);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.IndexProgressUpdate
+ */
+export const IndexProgressUpdate = new IndexProgressUpdate$Type();
 /**
  * @generated ServiceType for protobuf service searchium.v2.SearchiumService
  */
 export const SearchiumService = new ServiceType("searchium.v2.SearchiumService", [
-    { name: "Hello", options: {}, I: HelloRequest, O: HelloResponse }
+    { name: "Hello", options: {}, I: HelloRequest, O: HelloResponse },
+    { name: "RegisterFolder", options: {}, I: FolderRegisterRequest, O: GenericResponse },
+    { name: "UnregisterFolder", options: {}, I: FolderUnregisterRequest, O: GenericResponse },
+    { name: "GetIndexProgress", serverStreaming: true, options: {}, I: EmptyRequest, O: IndexProgressUpdate }
 ]);

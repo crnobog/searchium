@@ -1,6 +1,10 @@
 use tonic::transport::server::TcpIncoming;
+use tonic::Response;
+use tokio_stream;
 
 include!("gen/searchium.v2.rs");
+
+type TonicResult<T> = Result<T, tonic::Status>;
 
 #[derive(Default)]
 struct Service {}
@@ -10,12 +14,36 @@ impl searchium_service_server::SearchiumService for Service {
     async fn hello(
         &self,
         request: tonic::Request<HelloRequest>,
-    ) -> Result<tonic::Response<HelloResponse>, tonic::Status> {
+    ) -> TonicResult<Response<HelloResponse>> {
         println!("Got hello from {}", request.into_inner().id);
         let reply = HelloResponse {
             id: "rust searchium server".to_string(),
         };
-        Ok(tonic::Response::new(reply))
+        Ok(Response::new(reply))
+    }
+
+    async fn register_folder(
+        &self,
+        _request: tonic::Request<FolderRegisterRequest>,
+    ) -> TonicResult<Response<GenericResponse>> {
+        unimplemented!("register_folder");
+    }
+
+    async fn unregister_folder(
+        &self,
+        _request: tonic::Request<FolderUnregisterRequest>,
+    ) -> TonicResult<Response<GenericResponse>> {
+        unimplemented!("unregister_folder");
+    }
+
+    type GetIndexProgressStream = tokio_stream::wrappers::ReceiverStream<TonicResult<IndexProgressUpdate>>;
+
+    async fn get_index_progress(
+        &self,
+        _request: tonic::Request<EmptyRequest>,
+    ) -> TonicResult<Response<Self::GetIndexProgressStream>>
+    {   
+        unimplemented!("get_index_progress");
     }
 }
 

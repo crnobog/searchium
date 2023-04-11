@@ -16,5 +16,6 @@
         "options": [
             "--proto_path=${workspaceRoot}/proto"
         ]
-    }
+    },
+    "rust-analyzer.showUnlinkedFileNotification": false
 }

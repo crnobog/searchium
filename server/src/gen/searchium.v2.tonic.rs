@@ -4,7 +4,6 @@ pub mod searchium_service_client {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
     use tonic::codegen::http::Uri;
-    ///
     #[derive(Debug, Clone)]
     pub struct SearchiumServiceClient<T> {
         inner: tonic::client::Grpc<T>,
@@ -69,7 +68,6 @@ pub mod searchium_service_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
-        ///
         pub async fn hello(
             &mut self,
             request: impl tonic::IntoRequest<super::HelloRequest>,
@@ -89,6 +87,66 @@ pub mod searchium_service_client {
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
+        pub async fn register_folder(
+            &mut self,
+            request: impl tonic::IntoRequest<super::FolderRegisterRequest>,
+        ) -> Result<tonic::Response<super::GenericResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/searchium.v2.SearchiumService/RegisterFolder",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn unregister_folder(
+            &mut self,
+            request: impl tonic::IntoRequest<super::FolderUnregisterRequest>,
+        ) -> Result<tonic::Response<super::GenericResponse>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/searchium.v2.SearchiumService/UnregisterFolder",
+            );
+            self.inner.unary(request.into_request(), path, codec).await
+        }
+        pub async fn get_index_progress(
+            &mut self,
+            request: impl tonic::IntoRequest<super::EmptyRequest>,
+        ) -> Result<
+            tonic::Response<tonic::codec::Streaming<super::IndexProgressUpdate>>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/searchium.v2.SearchiumService/GetIndexProgress",
+            );
+            self.inner.server_streaming(request.into_request(), path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -98,13 +156,29 @@ pub mod searchium_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with SearchiumServiceServer.
     #[async_trait]
     pub trait SearchiumService: Send + Sync + 'static {
-        ///
         async fn hello(
             &self,
             request: tonic::Request<super::HelloRequest>,
         ) -> Result<tonic::Response<super::HelloResponse>, tonic::Status>;
+        async fn register_folder(
+            &self,
+            request: tonic::Request<super::FolderRegisterRequest>,
+        ) -> Result<tonic::Response<super::GenericResponse>, tonic::Status>;
+        async fn unregister_folder(
+            &self,
+            request: tonic::Request<super::FolderUnregisterRequest>,
+        ) -> Result<tonic::Response<super::GenericResponse>, tonic::Status>;
+        /// Server streaming response type for the GetIndexProgress method.
+        type GetIndexProgressStream: futures_core::Stream<
+                Item = Result<super::IndexProgressUpdate, tonic::Status>,
+            >
+            + Send
+            + 'static;
+        async fn get_index_progress(
+            &self,
+            request: tonic::Request<super::EmptyRequest>,
+        ) -> Result<tonic::Response<Self::GetIndexProgressStream>, tonic::Status>;
     }
-    ///
     #[derive(Debug)]
     pub struct SearchiumServiceServer<T: SearchiumService> {
         inner: _Inner<T>,
@@ -197,6 +271,127 @@ pub mod searchium_service_server {
                                 send_compression_encodings,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/RegisterFolder" => {
+                    #[allow(non_camel_case_types)]
+                    struct RegisterFolderSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::UnaryService<super::FolderRegisterRequest>
+                    for RegisterFolderSvc<T> {
+                        type Response = super::GenericResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::FolderRegisterRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).register_folder(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = RegisterFolderSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/UnregisterFolder" => {
+                    #[allow(non_camel_case_types)]
+                    struct UnregisterFolderSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::UnaryService<super::FolderUnregisterRequest>
+                    for UnregisterFolderSvc<T> {
+                        type Response = super::GenericResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::FolderUnregisterRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).unregister_folder(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = UnregisterFolderSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/GetIndexProgress" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetIndexProgressSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::ServerStreamingService<super::EmptyRequest>
+                    for GetIndexProgressSvc<T> {
+                        type Response = super::IndexProgressUpdate;
+                        type ResponseStream = T::GetIndexProgressStream;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::EmptyRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).get_index_progress(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetIndexProgressSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

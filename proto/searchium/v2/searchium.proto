@@ -4,6 +4,17 @@ package searchium.v2;
 
 // import "google/type/datetime.proto"
 
+service SearchiumService { 
+  // TODO: Replace with capabilities/version negotiation
+  rpc Hello(HelloRequest) returns (HelloResponse);
+  
+  // TODO: Consider returning stream progress from RegisterFolder 
+  rpc RegisterFolder(FolderRegisterRequest) returns (GenericResponse);
+  rpc UnregisterFolder(FolderUnregisterRequest) returns (GenericResponse);
+  
+  rpc GetIndexProgress(EmptyRequest) returns (stream IndexProgressUpdate);
+}
+
 message HelloRequest {
   string id = 1;  
 }
@@ -11,6 +22,29 @@ message HelloResponse {
   string id = 1;
 }
 
-service SearchiumService { 
-  rpc Hello(HelloRequest) returns (HelloResponse);
+message EmptyRequest {}
+
+enum GenericError {
+  GENERIC_ERROR_NONE = 0;
+}
+
+message GenericResponse { 
+  GenericError error = 1;
+  string log_message = 2;
+}
+
+message FolderRegisterRequest {
+  string path = 1;
+  repeated string ignore_file_globs = 2;
+  repeated string ignore_search_globs = 3;
+}
+
+message FolderUnregisterRequest { 
+  string path = 1;
+}
+
+message IndexProgressUpdate {
+  string message = 1;
+  uint32 completed = 2;
+  uint32 total = 3;
 }

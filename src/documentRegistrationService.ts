@@ -16,7 +16,7 @@ export class DocumentRegistrationService implements vscode.Disposable {
         if (vscode.workspace.workspaceFolders) {
             for (const folder of vscode.workspace.workspaceFolders) {
                 if (folder.uri.scheme === 'file') {
-                    this.registerPath(folder.uri.fsPath);
+                    this.register(folder);
                 }
             }
         }
@@ -26,24 +26,29 @@ export class DocumentRegistrationService implements vscode.Disposable {
     private onWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
         for (const added of event.added) {
             if (added.uri.scheme === 'file') {
-                this.registerPath(added.uri.fsPath);
+                this.register(added);
             }
         }
         for (const removed of event.removed) {
             if (removed.uri.scheme === 'file') {
-                this.unregisterPath(removed.uri.fsPath);
+                this.unregister(removed);
             }
         }
     }
 
-    private registerPath(path: string): void {
-        this.client.registerWorkspaceFolder(path)
-            .then(() => getLogger().logDebug`Completed register for ${path}`)
-            .catch((e) => getLogger().logError`Error registering file ${path}: ${e}`);
+    private register(folder: vscode.WorkspaceFolder): void {
+        const request = {
+            path: folder.uri.fsPath,
+            ignoreFileGlobs: [],
+            ignoreSearchGlobs: []
+        };
+        this.client.registerWorkspaceFolder(request)
+            .then(() => getLogger().logDebug`Completed register for ${folder.name}`)
+            .catch((e) => getLogger().logError`Error registering file ${folder.name}: ${e}`);
     }
-    private unregisterPath(path: string): void {
-        this.client.unregisterWorkspaceFolder(path)
-            .then(() => getLogger().logDebug`Completed unregister for ${path}`)
-            .catch((e) => getLogger().logError`Error unregistering file ${path}: ${e}`);
+    private unregister(folder: vscode.WorkspaceFolder): void {
+        this.client.unregisterWorkspaceFolder({ path : folder.uri.fsPath })
+            .then(() => getLogger().logDebug`Completed unregister for ${folder.name}`)
+            .catch((e) => getLogger().logError`Error unregistering file ${folder.name}: ${e}`);
     }
 }

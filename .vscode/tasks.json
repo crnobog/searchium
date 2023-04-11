@@ -20,14 +20,16 @@
 			"script": "build",
 			"group": {
 				"kind": "build",
-				"isDefault": true
 			},
 			"problemMatcher": [
 				"$tsc",
 				"$eslint-compact"
 			],
 			"label": "npm: build",
-			"detail": "build extension"
+			"detail": "build extension",
+			"dependsOn": [
+				"Build server"
+			]
 		},
 		{
 			"type": "npm",
@@ -36,7 +38,35 @@
 				"$tsc",
 				"$eslint-compact"
 			],
-			"label": "npm: lint",
+			"label": "npm: lint"
+		},
+		{
+			"type": "npm",
+			"script": "gen",
+			"problemMatcher": [],
+			"label": "npm: gen",
+			"detail": "buf generate proto"
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "Build server",
+		},
+		{
+			"label": "Build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "Build server & extension & lint",
+			"dependsOn": [
+				"npm: build",
+				"npm: lint"
+			]
 		}
 	]
 }
