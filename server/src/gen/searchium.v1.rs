@@ -743,5 +743,4 @@ impl IndexingServerStatus {
         }
     }
 }
-include!("searchium.v1.serde.rs");
 // @@protoc_insertion_point(module)

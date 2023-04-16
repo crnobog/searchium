@@ -23,14 +23,11 @@ class IndexServerProcess implements vscode.Disposable {
 
 class IndexServerClient implements IndexClient {
     constructor(private client: ISearchiumServiceClient) { }
-    public async registerWorkspaceFolder(request: pb.FolderRegisterRequest): Promise<void> {
-        await this.client.registerFolder(request).response;
+    public registerWorkspaceFolder(request: pb.FolderRegisterRequest): AsyncIterable<pb.IndexUpdate> {
+        return this.client.registerFolder(request).responses;
     }
     public async unregisterWorkspaceFolder(request: pb.FolderUnregisterRequest): Promise<void> {
         await this.client.unregisterFolder(request).response;
-    }
-    public getIndexProgress(): AsyncIterable<pb.IndexProgressUpdate> {
-        throw new Error("Method not implemented.");
     }
 }
 

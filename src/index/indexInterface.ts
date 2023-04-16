@@ -8,8 +8,6 @@ import * as pb from "gen/searchium/v2/searchium";
 //  search.useParentIgnoreFiles
 //  search.useGlobalIgnoreFiles
 export interface IndexClient {
-    registerWorkspaceFolder(request: pb.FolderRegisterRequest): Promise<void>;
+    registerWorkspaceFolder(request: pb.FolderRegisterRequest): AsyncIterable<pb.IndexUpdate>;
     unregisterWorkspaceFolder(request: pb.FolderUnregisterRequest): Promise<void>;
-
-    getIndexProgress(): AsyncIterable<pb.IndexProgressUpdate>;
 }

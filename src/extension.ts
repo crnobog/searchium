@@ -8,19 +8,19 @@ import { DetailsPanelProvider } from './detailsPanel';
 import { SearchHistory } from './history';
 import { startServer } from './index/indexServerProcess';
 import { startLegacyServer } from './index/legacy/legacyServerProcess';
-import { IndexClient } from 'index/indexInterface';
-import * as pb2 from 'gen/searchium/v2/searchium';
+import { IpcChannel } from 'ipcChannel';
+import * as ipcEvents from 'ipcEvents';
 
 async function drainIndexProgress(
     progress: vscode.Progress<{ increment: number, message: string }>,
-    event: pb2.IndexProgressUpdate,
-    iterator: AsyncIterator<pb2.IndexProgressUpdate>
+    event: ipcEvents.ProgressReportEvent,
+    iterator: AsyncIterator<ipcEvents.ProgressReportEvent>
 ): Promise<void> {
     const total = event.total;
     let completed = event.completed;
     if (completed === total) { return; }
     getLogger().logInformation`Starting index progress ${completed} ... ${total}`;
-    progress.report({ increment: completed / total * 100, message: event.message });
+    progress.report({ increment: completed / total * 100, message: event.displayText });
     for (; ;) {
         const i = await iterator.next();
         if (i.done) { return; }
@@ -30,7 +30,7 @@ async function drainIndexProgress(
             return;
         }
         getLogger().logInformation`Continuing index progress ${completed} ... ${total}`;
-        progress.report({ increment: (e.completed - completed) / e.total * 100, message: e.message });
+        progress.report({ increment: (e.completed - completed) / e.total * 100, message: e.displayText });
         completed = e.completed;
         if (e.completed === e.total) {
             getLogger().logInformation`Indexing complete ${e.completed}`;
@@ -41,7 +41,7 @@ async function drainIndexProgress(
 
 class IndexProgressReporter implements vscode.Disposable {
     abort = false;
-    constructor(private client: IndexClient) {
+    constructor(private channel: IpcChannel) {
         this.startListening();
     }
 
@@ -49,14 +49,36 @@ class IndexProgressReporter implements vscode.Disposable {
         this.abort = true;
     }
 
+    private getIndexProgress(): AsyncIterable<ipcEvents.ProgressReportEvent> {
+        const channel = this.channel;
+        return async function* () {
+            let events: ipcEvents.ProgressReportEvent[] = [];
+            let resolve: () => void;
+            let promise: Promise<void> = new Promise<void>(r => resolve = r);
+
+            channel.on('event', (e: ipcEvents.TypedEvent) => {
+                if (e.eventType === 'progressReport') {
+                    events.push(e);
+                    resolve();
+                    promise = new Promise<void>(r => resolve = r);
+                }
+            });
+            for (; ;) {
+                await promise;
+                yield* events;
+                events = [];
+            }
+        }();
+    }
+
     private async startListening(): Promise<void> {
-        const iterable = this.client.getIndexProgress();
+        const iterable = this.getIndexProgress();
         const iterator = iterable[Symbol.asyncIterator]();
         getLogger().logInformation`IndexProgressReporter.startListening`;
         for (; ;) {
             const i = await iterator.next();
             if (i.done || this.abort) { break; }
-            const e: pb2.IndexProgressUpdate = i.value;
+            const e: ipcEvents.ProgressReportEvent = i.value;
             const options: vscode.ProgressOptions = {
                 location: vscode.ProgressLocation.Notification,
                 cancellable: false,
@@ -83,7 +105,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const useLegacyServer = config.get<boolean>("useLegacyServer", true);
 
         if (useLegacyServer) {
-            const [proxy, channel, client] = await startLegacyServer(context);
+            const [proxy, channel] = await startLegacyServer(context);
             context.subscriptions.push(proxy);
 
             channel.on('response', (r) => {
@@ -109,8 +131,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             const controlsProvider = new ControlsProvider(context, context.extensionUri, indexState, history);
             context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
 
-            context.subscriptions.push(new IndexProgressReporter(client));
-            context.subscriptions.push(new DocumentRegistrationService(context, client));
+            context.subscriptions.push(new IndexProgressReporter(channel));
+            context.subscriptions.push(new DocumentRegistrationService(context, channel, undefined));
 
             // const fileSearchManager = new FileSearchManager(channel);
             const detailsPanelProvider = new DetailsPanelProvider(context, channel);
@@ -141,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         else {
             const [process, client] = await startServer(context);
             context.subscriptions.push(process);
-            context.subscriptions.push(new DocumentRegistrationService(context, client));
+            context.subscriptions.push(new DocumentRegistrationService(context, undefined, client));
         }
     } catch (err) {
         getLogger().logError`Unexpected error initializing extension: ${err}`;

@@ -33,6 +33,7 @@ pub fn scan_filesystem<P: AsRef<Path> + Send>(
     rayon::scope(|s| {
         s.spawn(|s| scan_directory_recursive(root_path, filter, (), &directories_with_files, s));
     });
+    event!(Level::INFO, root = ?root_path, "Building filesystem");
     build_filesystem(root_path, directories_with_files)
 }
 
@@ -49,13 +50,11 @@ fn build_filesystem(
     let directories_to_files = {
         let mut dirs: HashMap<&Path, Vec<PathBuf>> = HashMap::new();
         for (path, files) in &mut directories_with_files {
-            event!(Level::INFO, files = ?files.len(), ?path, "dir with files");
             dirs.insert(path.as_path(), mem::take(files));
             if *path == *root_path {
                 continue;
             }
             for parent in path.ancestors().skip(1) {
-                event!(Level::INFO, ?parent, "Adding parent");
                 dirs.entry(parent).or_insert(Vec::default());
                 if *parent == *root_path {
                     break;
@@ -65,7 +64,6 @@ fn build_filesystem(
         dirs
     };
 
-    event!(Level::INFO, "rebuilt directory tree");
     #[derive(Default)]
     struct DirectoryChildren<'a> {
         files: Vec<PathBuf>,
@@ -94,14 +92,6 @@ fn build_filesystem(
     directories.sort_by(|a, b| a.0.cmp(b.0).reverse());
     let mut directory_map: HashMap<&Path, Directory> = HashMap::new();
     for (parent, children) in directories {
-        event!(
-            Level::DEBUG,
-            path = ?parent,
-            directory_map_len = directory_map.len(),
-            files = children.files.len(),
-            dirs = children.dirs.len(),
-            "Creating directory"
-        );
         let child_dirs: Vec<_> = children
             .dirs
             .into_iter()
@@ -117,10 +107,7 @@ fn build_filesystem(
             Directory::new(parent.to_owned(), child_dirs, children.files),
         );
     }
-    event!(Level::DEBUG, final_dir_count = directory_map.len());
-    for dir in directory_map.keys() {
-        event!(Level::DEBUG, ?dir, "Final dir");
-    }
+    assert!(directory_map.len() == 1);
     for root in directory_map.into_values() {
         return root;
     }
@@ -135,19 +122,6 @@ enum DirectoryOrFile {
 trait DirectoryItem {
     fn path(&self) -> &Path;
     fn is_dir(&self) -> bool;
-}
-
-impl<'a, T> DirectoryItem for &'a T
-where
-    T: DirectoryItem,
-{
-    fn path(&self) -> &Path {
-        (*self).path()
-    }
-
-    fn is_dir(&self) -> bool {
-        (*self).is_dir()
-    }
 }
 
 impl DirectoryItem for DirectoryOrFile {
@@ -505,9 +479,7 @@ mod tests {
         let d = |dir| TestDirOrFile::Directory(dir);
         let f = |f| TestDirOrFile::File(f);
 
-        let filter = HashSet::from([
-            p("C:\\code\\projects\\generated")
-        ]);
+        let filter = HashSet::from([p("C:\\code\\projects\\generated")]);
         let directories_with_files = Bag::new();
         let root_path = PathBuf::from("C:\\code\\projects");
         let test_data = HashMap::from([

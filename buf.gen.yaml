@@ -9,7 +9,11 @@ plugins:
       - eslint_disable
   - plugin: buf.build/community/neoeinstein-prost
     out: server/src/gen
-  - plugin: buf.build/community/neoeinstein-prost-serde
-    out: server/src/gen
+    opt:
+      - compile_well_known_types
+      - extern_path=.google.protobuf=::prost_types
   - plugin: buf.build/community/neoeinstein-tonic
     out: server/src/gen
+    opt:
+      - no_client
+      - compile_well_known_types

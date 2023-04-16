@@ -3,52 +3,14 @@ import * as child_process from 'child_process';
 import * as path from 'path';
 import { AddressInfo, createServer, Server, Socket } from 'net';
 import * as searchium_pb from "gen/searchium";
-import * as pb2 from "gen/searchium/v2/searchium";
-import * as ipcRequests from "ipcRequests";
-import * as ipcEvents from "ipcEvents";
 import { IpcChannel } from "ipcChannel";
-import { IndexClient } from "index/indexInterface";
 import { getLogger } from "logger";
 
-export async function startLegacyServer(context: vscode.ExtensionContext): Promise<[vscode.Disposable, IpcChannel, IndexClient]> {
+export async function startLegacyServer(context: vscode.ExtensionContext): Promise<[vscode.Disposable, IpcChannel]> {
     const proxy = new ServerProxy();
     const channel = await proxy.startServer(context);
 
-    return [proxy, channel, new ChannelClient(channel)];
-}
-
-class ChannelClient implements IndexClient {
-    constructor(private channel: IpcChannel) { }
-
-    public registerWorkspaceFolder(request: pb2.FolderRegisterRequest): Promise<void> {
-        return this.channel.sendSequentialRequest(new ipcRequests.RegisterFileRequest(request.path));
-    }
-
-    public unregisterWorkspaceFolder(request: pb2.FolderUnregisterRequest): Promise<void> {
-        return this.channel.sendSequentialRequest(new ipcRequests.UnregisterFileRequest(request.path));
-    }
-
-    public getIndexProgress(): AsyncIterable<pb2.IndexProgressUpdate> {
-        const channel = this.channel;
-        return async function* () {
-            let events: pb2.IndexProgressUpdate[] = [];
-            let resolve: () => void;
-            let promise: Promise<void> = new Promise<void>(r => resolve = r);
-
-            channel.on('event', (e: ipcEvents.TypedEvent) => {
-                if (e.eventType === 'progressReport') {
-                    events.push({ completed: e.completed, message: e.displayText, total: e.total });
-                    resolve();
-                    promise = new Promise<void>(r => resolve = r);
-                }
-            });
-            for (; ;) {
-                await promise;
-                yield* events;
-                events = [];
-            }
-        }();
-    }
+    return [proxy, channel];
 }
 
 class ServerProxy implements vscode.Disposable {

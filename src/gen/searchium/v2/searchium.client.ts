@@ -5,19 +5,16 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
-import type { IndexProgressUpdate } from "./searchium";
-import type { EmptyRequest } from "./searchium";
-import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
-import type { FolderUnregisterRequest } from "./searchium";
 import type { GenericResponse } from "./searchium";
+import type { FolderUnregisterRequest } from "./searchium";
+import type { IndexUpdate } from "./searchium";
 import type { FolderRegisterRequest } from "./searchium";
+import type { ServerStreamingCall } from "@protobuf-ts/runtime-rpc";
 import { stackIntercept } from "@protobuf-ts/runtime-rpc";
 import type { HelloResponse } from "./searchium";
 import type { HelloRequest } from "./searchium";
 import type { UnaryCall } from "@protobuf-ts/runtime-rpc";
 import type { RpcOptions } from "@protobuf-ts/runtime-rpc";
-// import "google/type/datetime.proto"
-
 /**
  * @generated from protobuf service searchium.v2.SearchiumService
  */
@@ -29,22 +26,14 @@ export interface ISearchiumServiceClient {
      */
     hello(input: HelloRequest, options?: RpcOptions): UnaryCall<HelloRequest, HelloResponse>;
     /**
-     * TODO: Consider returning stream progress from RegisterFolder
-     *
-     * @generated from protobuf rpc: RegisterFolder(searchium.v2.FolderRegisterRequest) returns (searchium.v2.GenericResponse);
+     * @generated from protobuf rpc: RegisterFolder(searchium.v2.FolderRegisterRequest) returns (stream searchium.v2.IndexUpdate);
      */
-    registerFolder(input: FolderRegisterRequest, options?: RpcOptions): UnaryCall<FolderRegisterRequest, GenericResponse>;
+    registerFolder(input: FolderRegisterRequest, options?: RpcOptions): ServerStreamingCall<FolderRegisterRequest, IndexUpdate>;
     /**
      * @generated from protobuf rpc: UnregisterFolder(searchium.v2.FolderUnregisterRequest) returns (searchium.v2.GenericResponse);
      */
     unregisterFolder(input: FolderUnregisterRequest, options?: RpcOptions): UnaryCall<FolderUnregisterRequest, GenericResponse>;
-    /**
-     * @generated from protobuf rpc: GetIndexProgress(searchium.v2.EmptyRequest) returns (stream searchium.v2.IndexProgressUpdate);
-     */
-    getIndexProgress(input: EmptyRequest, options?: RpcOptions): ServerStreamingCall<EmptyRequest, IndexProgressUpdate>;
 }
-// import "google/type/datetime.proto"
-
 /**
  * @generated from protobuf service searchium.v2.SearchiumService
  */
@@ -64,13 +53,11 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
         return stackIntercept<HelloRequest, HelloResponse>("unary", this._transport, method, opt, input);
     }
     /**
-     * TODO: Consider returning stream progress from RegisterFolder
-     *
-     * @generated from protobuf rpc: RegisterFolder(searchium.v2.FolderRegisterRequest) returns (searchium.v2.GenericResponse);
+     * @generated from protobuf rpc: RegisterFolder(searchium.v2.FolderRegisterRequest) returns (stream searchium.v2.IndexUpdate);
      */
-    registerFolder(input: FolderRegisterRequest, options?: RpcOptions): UnaryCall<FolderRegisterRequest, GenericResponse> {
+    registerFolder(input: FolderRegisterRequest, options?: RpcOptions): ServerStreamingCall<FolderRegisterRequest, IndexUpdate> {
         const method = this.methods[1], opt = this._transport.mergeOptions(options);
-        return stackIntercept<FolderRegisterRequest, GenericResponse>("unary", this._transport, method, opt, input);
+        return stackIntercept<FolderRegisterRequest, IndexUpdate>("serverStreaming", this._transport, method, opt, input);
     }
     /**
      * @generated from protobuf rpc: UnregisterFolder(searchium.v2.FolderUnregisterRequest) returns (searchium.v2.GenericResponse);
@@ -78,12 +65,5 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
     unregisterFolder(input: FolderUnregisterRequest, options?: RpcOptions): UnaryCall<FolderUnregisterRequest, GenericResponse> {
         const method = this.methods[2], opt = this._transport.mergeOptions(options);
         return stackIntercept<FolderUnregisterRequest, GenericResponse>("unary", this._transport, method, opt, input);
-    }
-    /**
-     * @generated from protobuf rpc: GetIndexProgress(searchium.v2.EmptyRequest) returns (stream searchium.v2.IndexProgressUpdate);
-     */
-    getIndexProgress(input: EmptyRequest, options?: RpcOptions): ServerStreamingCall<EmptyRequest, IndexProgressUpdate> {
-        const method = this.methods[3], opt = this._transport.mergeOptions(options);
-        return stackIntercept<EmptyRequest, IndexProgressUpdate>("serverStreaming", this._transport, method, opt, input);
     }
 }

@@ -41,13 +41,26 @@ pub struct FolderUnregisterRequest {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct IndexProgressUpdate {
-    #[prost(string, tag="1")]
-    pub message: ::prost::alloc::string::String,
-    #[prost(uint32, tag="2")]
-    pub completed: u32,
-    #[prost(uint32, tag="3")]
-    pub total: u32,
+pub struct IndexUpdate {
+    #[prost(message, optional, tag="1")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    #[prost(oneof="index_update::Type", tags="10, 11")]
+    pub r#type: ::core::option::Option<index_update::Type>,
+}
+/// Nested message and enum types in `IndexUpdate`.
+pub mod index_update {
+    #[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Type {
+        #[prost(message, tag="10")]
+        FilesystemScanStart(super::GenericEvent),
+        #[prost(message, tag="11")]
+        FilesystemScanEnd(super::GenericEvent),
+    }
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GenericEvent {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -72,6 +85,5 @@ impl GenericError {
         }
     }
 }
-include!("searchium.v2.serde.rs");
 include!("searchium.v2.tonic.rs");
 // @@protoc_insertion_point(module)

@@ -189,5 +189,4 @@ pub struct Decimal {
     #[prost(uint32, tag="3")]
     pub sign_scale: u32,
 }
-include!("bcl.serde.rs");
 // @@protoc_insertion_point(module)

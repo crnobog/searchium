@@ -2,17 +2,14 @@ syntax = "proto3";
 
 package searchium.v2;
 
-// import "google/type/datetime.proto"
+import "google/protobuf/timestamp.proto";
 
 service SearchiumService { 
   // TODO: Replace with capabilities/version negotiation
   rpc Hello(HelloRequest) returns (HelloResponse);
   
-  // TODO: Consider returning stream progress from RegisterFolder 
-  rpc RegisterFolder(FolderRegisterRequest) returns (GenericResponse);
+  rpc RegisterFolder(FolderRegisterRequest) returns (stream IndexUpdate);
   rpc UnregisterFolder(FolderUnregisterRequest) returns (GenericResponse);
-  
-  rpc GetIndexProgress(EmptyRequest) returns (stream IndexProgressUpdate);
 }
 
 message HelloRequest {
@@ -43,8 +40,13 @@ message FolderUnregisterRequest {
   string path = 1;
 }
 
-message IndexProgressUpdate {
-  string message = 1;
-  uint32 completed = 2;
-  uint32 total = 3;
+message IndexUpdate { 
+  google.protobuf.Timestamp timestamp = 1;
+  oneof type { 
+    GenericEvent filesystem_scan_start = 10; 
+    GenericEvent filesystem_scan_end = 11; 
+  }
+}
+
+message GenericEvent {
 }
