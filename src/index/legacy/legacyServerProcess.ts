@@ -82,8 +82,8 @@ class ServerProxy implements vscode.Disposable {
         const port = await portTask;
         getLogger().logInformation`Listening on port ${port}`;
 
-        const hostExePath = path.join(context.extensionPath, "bin", "VSChromium.Host.exe");
-        const serverExePath = path.join(context.extensionPath, "bin", "VSChromium.Server.exe");
+        const hostExePath = path.join(context.extensionPath, "bin-debug", "VSChromium.Host.exe");
+        const serverExePath = path.join(context.extensionPath, "bin-debug", "VSChromium.Server.exe");
         this.proc = child_process.spawn(hostExePath, [serverExePath, `${port}`], { detached: true });
 
         const c = await pendingSocket;

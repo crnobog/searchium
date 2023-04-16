@@ -10,13 +10,13 @@ import { IndexClient } from "./indexInterface";
 
 class IndexServerProcess implements vscode.Disposable {
     constructor(
-        private proc: child_process.ChildProcessWithoutNullStreams,
+        private proc: child_process.ChildProcessWithoutNullStreams | undefined,
         private transport: GrpcTransport,
     ) {
     }
 
     public dispose(): void {
-        this.proc.kill();
+        this.proc?.kill();
         this.transport.close();
     }
 };
@@ -35,21 +35,26 @@ class IndexServerClient implements IndexClient {
 }
 
 export async function startServer(context: vscode.ExtensionContext): Promise<[IndexServerProcess, IndexClient]> {
-    const serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
-    const proc = child_process.spawn(serverExePath, [], { detached: true });
-    const host: string = await new Promise((resolve, _reject) => {
-        let msg = "";
-        const listener = (s: string): void => {
-            msg += s;
-            const i = msg.indexOf('\n');
-            if (i !== -1) {
-                proc.stdout.off('data', listener);
-                resolve(msg.substring(0, i));
-            }
-        };
-        proc.stdout.on('data', listener);
-        // TODO: Error conditions
-    });
+    let host = vscode.workspace.getConfiguration("searchium").get<string>("debugIndexHost");
+    let childProc: child_process.ChildProcessWithoutNullStreams | undefined;
+    if (!host) {
+        const serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
+        const proc = child_process.spawn(serverExePath, [], { detached: true });
+        childProc = proc;
+        host = await new Promise<string>((resolve, _reject) => {
+            let msg = "";
+            const listener = (s: string): void => {
+                msg += s;
+                const i = msg.indexOf('\n');
+                if (i !== -1) {
+                    proc.stdout.off('data', listener);
+                    resolve(msg.substring(0, i));
+                }
+            };
+            proc.stdout.on('data', listener);
+            // TODO: Error conditions
+        });
+    }
     const transport = new GrpcTransport({
         host,
         channelCredentials: ChannelCredentials.createInsecure(),
@@ -65,5 +70,5 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
             getLogger().logError`Error ${err}`;
         });
 
-    return [new IndexServerProcess(proc, transport), new IndexServerClient(client)];
+    return [new IndexServerProcess(childProc, transport), new IndexServerClient(client)];
 }

@@ -18,18 +18,21 @@
 		{
 			"type": "npm",
 			"script": "build",
-			"group": {
-				"kind": "build",
-			},
+			"group": "build",
 			"problemMatcher": [
 				"$tsc",
 				"$eslint-compact"
 			],
 			"label": "npm: build",
 			"detail": "build extension",
-			"dependsOn": [
-				"Build server"
-			]
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": true
+			}
 		},
 		{
 			"type": "npm",
@@ -57,6 +60,43 @@
 			"label": "Build server",
 		},
 		{
+			"type": "shell",
+			"command": "cargo run --bin searchium-server",
+			"group": "none",
+			"label": "Run server",
+			"isBackground": true,
+			"options": {
+				"env": {
+					"SEARCHIUM_LOG": "searchium_server=DEBUG,searchium_server::fs_state=DEBUG"
+				}
+			},
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"killserver",
+				"Build server"
+			],
+			"problemMatcher": {
+				"owner": "external",
+				"fileLocation": "relative",
+				"pattern": {
+					"regexp": "^NEVER(.)(.)(.)$",
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ": Building searchium index server",
+					"endsPattern": ": Starting searchium index server",
+				}
+			},
+			"presentation": {
+				"echo": false,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": true
+			}
+		},
+		{
 			"label": "Build",
 			"group": {
 				"kind": "build",
@@ -64,9 +104,37 @@
 			},
 			"detail": "Build server & extension & lint",
 			"dependsOn": [
+				"Build server",
 				"npm: build",
 				"npm: lint"
 			]
+		},
+		{
+			"label": "prelaunch",
+			"group": "none",
+			"dependsOn": [
+				"npm: build",
+				"Run server"
+			],
+			"hide": true
+		},
+		{
+			"label": "killserver",
+			"group": "none",
+			"hide": true,
+			"type": "shell",
+			"command": "Get-Process -Name searchium-server -ErrorAction SilentlyContinue | Stop-Process || $True",
+			"runOptions": {
+				"instanceLimit": 1
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "never",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			}
 		}
 	]
 }
