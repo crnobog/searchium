@@ -4,6 +4,7 @@ import { getLogger } from "./logger";
 import { IndexClient } from "./index/indexInterface";
 import { IpcChannel } from "ipcChannel";
 import * as ipcRequests from "ipcRequests";
+import { Timestamp } from "gen/google/protobuf/timestamp";
 
 export class DocumentRegistrationService implements vscode.Disposable {
     constructor(
@@ -63,12 +64,12 @@ export class DocumentRegistrationService implements vscode.Disposable {
                     for await (const event of events) {
                         switch (event.type.oneofKind) {
                             case 'filesystemScanStart': {
-                                getLogger().logInformation`Filesystem scan started at ${event.timestamp}`;
+                                getLogger().logInformation`Filesystem scan started at ${Timestamp.toDate(event.timestamp ?? Timestamp.now())}`;
                                 progress.report({ message: `Scanning filesystem.` });
                                 break;
                             }
                             case 'filesystemScanEnd': {
-                                getLogger().logInformation`Filesystem scan ended at ${event.timestamp}`;
+                                getLogger().logInformation`Filesystem scan ended at ${Timestamp.toDate(event.timestamp ?? Timestamp.now())}`;
                                 progress.report({ message: `Finished scanning filesystem.` });
                                 break;
                             }
