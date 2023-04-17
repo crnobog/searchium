@@ -110,6 +110,11 @@
         "command": "searchium.clearHistory",
         "category": "Searchium",
         "title": "Clear History"
+      },
+      {
+        "command": "searchium.searchFilePaths",
+        "category": "Searchium",
+        "title": "Search File Paths"
       }
     ],
     "keybindings": [

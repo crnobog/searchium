@@ -1,7 +1,7 @@
-import { IpcChannel } from "./ipcChannel";
 import * as vscode from "vscode";
-import { SearchFilePathsRequest } from "./ipcRequests";
-import { SearchFilePathsResponse } from "./ipcResponses";
+import { IndexClient } from "index/indexInterface";
+import { getLogger } from "logger";
+import * as pb from 'gen/searchium/v2/searchium';
 
 class FileResult implements vscode.QuickPickItem {
     kind?: vscode.QuickPickItemKind | undefined;
@@ -12,12 +12,66 @@ class FileResult implements vscode.QuickPickItem {
     buttons?: readonly vscode.QuickInputButton[] | undefined;
 
     constructor(public label: string) {
-
+        this.alwaysShow = true;
     }
 }
 
-export class FileSearchManager {
-    constructor(private channel: IpcChannel) { }
+class Debouncer implements vscode.Disposable {
+    handle?: NodeJS.Timeout;
+
+    constructor(private debounceTimeMS: number) {
+    }
+
+    public dispose(): void {
+        if (this.handle) {
+            clearTimeout(this.handle);
+        }
+    }
+
+    public do(func: () => Promise<void>): void {
+        if (this.handle) {
+            clearTimeout(this.handle);
+        }
+        this.handle = setTimeout(func, this.debounceTimeMS);
+    }
+}
+
+class ResultsWaiter implements vscode.Disposable {
+    cancelSource: vscode.CancellationTokenSource;
+    resolve?: (r: pb.FilePathSearchResponse) => void;
+
+    constructor(private results: AsyncIterable<pb.FilePathSearchResponse>) {
+        this.cancelSource = new vscode.CancellationTokenSource();
+        process.nextTick(async () => {
+            for await (const result of this.results) {
+                if (this.cancelSource.token.isCancellationRequested) {
+                    getLogger().logInformation`Canceling file search results processing`;
+                    break;
+                }
+                getLogger().logInformation`Got new file search results in ${result.duration?.seconds.toString()}s`;
+                for (const path of result.results) {
+                    getLogger().logInformation`${path}`;
+                }
+                if (this.resolve) {
+                    this.resolve(result);
+                }
+            }
+        });
+    }
+
+    public dispose(): void {
+        this.cancelSource.cancel();
+    }
+
+    public waitForNext(): Promise<pb.FilePathSearchResponse> {
+        return new Promise((resolve, _reject) => this.resolve = resolve);
+    }
+}
+
+export class FileSearchManager implements vscode.Disposable {
+    constructor(private client: IndexClient) { }
+
+    public dispose(): void { getLogger().logDebug`Disposing FileSearchManager`; }
 
     public async onSearchFilePaths(): Promise<void> {
         const disposables: vscode.Disposable[] = [];
@@ -27,29 +81,30 @@ export class FileSearchManager {
                 input.canSelectMany = false;
                 input.placeholder = "Type to search for files";
                 // TODO set busy when searching 
-
-                let cancelSource = new vscode.CancellationTokenSource();
-                disposables.push(cancelSource);
-                let timeout: NodeJS.Timeout | undefined = undefined;
-                const debounceTime = 200;
+                const stream = this.client.searchFilePaths();
+                const debouncer = new Debouncer(200);
+                const waiter = new ResultsWaiter(stream.results);
+                disposables.push(
+                    input,
+                    debouncer,
+                    waiter,
+                    {
+                        dispose: () => { stream.complete(); },
+                    });
                 input.onDidChangeValue((value) => {
                     // todo: debounce searching  
                     if (!value || value === "") {
-                        input.items = [];
                         return;
                     }
-                    if (timeout) { clearTimeout(timeout); }
-                    cancelSource.cancel();
-                    cancelSource = new vscode.CancellationTokenSource();
-                    timeout = setTimeout(async () => {
-                        input.busy = true;
-                        const results = await this.searchForFiles(value, cancelSource.token);
-                        if (!results) { return; } // cancelled
-                        input.busy = false;
-                        input.items = results;
+                    // TODO: set input busy 
+                    debouncer.do(async () => {
+                        await stream.send({ query: value, maxResults: 20 });
                         // todo: cancellation? 
-                    }, debounceTime);
+                        const r = await waiter.waitForNext();
+                        input.items = r.results.map((path) => new FileResult(path));
+                    });
                 }, disposables);
+
 
                 input.show();
             });
@@ -57,38 +112,5 @@ export class FileSearchManager {
         finally {
             disposables.forEach(d => d.dispose());
         }
-    }
-
-    private async searchForFiles(value: string, token: vscode.CancellationToken): Promise<FileResult[] | undefined> {
-        const results = await this.channel.sendRequest(new SearchFilePathsRequest({
-            searchString: value,
-            includeSymLinks: false,
-            matchCase: false,
-            matchWholeWord: false,
-            maxResults: 100,
-            regex: true,
-            useRe2Engine: false,
-            filePathPattern: "",
-        })) as SearchFilePathsResponse;
-        if (token.isCancellationRequested) { return undefined; }
-
-        if (results.hitCount === 0n) {
-            return [];
-        }
-
-        if (results.searchResult.subtype.oneofKind !== 'directoryEntry') {
-            return []; // TODO error 
-        }
-        const root = results.searchResult.subtype.directoryEntry;
-        const files = [];
-        for (const dir of root.entries) {
-            if (dir.subtype.oneofKind !== 'directoryEntry') { continue; }
-            // TODO: dividor/group per directory/project 
-            for (const file of dir.subtype.directoryEntry.entries) {
-                if (file.subtype.oneofKind !== 'fileEntry') { continue; }
-                files.push(new FileResult(file.name));
-            }
-        }
-        return files;
     }
 }

@@ -5,6 +5,18 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use tracing::{event, Level};
 
+pub struct Root {
+    directory : Directory,
+    all_files : Vec<PathBuf>
+}
+
+impl Root { 
+    pub fn directory(&self) -> &Directory { &self.directory }
+    pub fn all_files(&self) -> &[PathBuf] {
+        return &self.all_files;
+    }
+}
+
 pub struct Directory {
     _dir_path: PathBuf,
     _child_directories: Vec<Directory>,
@@ -26,7 +38,7 @@ type DirectoryWithFiles = (PathBuf, Vec<PathBuf>);
 pub fn scan_filesystem<P: AsRef<Path> + Send>(
     root_path: P,
     filter: &(impl PathFilter + Sync),
-) -> Directory {
+) -> Root {
     let root_path = root_path.as_ref();
     event!(Level::INFO, root = ?root_path, "Scanning filesystem");
     let directories_with_files = Bag::new();
@@ -40,7 +52,7 @@ pub fn scan_filesystem<P: AsRef<Path> + Send>(
 fn build_filesystem(
     root_path: &Path,
     directories_with_files: impl IntoIterator<Item = DirectoryWithFiles>,
-) -> Directory {
+) -> Root {
     let mut directories_with_files: Vec<_> = directories_with_files.into_iter().collect();
     event!(
         Level::INFO,
@@ -88,6 +100,7 @@ fn build_filesystem(
         }
     }
 
+    let mut all_files = Vec::new();
     let mut directories: Vec<_> = directory_to_children.into_iter().collect();
     directories.sort_by(|a, b| a.0.cmp(b.0).reverse());
     let mut directory_map: HashMap<&Path, Directory> = HashMap::new();
@@ -102,14 +115,15 @@ fn build_filesystem(
             })
             .collect();
         // TODO: avoid copies here? Borrow directory as mut and swap? Refcount path symbols so maps don't have to borrow?
+        all_files.extend_from_slice(&children.files);
         directory_map.insert(
             parent,
             Directory::new(parent.to_owned(), child_dirs, children.files),
         );
     }
     assert!(directory_map.len() == 1);
-    for root in directory_map.into_values() {
-        return root;
+    for directory in directory_map.into_values() {
+        return Root{ directory, all_files };
     }
     unreachable!();
 }
@@ -297,7 +311,8 @@ mod tests {
                 ("src/module", vec!["module1.cpp", "module2.cpp"]),
             ],
         );
-        let dir = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
+        let root = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
+        let dir = root.directory;
         let p = |p| PathBuf::from(p);
         assert_eq!(dir._dir_path, p("C:\\code\\projects"));
         assert_eq!(dir._files, vec![p("C:\\code\\projects\\readme.md")]);
@@ -338,7 +353,8 @@ mod tests {
                 ("src/modules/module2", vec!["module2.cpp"]),
             ],
         );
-        let dir = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
+        let root = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
+        let dir = root.directory;
         let p = |p| PathBuf::from(p);
         assert_eq!(dir._dir_path, p("C:\\code\\projects"));
         assert_eq!(dir._files, vec![p("C:\\code\\projects\\readme.md")]);

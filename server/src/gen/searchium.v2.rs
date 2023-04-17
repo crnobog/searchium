@@ -50,17 +50,37 @@ pub struct IndexUpdate {
 /// Nested message and enum types in `IndexUpdate`.
 pub mod index_update {
     #[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct FilesystemScanStart {
+    }
+    #[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct FilesystemScanEnd {
+    }
+    #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag="10")]
-        FilesystemScanStart(super::GenericEvent),
+        FilesystemScanStart(FilesystemScanStart),
         #[prost(message, tag="11")]
-        FilesystemScanEnd(super::GenericEvent),
+        FilesystemScanEnd(FilesystemScanEnd),
     }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GenericEvent {
+pub struct FilePathSearchRequest {
+    #[prost(string, tag="1")]
+    pub query: ::prost::alloc::string::String,
+    #[prost(uint32, tag="2")]
+    pub max_results: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FilePathSearchResponse {
+    #[prost(string, repeated, tag="1")]
+    pub results: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(message, optional, tag="2")]
+    pub duration: ::core::option::Option<::prost_types::Duration>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

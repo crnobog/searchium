@@ -6,7 +6,7 @@ import { ChannelCredentials } from "@grpc/grpc-js";
 import * as pb from "gen/searchium/v2/searchium";
 import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/v2/searchium.client';
 import { getLogger } from 'logger';
-import { IndexClient } from "./indexInterface";
+import { DuplexStreamingMethod, IndexClient } from "./indexInterface";
 
 class IndexServerProcess implements vscode.Disposable {
     constructor(
@@ -28,6 +28,18 @@ class IndexServerClient implements IndexClient {
     }
     public async unregisterWorkspaceFolder(request: pb.FolderUnregisterRequest): Promise<void> {
         await this.client.unregisterFolder(request).response;
+    }
+    public searchFilePaths(): DuplexStreamingMethod<pb.FilePathSearchRequest, pb.FilePathSearchResponse> {
+        const res = this.client.searchFilePaths();
+        return {
+            send: async (message: pb.FilePathSearchRequest) => {
+                await res.requests.send(message);
+            },
+            complete: async () => {
+                await res.requests.complete();
+            },
+            results: res.responses
+        };
     }
 }
 

@@ -5,6 +5,9 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
+import type { FilePathSearchResponse } from "./searchium";
+import type { FilePathSearchRequest } from "./searchium";
+import type { DuplexStreamingCall } from "@protobuf-ts/runtime-rpc";
 import type { GenericResponse } from "./searchium";
 import type { FolderUnregisterRequest } from "./searchium";
 import type { IndexUpdate } from "./searchium";
@@ -33,6 +36,10 @@ export interface ISearchiumServiceClient {
      * @generated from protobuf rpc: UnregisterFolder(searchium.v2.FolderUnregisterRequest) returns (searchium.v2.GenericResponse);
      */
     unregisterFolder(input: FolderUnregisterRequest, options?: RpcOptions): UnaryCall<FolderUnregisterRequest, GenericResponse>;
+    /**
+     * @generated from protobuf rpc: SearchFilePaths(stream searchium.v2.FilePathSearchRequest) returns (stream searchium.v2.FilePathSearchResponse);
+     */
+    searchFilePaths(options?: RpcOptions): DuplexStreamingCall<FilePathSearchRequest, FilePathSearchResponse>;
 }
 /**
  * @generated from protobuf service searchium.v2.SearchiumService
@@ -65,5 +72,12 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
     unregisterFolder(input: FolderUnregisterRequest, options?: RpcOptions): UnaryCall<FolderUnregisterRequest, GenericResponse> {
         const method = this.methods[2], opt = this._transport.mergeOptions(options);
         return stackIntercept<FolderUnregisterRequest, GenericResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: SearchFilePaths(stream searchium.v2.FilePathSearchRequest) returns (stream searchium.v2.FilePathSearchResponse);
+     */
+    searchFilePaths(options?: RpcOptions): DuplexStreamingCall<FilePathSearchRequest, FilePathSearchResponse> {
+        const method = this.methods[3], opt = this._transport.mergeOptions(options);
+        return stackIntercept<FilePathSearchRequest, FilePathSearchResponse>("duplex", this._transport, method, opt);
     }
 }

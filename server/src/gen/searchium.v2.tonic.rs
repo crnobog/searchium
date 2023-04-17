@@ -24,6 +24,16 @@ pub mod searchium_service_server {
             &self,
             request: tonic::Request<super::FolderUnregisterRequest>,
         ) -> Result<tonic::Response<super::GenericResponse>, tonic::Status>;
+        /// Server streaming response type for the SearchFilePaths method.
+        type SearchFilePathsStream: futures_core::Stream<
+                Item = Result<super::FilePathSearchResponse, tonic::Status>,
+            >
+            + Send
+            + 'static;
+        async fn search_file_paths(
+            &self,
+            request: tonic::Request<tonic::Streaming<super::FilePathSearchRequest>>,
+        ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct SearchiumServiceServer<T: SearchiumService> {
@@ -198,6 +208,49 @@ pub mod searchium_service_server {
                                 send_compression_encodings,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/SearchFilePaths" => {
+                    #[allow(non_camel_case_types)]
+                    struct SearchFilePathsSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::StreamingService<super::FilePathSearchRequest>
+                    for SearchFilePathsSvc<T> {
+                        type Response = super::FilePathSearchResponse;
+                        type ResponseStream = T::SearchFilePathsStream;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<
+                                tonic::Streaming<super::FilePathSearchRequest>,
+                            >,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).search_file_paths(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = SearchFilePathsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

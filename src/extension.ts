@@ -10,6 +10,7 @@ import { startServer } from './index/indexServerProcess';
 import { startLegacyServer } from './index/legacy/legacyServerProcess';
 import { IpcChannel } from 'ipcChannel';
 import * as ipcEvents from 'ipcEvents';
+import { FileSearchManager } from 'fileSearch';
 
 async function drainIndexProgress(
     progress: vscode.Progress<{ increment: number, message: string }>,
@@ -162,8 +163,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
         else {
             const [process, client] = await startServer(context);
-            context.subscriptions.push(process);
-            context.subscriptions.push(new DocumentRegistrationService(context, undefined, client));
+            const fileSearchManager = new FileSearchManager(client);
+            context.subscriptions.push(
+                process,
+                new DocumentRegistrationService(context, undefined, client),
+                fileSearchManager,
+                vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager)
+            );
         }
     } catch (err) {
         getLogger().logError`Unexpected error initializing extension: ${err}`;

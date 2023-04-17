@@ -1,22 +1,19 @@
 mod concurrent_bag;
 mod fs_filter;
 mod fs_state;
+mod index_server;
 
-use fs_filter::*;
-use fs_state::*;
+use index_server::*;
 
 use futures;
 use futures::StreamExt;
 use futures_core;
 use futures_core::stream::BoxStream;
-use std::fmt::Debug;
-use std::path::{Path, PathBuf};
-use std::time::SystemTime;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tonic::transport::server::TcpIncoming;
 use tonic::{Response, Status};
-use tracing::{event, info_span, instrument, Level};
+use tracing::{event, instrument, Level};
 use tracing_subscriber;
 use tracing_subscriber::{prelude::*, EnvFilter};
 
@@ -26,82 +23,15 @@ mod searchium {
 
 type TonicResult<T> = Result<T, tonic::Status>;
 
-// Commands for index state to update
-#[derive(Debug)]
-enum Command {
-    RegisterFolder(
-        searchium::FolderRegisterRequest,
-        broadcast::Sender<TonicResult<searchium::IndexUpdate>>,
-    ),
-    UnregisterFolder(searchium::FolderUnregisterRequest),
-}
-
 struct Service {
     command_tx: mpsc::Sender<Command>,
-}
-
-struct IndexState {
-    command_rx: mpsc::Receiver<Command>,
-    roots: Vec<Directory>,
-}
-
-impl std::fmt::Debug for IndexState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("")
-    }
-}
-// TODO: Setup directory watcher to feed update commands back into index state
-impl IndexState {
-    async fn run(mut self) {
-        event!(Level::INFO, "Starting index state command loop");
-        while let Some(c) = self.command_rx.recv().await {
-            // TODO: Consider how to handle parallelism here i.e. getting more commands while working on an indexing operation
-            self.execute_command(c).await;
-        }
-        event!(Level::INFO, "Leaving index state command loop");
-    }
-
-    async fn execute_command(&mut self, c: Command) {
-        match c {
-            Command::RegisterFolder(params, tx) => {
-                let span = info_span!("RegisterFolder");
-                let _ = span.enter();
-                let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-                tx.send(Ok(searchium::IndexUpdate {
-                    timestamp,
-                    r#type: Some(searchium::index_update::Type::FilesystemScanStart(searchium::GenericEvent{})),
-                }))
-                .ok();
-                event!(Level::DEBUG, ?params.ignore_file_globs, ?params.path, "Constructing path filter");
-                let filter =
-                    PathGlobFilter::new(PathBuf::from(&params.path), params.ignore_file_globs);
-                // TODO: Dupe detection, check for different ignore globs
-                let new_root = scan_filesystem(Path::new(&params.path), &filter);
-                self.roots.push(new_root);
-                let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-                tx.send(Ok(searchium::IndexUpdate {
-                    timestamp,
-                    r#type: Some(searchium::index_update::Type::FilesystemScanEnd(
-                        searchium::GenericEvent {},
-                    )),
-                }))
-                .ok();
-            }
-            Command::UnregisterFolder(_params) => {
-                // TODO: Remove root directory if it exists
-            }
-        }
-    }
 }
 
 impl Service {
     fn new() -> Self {
         let (command_tx, command_rx) = mpsc::channel(32);
-        let state = IndexState {
-            command_rx,
-            roots: Vec::new(),
-        };
-        tokio::spawn(async move { state.run().await });
+        let state = IndexState::new(command_rx) ;
+        state.run(); // moves state 
         Service { command_tx }
     }
 }
@@ -166,6 +96,80 @@ impl searchium::searchium_service_server::SearchiumService for Service {
                 log_message: "".to_owned(),
             })),
         }
+    }
+
+    type SearchFilePathsStream = BoxStream<'static, TonicResult<searchium::FilePathSearchResponse>>;
+
+    #[instrument(err)]
+    async fn search_file_paths(
+        &self,
+        request: tonic::Request<tonic::Streaming<searchium::FilePathSearchRequest>>,
+    ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status> {
+        let mut requests = request.into_inner();
+        let command_tx = self.command_tx.clone();
+        let (results_tx, results_rx) = mpsc::channel(8);
+        tokio::spawn(async move { 
+            let mut one_result_rx : Option<oneshot::Receiver<searchium::FilePathSearchResponse>> = None;
+            loop {
+                tokio::select! {
+                    Some(query) = requests.next() => {
+                        let (tx, rx) = oneshot::channel();
+                        command_tx.send(Command::FilePathSearch(query.unwrap(), tx)).await.unwrap();
+                        one_result_rx = Some(rx);
+                    },
+                    result = async { one_result_rx.as_mut().unwrap().await }, if one_result_rx.is_some() => {
+                        one_result_rx = None;
+                        results_tx.send(Ok::<_, Status>(result.unwrap())).await.unwrap();
+                    }
+                }
+            }
+            // Ok::<(), tonic::Status>(())
+        });        
+        //     let mut request_rx; 
+        //     let first = match requests.next().await {
+        //         None => return,
+        //         Some(first) => first?,
+        //     };
+
+        //     let do_query = |query| async move {
+        //         let (result_tx, mut result_rx) = oneshot::channel();
+        //         match command_tx
+        //             .send(Command::FilePathSearch(first, result_tx))
+        //             .await
+        //         {
+        //             Ok(_) => Ok(result_rx),
+        //             Err(_e) => Err(Status::internal("")),
+        //         }
+        //     };
+
+        //     let mut result_rx = do_query(first).await?;
+
+        //     loop {
+        //         tokio::select! {
+        //             Some(query) = requests.next() => {
+        //                 match query {
+        //                     Ok(query) => {
+        //                         match do_query(query).await {
+        //                            Ok(rx) => { result_rx = rx; Ok(()) }
+        //                            Err(_e) => Err(Status::internal(""))
+        //                         }
+        //                     }
+        //                     Err(_e) => Err(Status::internal(""))
+        //                 }
+        //             },
+        //             result = &mut result_rx => {
+        //                 match result {
+        //                     Ok(r) => { yield Ok::<_, tonic::Status>(r); Ok(()) },
+        //                     Err(_e) => Err(Status::internal(""))
+        //                 }
+        //             }
+        //         }?;
+        //     }
+        // });
+        let stream = tokio_stream::wrappers::ReceiverStream::from(results_rx);
+        Ok(Response::new(
+            Box::pin(stream) as Self::SearchFilePathsStream
+        ))
     }
 }
 

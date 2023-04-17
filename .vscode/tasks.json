@@ -67,7 +67,8 @@
 			"isBackground": true,
 			"options": {
 				"env": {
-					"SEARCHIUM_LOG": "searchium_server=DEBUG,searchium_server::fs_state=DEBUG"
+					"SEARCHIUM_LOG": "searchium_server=DEBUG,searchium_server::fs_state=DEBUG",
+					"RUST_BACKTRACE": "1"
 				}
 			},
 			"dependsOrder": "sequence",

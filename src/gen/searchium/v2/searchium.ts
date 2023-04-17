@@ -13,6 +13,7 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MESSAGE_TYPE } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
+import { Duration } from "../../google/protobuf/duration";
 import { Timestamp } from "../../google/protobuf/timestamp";
 /**
  * @generated from protobuf message searchium.v2.HelloRequest
@@ -90,23 +91,54 @@ export interface IndexUpdate {
     type: {
         oneofKind: "filesystemScanStart";
         /**
-         * @generated from protobuf field: searchium.v2.GenericEvent filesystem_scan_start = 10;
+         * @generated from protobuf field: searchium.v2.IndexUpdate.FilesystemScanStart filesystem_scan_start = 10;
          */
-        filesystemScanStart: GenericEvent;
+        filesystemScanStart: IndexUpdate_FilesystemScanStart;
     } | {
         oneofKind: "filesystemScanEnd";
         /**
-         * @generated from protobuf field: searchium.v2.GenericEvent filesystem_scan_end = 11;
+         * @generated from protobuf field: searchium.v2.IndexUpdate.FilesystemScanEnd filesystem_scan_end = 11;
          */
-        filesystemScanEnd: GenericEvent;
+        filesystemScanEnd: IndexUpdate_FilesystemScanEnd;
     } | {
         oneofKind: undefined;
     };
 }
 /**
- * @generated from protobuf message searchium.v2.GenericEvent
+ * @generated from protobuf message searchium.v2.IndexUpdate.FilesystemScanStart
  */
-export interface GenericEvent {
+export interface IndexUpdate_FilesystemScanStart {
+}
+/**
+ * @generated from protobuf message searchium.v2.IndexUpdate.FilesystemScanEnd
+ */
+export interface IndexUpdate_FilesystemScanEnd {
+}
+/**
+ * @generated from protobuf message searchium.v2.FilePathSearchRequest
+ */
+export interface FilePathSearchRequest {
+    /**
+     * @generated from protobuf field: string query = 1;
+     */
+    query: string;
+    /**
+     * @generated from protobuf field: uint32 max_results = 2;
+     */
+    maxResults: number;
+}
+/**
+ * @generated from protobuf message searchium.v2.FilePathSearchResponse
+ */
+export interface FilePathSearchResponse {
+    /**
+     * @generated from protobuf field: repeated string results = 1;
+     */
+    results: string[];
+    /**
+     * @generated from protobuf field: google.protobuf.Duration duration = 2;
+     */
+    duration?: Duration;
 }
 /**
  * @generated from protobuf enum searchium.v2.GenericError
@@ -404,8 +436,8 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
     constructor() {
         super("searchium.v2.IndexUpdate", [
             { no: 1, name: "timestamp", kind: "message", T: () => Timestamp },
-            { no: 10, name: "filesystem_scan_start", kind: "message", oneof: "type", T: () => GenericEvent },
-            { no: 11, name: "filesystem_scan_end", kind: "message", oneof: "type", T: () => GenericEvent }
+            { no: 10, name: "filesystem_scan_start", kind: "message", oneof: "type", T: () => IndexUpdate_FilesystemScanStart },
+            { no: 11, name: "filesystem_scan_end", kind: "message", oneof: "type", T: () => IndexUpdate_FilesystemScanEnd }
         ]);
     }
     create(value?: PartialMessage<IndexUpdate>): IndexUpdate {
@@ -423,16 +455,16 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
                 case /* google.protobuf.Timestamp timestamp */ 1:
                     message.timestamp = Timestamp.internalBinaryRead(reader, reader.uint32(), options, message.timestamp);
                     break;
-                case /* searchium.v2.GenericEvent filesystem_scan_start */ 10:
+                case /* searchium.v2.IndexUpdate.FilesystemScanStart filesystem_scan_start */ 10:
                     message.type = {
                         oneofKind: "filesystemScanStart",
-                        filesystemScanStart: GenericEvent.internalBinaryRead(reader, reader.uint32(), options, (message.type as any).filesystemScanStart)
+                        filesystemScanStart: IndexUpdate_FilesystemScanStart.internalBinaryRead(reader, reader.uint32(), options, (message.type as any).filesystemScanStart)
                     };
                     break;
-                case /* searchium.v2.GenericEvent filesystem_scan_end */ 11:
+                case /* searchium.v2.IndexUpdate.FilesystemScanEnd filesystem_scan_end */ 11:
                     message.type = {
                         oneofKind: "filesystemScanEnd",
-                        filesystemScanEnd: GenericEvent.internalBinaryRead(reader, reader.uint32(), options, (message.type as any).filesystemScanEnd)
+                        filesystemScanEnd: IndexUpdate_FilesystemScanEnd.internalBinaryRead(reader, reader.uint32(), options, (message.type as any).filesystemScanEnd)
                     };
                     break;
                 default:
@@ -450,12 +482,12 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
         /* google.protobuf.Timestamp timestamp = 1; */
         if (message.timestamp)
             Timestamp.internalBinaryWrite(message.timestamp, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* searchium.v2.GenericEvent filesystem_scan_start = 10; */
+        /* searchium.v2.IndexUpdate.FilesystemScanStart filesystem_scan_start = 10; */
         if (message.type.oneofKind === "filesystemScanStart")
-            GenericEvent.internalBinaryWrite(message.type.filesystemScanStart, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
-        /* searchium.v2.GenericEvent filesystem_scan_end = 11; */
+            IndexUpdate_FilesystemScanStart.internalBinaryWrite(message.type.filesystemScanStart, writer.tag(10, WireType.LengthDelimited).fork(), options).join();
+        /* searchium.v2.IndexUpdate.FilesystemScanEnd filesystem_scan_end = 11; */
         if (message.type.oneofKind === "filesystemScanEnd")
-            GenericEvent.internalBinaryWrite(message.type.filesystemScanEnd, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+            IndexUpdate_FilesystemScanEnd.internalBinaryWrite(message.type.filesystemScanEnd, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -467,21 +499,21 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
  */
 export const IndexUpdate = new IndexUpdate$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class GenericEvent$Type extends MessageType<GenericEvent> {
+class IndexUpdate_FilesystemScanStart$Type extends MessageType<IndexUpdate_FilesystemScanStart> {
     constructor() {
-        super("searchium.v2.GenericEvent", []);
+        super("searchium.v2.IndexUpdate.FilesystemScanStart", []);
     }
-    create(value?: PartialMessage<GenericEvent>): GenericEvent {
+    create(value?: PartialMessage<IndexUpdate_FilesystemScanStart>): IndexUpdate_FilesystemScanStart {
         const message = {};
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            reflectionMergePartial<GenericEvent>(this, message, value);
+            reflectionMergePartial<IndexUpdate_FilesystemScanStart>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: GenericEvent): GenericEvent {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IndexUpdate_FilesystemScanStart): IndexUpdate_FilesystemScanStart {
         return target ?? this.create();
     }
-    internalBinaryWrite(message: GenericEvent, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: IndexUpdate_FilesystemScanStart, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -489,14 +521,149 @@ class GenericEvent$Type extends MessageType<GenericEvent> {
     }
 }
 /**
- * @generated MessageType for protobuf message searchium.v2.GenericEvent
+ * @generated MessageType for protobuf message searchium.v2.IndexUpdate.FilesystemScanStart
  */
-export const GenericEvent = new GenericEvent$Type();
+export const IndexUpdate_FilesystemScanStart = new IndexUpdate_FilesystemScanStart$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class IndexUpdate_FilesystemScanEnd$Type extends MessageType<IndexUpdate_FilesystemScanEnd> {
+    constructor() {
+        super("searchium.v2.IndexUpdate.FilesystemScanEnd", []);
+    }
+    create(value?: PartialMessage<IndexUpdate_FilesystemScanEnd>): IndexUpdate_FilesystemScanEnd {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<IndexUpdate_FilesystemScanEnd>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IndexUpdate_FilesystemScanEnd): IndexUpdate_FilesystemScanEnd {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: IndexUpdate_FilesystemScanEnd, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.IndexUpdate.FilesystemScanEnd
+ */
+export const IndexUpdate_FilesystemScanEnd = new IndexUpdate_FilesystemScanEnd$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FilePathSearchRequest$Type extends MessageType<FilePathSearchRequest> {
+    constructor() {
+        super("searchium.v2.FilePathSearchRequest", [
+            { no: 1, name: "query", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "max_results", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<FilePathSearchRequest>): FilePathSearchRequest {
+        const message = { query: "", maxResults: 0 };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<FilePathSearchRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FilePathSearchRequest): FilePathSearchRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string query */ 1:
+                    message.query = reader.string();
+                    break;
+                case /* uint32 max_results */ 2:
+                    message.maxResults = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FilePathSearchRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string query = 1; */
+        if (message.query !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.query);
+        /* uint32 max_results = 2; */
+        if (message.maxResults !== 0)
+            writer.tag(2, WireType.Varint).uint32(message.maxResults);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.FilePathSearchRequest
+ */
+export const FilePathSearchRequest = new FilePathSearchRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FilePathSearchResponse$Type extends MessageType<FilePathSearchResponse> {
+    constructor() {
+        super("searchium.v2.FilePathSearchResponse", [
+            { no: 1, name: "results", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "duration", kind: "message", T: () => Duration }
+        ]);
+    }
+    create(value?: PartialMessage<FilePathSearchResponse>): FilePathSearchResponse {
+        const message = { results: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<FilePathSearchResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FilePathSearchResponse): FilePathSearchResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated string results */ 1:
+                    message.results.push(reader.string());
+                    break;
+                case /* google.protobuf.Duration duration */ 2:
+                    message.duration = Duration.internalBinaryRead(reader, reader.uint32(), options, message.duration);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FilePathSearchResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated string results = 1; */
+        for (let i = 0; i < message.results.length; i++)
+            writer.tag(1, WireType.LengthDelimited).string(message.results[i]);
+        /* google.protobuf.Duration duration = 2; */
+        if (message.duration)
+            Duration.internalBinaryWrite(message.duration, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.FilePathSearchResponse
+ */
+export const FilePathSearchResponse = new FilePathSearchResponse$Type();
 /**
  * @generated ServiceType for protobuf service searchium.v2.SearchiumService
  */
 export const SearchiumService = new ServiceType("searchium.v2.SearchiumService", [
     { name: "Hello", options: {}, I: HelloRequest, O: HelloResponse },
     { name: "RegisterFolder", serverStreaming: true, options: {}, I: FolderRegisterRequest, O: IndexUpdate },
-    { name: "UnregisterFolder", options: {}, I: FolderUnregisterRequest, O: GenericResponse }
+    { name: "UnregisterFolder", options: {}, I: FolderUnregisterRequest, O: GenericResponse },
+    { name: "SearchFilePaths", serverStreaming: true, clientStreaming: true, options: {}, I: FilePathSearchRequest, O: FilePathSearchResponse }
 ]);

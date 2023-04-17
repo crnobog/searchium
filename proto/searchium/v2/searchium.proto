@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package searchium.v2;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 service SearchiumService { 
@@ -10,6 +11,8 @@ service SearchiumService {
   
   rpc RegisterFolder(FolderRegisterRequest) returns (stream IndexUpdate);
   rpc UnregisterFolder(FolderUnregisterRequest) returns (GenericResponse);
+  
+  rpc SearchFilePaths(stream FilePathSearchRequest) returns (stream FilePathSearchResponse);
 }
 
 message HelloRequest {
@@ -42,11 +45,20 @@ message FolderUnregisterRequest {
 
 message IndexUpdate { 
   google.protobuf.Timestamp timestamp = 1;
+  message FilesystemScanStart {}
+  message FilesystemScanEnd {}
   oneof type { 
-    GenericEvent filesystem_scan_start = 10; 
-    GenericEvent filesystem_scan_end = 11; 
+    FilesystemScanStart filesystem_scan_start = 10; 
+    FilesystemScanEnd filesystem_scan_end = 11; 
   }
 }
 
-message GenericEvent {
+message FilePathSearchRequest {
+  string query = 1;
+  uint32 max_results = 2;
+}
+
+message FilePathSearchResponse {
+  repeated string results = 1;
+  google.protobuf.Duration duration = 2;
 }
