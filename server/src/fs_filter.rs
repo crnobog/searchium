@@ -18,9 +18,8 @@ impl PathGlobFilter {
     pub fn new(root: PathBuf, globs: Vec<String>) -> Self {
         let mut builder = ignore::gitignore::GitignoreBuilder::new(root);
         for glob in &globs {
-            match builder.add_line(None, glob) {
-                Ok(_) => {}
-                Err(_) => {}
+            if let Err(e) = builder.add_line(None, glob) {
+                println!("Error parsing glob line {}: {}", glob, e);
             }
         }
         PathGlobFilter {

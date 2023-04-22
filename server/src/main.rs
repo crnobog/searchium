@@ -5,16 +5,13 @@ mod index_server;
 
 use index_server::*;
 
-use futures;
 use futures::StreamExt;
-use futures_core;
 use futures_core::stream::BoxStream;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tonic::transport::server::TcpIncoming;
 use tonic::{Response, Status};
 use tracing::{event, instrument, Level};
-use tracing_subscriber;
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 mod searchium {

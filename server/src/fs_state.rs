@@ -6,14 +6,16 @@ use std::path::{Path, PathBuf};
 use tracing::{event, Level};
 
 pub struct Root {
-    directory : Directory,
-    all_files : Vec<PathBuf>
+    directory: Directory,
+    all_files: Vec<PathBuf>,
 }
 
-impl Root { 
-    pub fn directory(&self) -> &Directory { &self.directory }
+impl Root {
+    pub fn directory(&self) -> &Directory {
+        &self.directory
+    }
     pub fn all_files(&self) -> &[PathBuf] {
-        return &self.all_files;
+        &self.all_files
     }
 }
 
@@ -111,7 +113,7 @@ fn build_filesystem(
             .map(|child_path| {
                 directory_map
                     .remove(child_path)
-                    .expect(&format!("Missing child {:?} of {:?}", child_path, parent))
+                    .unwrap_or_else(|| panic!("Missing child {:?} of {:?}", child_path, parent))
             })
             .collect();
         // TODO: avoid copies here? Borrow directory as mut and swap? Refcount path symbols so maps don't have to borrow?
@@ -122,10 +124,11 @@ fn build_filesystem(
         );
     }
     assert!(directory_map.len() == 1);
-    for directory in directory_map.into_values() {
-        return Root{ directory, all_files };
+    let directory = directory_map.into_values().next().unwrap();
+    Root {
+        directory,
+        all_files,
     }
-    unreachable!();
 }
 
 enum DirectoryOrFile {
@@ -203,7 +206,7 @@ fn scan_directory_recursive<'a, Filter, FS>(
     Filter: PathFilter + Sync,
     FS: DirScanner + Send + 'a + Clone,
 {
-    let dir = match scanner.read_dir(&dir_path) {
+    let dir = match scanner.read_dir(dir_path) {
         Ok(dir) => dir,
         Err(_) => return,
     };
@@ -231,7 +234,7 @@ fn scan_directory_recursive<'a, Filter, FS>(
         .collect();
 
     if !files.is_empty() {
-        directories_with_files.push((dir_path.clone(), files));
+        directories_with_files.push((dir_path, files));
     }
 }
 

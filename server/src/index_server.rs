@@ -107,7 +107,7 @@ impl IndexState {
                         .all_files()
                         .par_iter()
                         .filter_map(|file| {
-                            match match_file_path(&file, &fragments) { 
+                            match match_file_path(file, &fragments) { 
                                 Some(s) => { 
                                     event!(Level::DEBUG, ?s, "match");
                                     Some(s) 
