@@ -123,47 +123,6 @@ impl searchium::searchium_service_server::SearchiumService for Service {
             }
             // Ok::<(), tonic::Status>(())
         });        
-        //     let mut request_rx; 
-        //     let first = match requests.next().await {
-        //         None => return,
-        //         Some(first) => first?,
-        //     };
-
-        //     let do_query = |query| async move {
-        //         let (result_tx, mut result_rx) = oneshot::channel();
-        //         match command_tx
-        //             .send(Command::FilePathSearch(first, result_tx))
-        //             .await
-        //         {
-        //             Ok(_) => Ok(result_rx),
-        //             Err(_e) => Err(Status::internal("")),
-        //         }
-        //     };
-
-        //     let mut result_rx = do_query(first).await?;
-
-        //     loop {
-        //         tokio::select! {
-        //             Some(query) = requests.next() => {
-        //                 match query {
-        //                     Ok(query) => {
-        //                         match do_query(query).await {
-        //                            Ok(rx) => { result_rx = rx; Ok(()) }
-        //                            Err(_e) => Err(Status::internal(""))
-        //                         }
-        //                     }
-        //                     Err(_e) => Err(Status::internal(""))
-        //                 }
-        //             },
-        //             result = &mut result_rx => {
-        //                 match result {
-        //                     Ok(r) => { yield Ok::<_, tonic::Status>(r); Ok(()) },
-        //                     Err(_e) => Err(Status::internal(""))
-        //                 }
-        //             }
-        //         }?;
-        //     }
-        // });
         let stream = tokio_stream::wrappers::ReceiverStream::from(results_rx);
         Ok(Response::new(
             Box::pin(stream) as Self::SearchFilePathsStream
