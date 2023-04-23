@@ -44,7 +44,7 @@ pub struct FolderUnregisterRequest {
 pub struct IndexUpdate {
     #[prost(message, optional, tag="1")]
     pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
-    #[prost(oneof="index_update::Type", tags="10, 11")]
+    #[prost(oneof="index_update::Type", tags="10, 11, 12")]
     pub r#type: ::core::option::Option<index_update::Type>,
 }
 /// Nested message and enum types in `IndexUpdate`.
@@ -58,12 +58,18 @@ pub mod index_update {
     pub struct FilesystemScanEnd {
     }
     #[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct FileContentsLoaded {
+    }
+    #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Type {
         #[prost(message, tag="10")]
         FilesystemScanStart(FilesystemScanStart),
         #[prost(message, tag="11")]
         FilesystemScanEnd(FilesystemScanEnd),
+        #[prost(message, tag="12")]
+        FileContentsLoaded(FileContentsLoaded),
     }
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

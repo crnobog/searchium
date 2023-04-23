@@ -101,6 +101,12 @@ export interface IndexUpdate {
          */
         filesystemScanEnd: IndexUpdate_FilesystemScanEnd;
     } | {
+        oneofKind: "fileContentsLoaded";
+        /**
+         * @generated from protobuf field: searchium.v2.IndexUpdate.FileContentsLoaded file_contents_loaded = 12;
+         */
+        fileContentsLoaded: IndexUpdate_FileContentsLoaded;
+    } | {
         oneofKind: undefined;
     };
 }
@@ -113,6 +119,11 @@ export interface IndexUpdate_FilesystemScanStart {
  * @generated from protobuf message searchium.v2.IndexUpdate.FilesystemScanEnd
  */
 export interface IndexUpdate_FilesystemScanEnd {
+}
+/**
+ * @generated from protobuf message searchium.v2.IndexUpdate.FileContentsLoaded
+ */
+export interface IndexUpdate_FileContentsLoaded {
 }
 /**
  * @generated from protobuf message searchium.v2.FilePathSearchRequest
@@ -455,7 +466,8 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
         super("searchium.v2.IndexUpdate", [
             { no: 1, name: "timestamp", kind: "message", T: () => Timestamp },
             { no: 10, name: "filesystem_scan_start", kind: "message", oneof: "type", T: () => IndexUpdate_FilesystemScanStart },
-            { no: 11, name: "filesystem_scan_end", kind: "message", oneof: "type", T: () => IndexUpdate_FilesystemScanEnd }
+            { no: 11, name: "filesystem_scan_end", kind: "message", oneof: "type", T: () => IndexUpdate_FilesystemScanEnd },
+            { no: 12, name: "file_contents_loaded", kind: "message", oneof: "type", T: () => IndexUpdate_FileContentsLoaded }
         ]);
     }
     create(value?: PartialMessage<IndexUpdate>): IndexUpdate {
@@ -485,6 +497,12 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
                         filesystemScanEnd: IndexUpdate_FilesystemScanEnd.internalBinaryRead(reader, reader.uint32(), options, (message.type as any).filesystemScanEnd)
                     };
                     break;
+                case /* searchium.v2.IndexUpdate.FileContentsLoaded file_contents_loaded */ 12:
+                    message.type = {
+                        oneofKind: "fileContentsLoaded",
+                        fileContentsLoaded: IndexUpdate_FileContentsLoaded.internalBinaryRead(reader, reader.uint32(), options, (message.type as any).fileContentsLoaded)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -506,6 +524,9 @@ class IndexUpdate$Type extends MessageType<IndexUpdate> {
         /* searchium.v2.IndexUpdate.FilesystemScanEnd filesystem_scan_end = 11; */
         if (message.type.oneofKind === "filesystemScanEnd")
             IndexUpdate_FilesystemScanEnd.internalBinaryWrite(message.type.filesystemScanEnd, writer.tag(11, WireType.LengthDelimited).fork(), options).join();
+        /* searchium.v2.IndexUpdate.FileContentsLoaded file_contents_loaded = 12; */
+        if (message.type.oneofKind === "fileContentsLoaded")
+            IndexUpdate_FileContentsLoaded.internalBinaryWrite(message.type.fileContentsLoaded, writer.tag(12, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -568,6 +589,32 @@ class IndexUpdate_FilesystemScanEnd$Type extends MessageType<IndexUpdate_Filesys
  * @generated MessageType for protobuf message searchium.v2.IndexUpdate.FilesystemScanEnd
  */
 export const IndexUpdate_FilesystemScanEnd = new IndexUpdate_FilesystemScanEnd$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class IndexUpdate_FileContentsLoaded$Type extends MessageType<IndexUpdate_FileContentsLoaded> {
+    constructor() {
+        super("searchium.v2.IndexUpdate.FileContentsLoaded", []);
+    }
+    create(value?: PartialMessage<IndexUpdate_FileContentsLoaded>): IndexUpdate_FileContentsLoaded {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<IndexUpdate_FileContentsLoaded>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: IndexUpdate_FileContentsLoaded): IndexUpdate_FileContentsLoaded {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: IndexUpdate_FileContentsLoaded, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.IndexUpdate.FileContentsLoaded
+ */
+export const IndexUpdate_FileContentsLoaded = new IndexUpdate_FileContentsLoaded$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class FilePathSearchRequest$Type extends MessageType<FilePathSearchRequest> {
     constructor() {

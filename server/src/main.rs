@@ -2,6 +2,7 @@ mod concurrent_bag;
 mod fs_filter;
 mod fs_state;
 mod index_server;
+mod file_contents;
 
 use index_server::*;
 

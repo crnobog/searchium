@@ -1,8 +1,11 @@
+use crate::file_contents::FileContents;
+use crate::file_contents::load_files;
 use crate::fs_filter::*;
 use crate::fs_state::*;
 use crate::searchium;
 
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::{fmt::Debug, time::SystemTime};
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -27,6 +30,7 @@ pub enum Command {
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
     roots: Vec<Root>,
+    contents: Vec<HashMap<PathBuf, FileContents>>,
 }
 
 impl IndexServer {
@@ -34,6 +38,7 @@ impl IndexServer {
         IndexServer {
             command_rx,
             roots: Vec::new(),
+            contents : Vec::new(),
         }
     }
 
@@ -45,6 +50,36 @@ impl IndexServer {
 impl std::fmt::Debug for IndexServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("")
+    }
+}
+
+impl searchium::IndexUpdate {
+    fn scan_start() -> Self {
+        let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
+        Self{
+            timestamp,
+            r#type: Some(searchium::index_update::Type::FilesystemScanStart(
+                searchium::index_update::FilesystemScanStart::default(),
+            )),
+        }
+    }
+    fn scan_end() -> Self {
+        let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
+        Self{
+            timestamp,
+            r#type: Some(searchium::index_update::Type::FilesystemScanEnd(
+                searchium::index_update::FilesystemScanEnd::default(),
+            )),
+        }
+    }
+    fn loaded() -> Self {
+        let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
+        Self{
+            timestamp,
+            r#type: Some(searchium::index_update::Type::FileContentsLoaded(
+                searchium::index_update::FileContentsLoaded::default(),
+            )),
+        }
     }
 }
 
@@ -65,28 +100,23 @@ impl IndexServer {
             Command::RegisterFolder(params, tx) => {
                 let span = info_span!("RegisterFolder");
                 let _ = span.enter();
-                let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-                tx.send(Ok(searchium::IndexUpdate {
-                    timestamp,
-                    r#type: Some(searchium::index_update::Type::FilesystemScanStart(
-                        searchium::index_update::FilesystemScanStart::default(),
-                    )),
-                }))
-                .ok();
+
+                tx.send(Ok(searchium::IndexUpdate::scan_start())).ok(); // TODO: Handle error
                 event!(Level::DEBUG, ?params.ignore_file_globs, ?params.path, "Constructing path filter");
                 let filter =
                     PathGlobFilter::new(PathBuf::from(&params.path), params.ignore_file_globs);
                 // TODO: Dupe detection, check for different ignore globs
                 let new_root = scan_filesystem(Path::new(&params.path), &filter);
+                tx.send(Ok(searchium::IndexUpdate::scan_end())).ok();
+
+                // Load the contents of all discovered files in the new root into memory
+                let contents = load_files(&new_root.all_files());
+                let contents : HashMap<PathBuf, _> = new_root.all_files().iter().map(Clone::clone).zip(contents).collect();
+                tx.send(Ok(searchium::IndexUpdate::loaded())).ok();
+                event!(Level::INFO, "Finished loading file contents");
+                // Add the root to make it available for searches
                 self.roots.push(new_root);
-                let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-                tx.send(Ok(searchium::IndexUpdate {
-                    timestamp,
-                    r#type: Some(searchium::index_update::Type::FilesystemScanEnd(
-                        searchium::index_update::FilesystemScanEnd::default(),
-                    )),
-                }))
-                .ok();
+                self.contents.push(contents);
             }
             Command::UnregisterFolder(_params) => {
                 // TODO: Remove root directory if it exists
@@ -103,19 +133,17 @@ impl IndexServer {
                 // TODO: Unit test for search query
                 for root in &self.roots {
                     // TODO: limit number of results per parallel task
-                    results.par_extend(root
-                        .all_files()
-                        .par_iter()
-                        .filter_map(|file| {
-                            match match_file_path(file, &fragments) { 
-                                Some(s) => { 
+                    results.par_extend(
+                        root.all_files()
+                            .par_iter()
+                            .filter_map(|file| match match_file_path(file, &fragments) {
+                                Some(s) => {
                                     event!(Level::DEBUG, ?s, "match");
-                                    Some(s) 
+                                    Some(s)
                                 }
-                                None => None 
-                            }
-                        })
-                        .take_any(params.max_results as usize)
+                                None => None,
+                            })
+                            .take_any(params.max_results as usize),
                     );
                 }
                 results.truncate(params.max_results as usize);
@@ -141,21 +169,21 @@ fn match_file_path(file: &Path, fragments: &[&str]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_single_fragment_match() {
-        let file ="C:\\code\\projects\\foo\\src\\module.cpp" ;
+        let file = "C:\\code\\projects\\foo\\src\\module.cpp";
         let path = PathBuf::from(file);
-        let fragments : Vec<_> = "foo".split_whitespace().collect();
+        let fragments: Vec<_> = "foo".split_whitespace().collect();
         let m = match_file_path(&path, &fragments);
         assert_eq!(m.as_ref().map(|s| s.as_str()), Some(file));
     }
 
     #[test]
     fn test_two_fragment_match() {
-        let file ="C:\\code\\projects\\foo\\src\\module.cpp" ;
+        let file = "C:\\code\\projects\\foo\\src\\module.cpp";
         let path = PathBuf::from(file);
-        let fragments : Vec<_> = "foo cpp".split_whitespace().collect();
+        let fragments: Vec<_> = "foo cpp".split_whitespace().collect();
         let m = match_file_path(&path, &fragments);
         assert_eq!(m.as_ref().map(|s| s.as_str()), Some(file));
     }

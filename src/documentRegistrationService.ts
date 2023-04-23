@@ -73,6 +73,11 @@ export class DocumentRegistrationService implements vscode.Disposable {
                                 progress.report({ message: `Finished scanning filesystem.` });
                                 break;
                             }
+                            case 'fileContentsLoaded': {
+                                getLogger().logInformation`File load ended at ${Timestamp.toDate(event.timestamp ?? Timestamp.now())}`;
+                                progress.report({ message: `Finished loading files.` });
+                                break;
+                            }
                         }
                     }
                 }
