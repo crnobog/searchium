@@ -28,7 +28,7 @@ struct Service {
 impl Service {
     fn new() -> Self {
         let (command_tx, command_rx) = mpsc::channel(32);
-        let state = IndexState::new(command_rx) ;
+        let state = IndexServer::new(command_rx) ;
         state.run(); // moves state 
         Service { command_tx }
     }

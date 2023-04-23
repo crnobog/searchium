@@ -24,14 +24,14 @@ pub enum Command {
     ),
 }
 
-pub struct IndexState {
+pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
     roots: Vec<Root>,
 }
 
-impl IndexState {
+impl IndexServer {
     pub fn new(command_rx: mpsc::Receiver<Command>) -> Self {
-        IndexState {
+        IndexServer {
             command_rx,
             roots: Vec::new(),
         }
@@ -42,14 +42,14 @@ impl IndexState {
     }
 }
 
-impl std::fmt::Debug for IndexState {
+impl std::fmt::Debug for IndexServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("")
     }
 }
 
 // TODO: Setup directory watcher to feed update commands back into index state
-impl IndexState {
+impl IndexServer {
     async fn run_internal(mut self) {
         event!(Level::INFO, "Starting index state command loop");
         while let Some(c) = self.command_rx.recv().await {
