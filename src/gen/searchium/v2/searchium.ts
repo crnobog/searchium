@@ -141,6 +141,24 @@ export interface FilePathSearchResponse {
     duration?: Duration;
 }
 /**
+ * @generated from protobuf message searchium.v2.ProcessInfoRequest
+ */
+export interface ProcessInfoRequest {
+}
+/**
+ * @generated from protobuf message searchium.v2.ProcessInfoResponse
+ */
+export interface ProcessInfoResponse {
+    /**
+     * @generated from protobuf field: uint64 physical_memory = 1;
+     */
+    physicalMemory: bigint;
+    /**
+     * @generated from protobuf field: uint64 virtual_memory = 2;
+     */
+    virtualMemory: bigint;
+}
+/**
  * @generated from protobuf enum searchium.v2.GenericError
  */
 export enum GenericError {
@@ -658,6 +676,86 @@ class FilePathSearchResponse$Type extends MessageType<FilePathSearchResponse> {
  * @generated MessageType for protobuf message searchium.v2.FilePathSearchResponse
  */
 export const FilePathSearchResponse = new FilePathSearchResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ProcessInfoRequest$Type extends MessageType<ProcessInfoRequest> {
+    constructor() {
+        super("searchium.v2.ProcessInfoRequest", []);
+    }
+    create(value?: PartialMessage<ProcessInfoRequest>): ProcessInfoRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ProcessInfoRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ProcessInfoRequest): ProcessInfoRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: ProcessInfoRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.ProcessInfoRequest
+ */
+export const ProcessInfoRequest = new ProcessInfoRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ProcessInfoResponse$Type extends MessageType<ProcessInfoResponse> {
+    constructor() {
+        super("searchium.v2.ProcessInfoResponse", [
+            { no: 1, name: "physical_memory", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 2, name: "virtual_memory", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<ProcessInfoResponse>): ProcessInfoResponse {
+        const message = { physicalMemory: 0n, virtualMemory: 0n };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ProcessInfoResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ProcessInfoResponse): ProcessInfoResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint64 physical_memory */ 1:
+                    message.physicalMemory = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 virtual_memory */ 2:
+                    message.virtualMemory = reader.uint64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: ProcessInfoResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint64 physical_memory = 1; */
+        if (message.physicalMemory !== 0n)
+            writer.tag(1, WireType.Varint).uint64(message.physicalMemory);
+        /* uint64 virtual_memory = 2; */
+        if (message.virtualMemory !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.virtualMemory);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.ProcessInfoResponse
+ */
+export const ProcessInfoResponse = new ProcessInfoResponse$Type();
 /**
  * @generated ServiceType for protobuf service searchium.v2.SearchiumService
  */
@@ -665,5 +763,6 @@ export const SearchiumService = new ServiceType("searchium.v2.SearchiumService",
     { name: "Hello", options: {}, I: HelloRequest, O: HelloResponse },
     { name: "RegisterFolder", serverStreaming: true, options: {}, I: FolderRegisterRequest, O: IndexUpdate },
     { name: "UnregisterFolder", options: {}, I: FolderUnregisterRequest, O: GenericResponse },
-    { name: "SearchFilePaths", serverStreaming: true, clientStreaming: true, options: {}, I: FilePathSearchRequest, O: FilePathSearchResponse }
+    { name: "SearchFilePaths", serverStreaming: true, clientStreaming: true, options: {}, I: FilePathSearchRequest, O: FilePathSearchResponse },
+    { name: "GetProcessInfo", options: {}, I: ProcessInfoRequest, O: ProcessInfoResponse }
 ]);

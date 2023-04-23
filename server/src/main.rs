@@ -7,6 +7,7 @@ use index_server::*;
 
 use futures::StreamExt;
 use futures_core::stream::BoxStream;
+use memory_stats::memory_stats;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tonic::transport::server::TcpIncoming;
@@ -167,6 +168,19 @@ impl searchium::searchium_service_server::SearchiumService for Service {
         Ok(Response::new(
             Box::pin(stream) as Self::SearchFilePathsStream
         ))
+            
+    }
+
+    async fn get_process_info(
+        &self,
+        _request: tonic::Request<searchium::ProcessInfoRequest>,
+        ) -> Result<tonic::Response<searchium::ProcessInfoResponse>, tonic::Status>
+    {
+        let stats = memory_stats().ok_or_else(|| Status::internal(""))?;
+        Ok(Response::new(searchium::ProcessInfoResponse{
+            physical_memory : stats.physical_mem as u64,
+            virtual_memory : stats.virtual_mem as u64
+        }))
     }
 }
 

@@ -5,6 +5,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
+import type { ProcessInfoResponse } from "./searchium";
+import type { ProcessInfoRequest } from "./searchium";
 import type { FilePathSearchResponse } from "./searchium";
 import type { FilePathSearchRequest } from "./searchium";
 import type { DuplexStreamingCall } from "@protobuf-ts/runtime-rpc";
@@ -40,6 +42,10 @@ export interface ISearchiumServiceClient {
      * @generated from protobuf rpc: SearchFilePaths(stream searchium.v2.FilePathSearchRequest) returns (stream searchium.v2.FilePathSearchResponse);
      */
     searchFilePaths(options?: RpcOptions): DuplexStreamingCall<FilePathSearchRequest, FilePathSearchResponse>;
+    /**
+     * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
+     */
+    getProcessInfo(input: ProcessInfoRequest, options?: RpcOptions): UnaryCall<ProcessInfoRequest, ProcessInfoResponse>;
 }
 /**
  * @generated from protobuf service searchium.v2.SearchiumService
@@ -79,5 +85,12 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
     searchFilePaths(options?: RpcOptions): DuplexStreamingCall<FilePathSearchRequest, FilePathSearchResponse> {
         const method = this.methods[3], opt = this._transport.mergeOptions(options);
         return stackIntercept<FilePathSearchRequest, FilePathSearchResponse>("duplex", this._transport, method, opt);
+    }
+    /**
+     * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
+     */
+    getProcessInfo(input: ProcessInfoRequest, options?: RpcOptions): UnaryCall<ProcessInfoRequest, ProcessInfoResponse> {
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ProcessInfoRequest, ProcessInfoResponse>("unary", this._transport, method, opt, input);
     }
 }

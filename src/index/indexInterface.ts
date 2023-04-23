@@ -17,4 +17,5 @@ export interface IndexClient {
     registerWorkspaceFolder(request: pb.FolderRegisterRequest): AsyncIterable<pb.IndexUpdate>;
     unregisterWorkspaceFolder(request: pb.FolderUnregisterRequest): Promise<void>;
     searchFilePaths(): DuplexStreamingMethod<pb.FilePathSearchRequest, pb.FilePathSearchResponse>;
+    getProcessInfo(): Promise<pb.ProcessInfoResponse>;
 }

@@ -82,6 +82,18 @@ pub struct FilePathSearchResponse {
     #[prost(message, optional, tag="2")]
     pub duration: ::core::option::Option<::prost_types::Duration>,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProcessInfoRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ProcessInfoResponse {
+    #[prost(uint64, tag="1")]
+    pub physical_memory: u64,
+    #[prost(uint64, tag="2")]
+    pub virtual_memory: u64,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum GenericError {

@@ -170,6 +170,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 fileSearchManager,
                 vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager)
             );
+
+            const toMbString = (value: bigint): string =>
+                `${(Number(value / 1024n) / 1024.0).toFixed(2)} MB`;
+            setInterval(async () => {
+                const info = await client.getProcessInfo();
+                getLogger().logInformation`Index server physical memory: ${toMbString(info.physicalMemory)} Virtual memory: ${toMbString(info.virtualMemory)}`;
+            }, 10 * 1000);
         }
     } catch (err) {
         getLogger().logError`Unexpected error initializing extension: ${err}`;

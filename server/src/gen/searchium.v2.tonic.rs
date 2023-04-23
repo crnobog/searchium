@@ -34,6 +34,10 @@ pub mod searchium_service_server {
             &self,
             request: tonic::Request<tonic::Streaming<super::FilePathSearchRequest>>,
         ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status>;
+        async fn get_process_info(
+            &self,
+            request: tonic::Request<super::ProcessInfoRequest>,
+        ) -> Result<tonic::Response<super::ProcessInfoResponse>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct SearchiumServiceServer<T: SearchiumService> {
@@ -251,6 +255,46 @@ pub mod searchium_service_server {
                                 send_compression_encodings,
                             );
                         let res = grpc.streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/GetProcessInfo" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetProcessInfoSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::UnaryService<super::ProcessInfoRequest>
+                    for GetProcessInfoSvc<T> {
+                        type Response = super::ProcessInfoResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ProcessInfoRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).get_process_info(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetProcessInfoSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

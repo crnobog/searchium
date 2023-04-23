@@ -5,11 +5,13 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use tracing::{event, Level};
 
+#[allow(dead_code)]
 pub struct Root {
     directory: Directory,
     all_files: Vec<PathBuf>,
 }
 
+#[allow(dead_code)]
 impl Root {
     pub fn directory(&self) -> &Directory {
         &self.directory
