@@ -9,6 +9,11 @@ import * as vscode from "vscode";
 import { getLogger } from "./logger";
 import { Readable } from "stream";
 
+
+export function isChannel(obj: object): obj is IpcChannel {
+    return (obj as IpcChannel).drainDispatch !== undefined;
+}
+
 interface IpcChannelEvents {
     'raw': (raw: searchium_pb.IpcMessage) => void;
     'response': (r: ipcResponses.Response) => void;

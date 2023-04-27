@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { IpcChannel } from "./ipcChannel";
+import { IpcChannel, isChannel } from "./ipcChannel";
 import * as ipcRequests from "./ipcRequests";
 import * as ipcResponses from "./ipcResponses";
 import { getLogger } from "./logger";
@@ -7,6 +7,7 @@ import * as searchium_pb from "./gen/searchium";
 import * as path from "path";
 import './extensionsMethods';
 import { SearchHistory } from "./history";
+import { IndexClient } from "index/indexInterface";
 
 export interface SearchOptions {
     query: string,
@@ -25,12 +26,16 @@ interface DirectoryResult {
     next?: DirectoryResult;
     prev?: DirectoryResult;
 }
+interface FileResultPosition {
+    offset: number,
+    length: number,
+}
 interface FileResult {
     type: 'file';
     name: string;
     path: string;
     uri: vscode.Uri;
-    positions: searchium_pb.FilePositionSpan[];
+    positions: FileResultPosition[];
     extracts: () => Promise<ExtractResult[]>;
     parent: DirectoryResult,
     next?: FileResult;
@@ -50,12 +55,46 @@ type ExtractResult = {
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
 
-async function getFileExtracts(channel: IpcChannel, file: FileResult): Promise<ExtractResult[]> {
-    const extracts = (await channel.sendRequest(new ipcRequests.GetFileExtractsRequest(file.path, file.positions, 100))
+async function getFileExtractsFromChannel(channel: IpcChannel, file: FileResult): Promise<ExtractResult[]> {
+    const positions: searchium_pb.FilePositionSpan[] = file.positions.map(p => { return { position: p.offset, length: p.length }; });
+    const extracts = (await channel.sendRequest(new ipcRequests.GetFileExtractsRequest(file.path, positions, 100))
         .then((r: ipcResponses.GetFileExtractsResponse): searchium_pb.FileExtract[] =>
             r.fileExtracts))
         .map((e, i) =>
-            convertFileExtracts(file, e, file.positions[i]));
+            convertFileExtracts(file, e, positions[i]));
+    for (let i = 0; i < extracts.length; ++i) {
+        if (i !== 0) {
+            extracts[i].prev = extracts[i - 1];
+        }
+        if (i !== extracts.length - 1) {
+            extracts[i].next = extracts[i + 1];
+        }
+    }
+    return extracts;
+}
+
+async function getFileExtractsFromClient(client: IndexClient, file: FileResult): Promise<ExtractResult[]> {
+    const r = await client.getFileExtracts(file.path, file.positions.map(p => {
+        return { offsetBytes: p.offset, lengthBytes: p.length };
+    }), 100);
+    const extracts = r.fileExtracts.map((extract, index): ExtractResult => {
+        const info = file.positions[index];
+        const text = extract.text.trimStart();
+        const trimmed = extract.text.length - text.length;
+        const start = info.offset - extract.offset;
+        const end = start + info.length;
+        const range =
+            new vscode.Range(extract.lineNumber, extract.columnNumber, extract.lineNumber, extract.columnNumber + end - start);
+        return {
+            type: "extract",
+            highlights: [[start - trimmed, end - trimmed]],
+            parent: file,
+            range,
+            text: text.trimEnd(),
+            columnNumber: extract.columnNumber,
+            lineNumber: extract.lineNumber
+        };
+    });
     for (let i = 0; i < extracts.length; ++i) {
         if (i !== 0) {
             extracts[i].prev = extracts[i - 1];
@@ -68,7 +107,7 @@ async function getFileExtracts(channel: IpcChannel, file: FileResult): Promise<E
 }
 
 function convertFileResult(
-    channel: IpcChannel,
+    getFileExtracts: (file: FileResult) => Promise<ExtractResult[]>,
     parent: DirectoryResult,
     entry: searchium_pb.FileSystemEntry,
     parentPath?: string): FileResult {
@@ -84,11 +123,11 @@ function convertFileResult(
                     path: thisPath,
                     parent: parent,
                     uri: vscode.Uri.file(thisPath),
-                    positions: entry.data?.filePositionsData?.positions ?? [],
+                    positions: (entry.data?.filePositionsData?.positions ?? []).map(p => { return { offset: p.position, length: p.length }; }),
                     _extracts: undefined,
                     extracts: async function (): Promise<ExtractResult[]> {
                         if (this._extracts) { this._extracts; }
-                        this._extracts = getFileExtracts(channel, this);
+                        this._extracts = getFileExtracts(this);
                         return this._extracts;
                     }
                 };
@@ -99,7 +138,7 @@ function convertFileResult(
 }
 
 function convertDirectoryResult(
-    channel: IpcChannel,
+    getFileExtracts: (file: FileResult) => Promise<ExtractResult[]>,
     entry: searchium_pb.FileSystemEntry,
     parentPath?: string
 ): DirectoryResult {
@@ -115,7 +154,7 @@ function convertDirectoryResult(
                     children: []
                 };
                 dir.children = entry.subtype.directoryEntry.entries.map((e) =>
-                    convertFileResult(channel, dir, e, thisPath)
+                    convertFileResult(getFileExtracts, dir, e, thisPath)
                 );
                 for (let i = 0; i < dir.children.length; ++i) {
                     if (i !== 0) {
@@ -160,22 +199,13 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     rootResults: SearchResult[] = [];
     treeView?: vscode.TreeView<SearchResult>;
 
-    constructor(private channel: IpcChannel) {
+    constructor(private readonly channelOrClient: IpcChannel | IndexClient) {
     }
 
     // TODO: Remove first layer of tree if there's only one project/directory ?
-    public populate(r: ipcResponses.SearchCodeResponse, treeView: vscode.TreeView<SearchResult>): void {
-        if (r.requestId < this.currentRequestId) {
-            return;
-        }
+    public populate(rootResults: DirectoryResult[], treeView: vscode.TreeView<SearchResult>): void {
         this.treeView = treeView;
-        this.currentRequestId = r.requestId;
-        this.rootResults = [];
-        if (r.searchResults.subtype.oneofKind === 'directoryEntry') {
-            this.rootResults = r.searchResults.subtype.directoryEntry.entries.map((e) =>
-                convertDirectoryResult(this.channel, e)
-            );
-        }
+        this.rootResults = rootResults;
         this._onDidChangeTreeData.fire(undefined);
     }
     public getTreeItem(element: SearchResult): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -225,10 +255,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
             case 'directory': return element.children;
             case 'extract': return undefined;
             case 'file': {
-
-                const extracts = (await this.channel.sendRequest(new ipcRequests.GetFileExtractsRequest(element.path, element.positions, 100))
-                    .then((r: ipcResponses.GetFileExtractsResponse) => r.fileExtracts))
-                    .map((e, i) => convertFileExtracts(element, e, element.positions[i]));
+                const extracts = await element.extracts();
                 for (let i = 0; i < extracts.length; ++i) {
                     if (i !== 0) {
                         extracts[i].prev = extracts[i - 1];
@@ -251,10 +278,11 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
 
 export class SearchManager {
     private currentNavOperation: Promise<void>;
+    private currentRequestId = 0n;
     constructor(
         private readonly provider: SearchResultsProvider,
         private readonly treeView: vscode.TreeView<SearchResult>,
-        private readonly channel: IpcChannel,
+        private readonly channelOrClient: IpcChannel | IndexClient,
         private readonly history: SearchHistory
     ) {
         treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this);
@@ -278,34 +306,130 @@ export class SearchManager {
             this.history.add(options.query);
         }
         vscode.commands.executeCommand('searchium-results.focus'); // Reveal first to show progress spinner
+        let execute: (_progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken) => Promise<void>;
+        if (isChannel(this.channelOrClient)) {
+            const channel = this.channelOrClient;
+            execute = async (_progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
+                try {
+                    const r = await channel.sendRequest(new ipcRequests.SearchCodeRequest({
+                        searchString: options.query ?? "",
+                        filePathPattern: options.pathFilter ?? "",
+                        maxResults,
+                        matchCase: options.matchCase ?? false,
+                        matchWholeWord: options.wholeWord ?? false,
+                        includeSymLinks: false,
+                        regex: options.regex ?? false,
+                        useRe2Engine: false
+                    }));
+                    if (r.requestId < this.currentRequestId) {
+                        return;
+                    }
+                    this.currentRequestId = r.requestId;
+                    getLogger().logDebug`Search request complete`;
+                    let prefix = "";
+                    if (r.hitCount >= maxResults) {
+                        vscode.window.showInformationMessage("Search results exceeded configured maximum. Search results will be truncated.");
+                        prefix = "More than ";
+                    }
+                    this.treeView.badge = { tooltip: `${prefix}${r.hitCount.toLocaleString()} search results`, value: Number(r.hitCount) };
+                    if (r.searchResults.subtype.oneofKind === 'directoryEntry') {
+                        const getFileExtracts = (file: FileResult): Promise<ExtractResult[]> => {
+                            return getFileExtractsFromChannel(channel, file);
+                        };
+                        const rootResults = r.searchResults.subtype.directoryEntry.entries.map((e) =>
+                            convertDirectoryResult(getFileExtracts, e)
+                        );
+                        this.provider.populate(rootResults, this.treeView);
+                    }
+                    else {
+                        throw new Error(`Expected topmost result from server to be directory entry, got ${r.searchResults.subtype.oneofKind}`);
+                    }
+                    if (type !== "history") {
+                        this.treeView.reveal(this.provider.rootResults[0], { select: true, focus: false, expand: false });
+                    }
+                }
+                catch (err) {
+                    getLogger().logError`Search request failed: ${err}`;
+                }
+            };
+        }
+        else {
+            const client = this.channelOrClient;
+            // TODO: cancellation/interrupting with new search 
+            execute = async (_progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
+                try {
+                    const stream = client.searchFileContents({
+                        queryString: options.query ?? "",
+                        filePathPattern: options.pathFilter ?? "",
+                        maxResults,
+                        matchCase: options.matchCase ?? false,
+                        matchWholeWord: options.wholeWord ?? false,
+                        regex: options.regex ?? false,
+                    });
+                    let resultCount = 0;
+                    const resultMap: Map<string, DirectoryResult> = new Map();
+                    for await (const result of stream) {
+                        // TODO: populate results as they come in 
+                        resultCount += result.spans.length;
+                        let directory = resultMap.get(result.rootPath);
+                        if (!directory) {
+                            directory = <DirectoryResult>{
+                                name: result.rootPath,
+                                path: result.rootPath,
+                                children: [],
+                                parent: undefined,
+                                type: "directory",
+                                next: undefined,
+                                prev: undefined,
+                            };
+                            resultMap.set(result.rootPath, directory);
+                        }
+                        const fileResult: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
+                            name: result.fileRelativePath,
+                            path: path.join(result.rootPath, result.fileRelativePath), // TODO: Difference betewen name and path
+                            parent: directory,
+                            positions: result.spans.map(s => { return { offset: s.offsetBytes, length: s.lengthBytes }; }),
+                            type: "file",
+                            uri: vscode.Uri.file(path.join(result.rootPath, result.fileRelativePath)),
+                            prev: directory.children.last(),
+                            _extracts: undefined,
+                            extracts: async function (): Promise<ExtractResult[]> {
+                                if (this._extracts) { this._extracts; }
+                                this._extracts = getFileExtractsFromClient(client, this);
+                                return this._extracts;
+                            },
+                        };
+                        if (fileResult.prev) {
+                            fileResult.prev.next = fileResult;
+                        }
+                        directory.children.push(fileResult);
+                    }
+                    let prefix = "";
+                    if (resultCount > maxResults) {
+                        vscode.window.showInformationMessage("Search results exceeded configured maximum. Search results will be truncated.");
+                        prefix = "More than ";
+                    }
+                    const results: DirectoryResult[] = [];
+                    for (const dir of resultMap.values()) {
+                        dir.prev = results.last();
+                        if (dir.prev) {
+                            dir.prev.next = dir;
+                        }
+                        results.push(dir);
+                    }
+                    this.treeView.badge = { tooltip: `${prefix}${resultCount.toLocaleString()} search results`, value: Number(resultCount) };
+                    this.provider.populate(results, this.treeView);
+                    if (type !== "history") {
+                        this.treeView.reveal(this.provider.rootResults[0], { select: true, focus: false, expand: false });
+                    }
+                } catch (err) {
+                    getLogger().logError`Search request failed: ${err}`;
+                }
+            };
+        }
         await vscode.window.withProgress({ location: { viewId: 'searchium-results' }, cancellable: false, title: "Searching..." },
-            async (_progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
-                return await this.channel.sendRequest(new ipcRequests.SearchCodeRequest({
-                    searchString: options.query ?? "",
-                    filePathPattern: options.pathFilter ?? "",
-                    maxResults,
-                    matchCase: options.matchCase ?? false,
-                    matchWholeWord: options.wholeWord ?? false,
-                    includeSymLinks: false,
-                    regex: options.regex ?? false,
-                    useRe2Engine: false
-                }))
-                    .then((r: ipcResponses.SearchCodeResponse) => {
-                        getLogger().logDebug`Search request complete`;
-                        let prefix = "";
-                        if (r.hitCount >= maxResults) {
-                            vscode.window.showInformationMessage("Search results exceeded configured maximum. Search results will be truncated.");
-                            prefix = "More than ";
-                        }
-                        this.treeView.badge = { tooltip: `${prefix}${r.hitCount.toLocaleString()} search results`, value: Number(r.hitCount) };
-                        this.provider.populate(r, this.treeView);
-                        if (type !== "history") {
-                            this.treeView.reveal(this.provider.rootResults[0], { select: true, focus: false, expand: false });
-                        }
-                    })
-                    .catch((err) => getLogger().logError`Search request failed: ${err}`);
-            });
-    }
+            execute);
+    };
 
     public async navigateToNextResult(): Promise<void> {
         this.addNavigationOperation(() => this.navigateToNextResultInternal());

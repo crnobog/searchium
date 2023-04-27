@@ -1,7 +1,8 @@
-use crate::file_contents::FileContents;
 use crate::file_contents::load_files;
+use crate::file_contents::FileContents;
 use crate::fs_filter::*;
 use crate::fs_state::*;
+use crate::search_engine::{search_files_contents, get_file_extracts};
 use crate::searchium;
 
 use rayon::prelude::*;
@@ -9,6 +10,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::{fmt::Debug, time::SystemTime};
 use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio_util::sync::CancellationToken;
+use tonic::Status;
 use tracing::{event, info_span, Level};
 
 type TonicResult<T> = Result<T, tonic::Status>;
@@ -25,11 +28,21 @@ pub enum Command {
         searchium::FilePathSearchRequest,
         oneshot::Sender<searchium::FilePathSearchResponse>,
     ),
+    FileContentsSearch(
+        searchium::FileContentsSearchRequest,
+        mpsc::Sender<TonicResult<searchium::FileContentsSearchResponse>>,
+    ),
+    GetFileExtracts(
+        searchium::FileExtractsRequest,
+        oneshot::Sender<TonicResult<searchium::FileExtractsResponse>>,
+    ),
 }
 
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
+    // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
+    // TODO: move contents into roots 
     contents: Vec<HashMap<PathBuf, FileContents>>,
 }
 
@@ -38,7 +51,7 @@ impl IndexServer {
         IndexServer {
             command_rx,
             roots: Vec::new(),
-            contents : Vec::new(),
+            contents: Vec::new(),
         }
     }
 
@@ -56,7 +69,7 @@ impl std::fmt::Debug for IndexServer {
 impl searchium::IndexUpdate {
     fn scan_start() -> Self {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-        Self{
+        Self {
             timestamp,
             r#type: Some(searchium::index_update::Type::FilesystemScanStart(
                 searchium::index_update::FilesystemScanStart::default(),
@@ -65,7 +78,7 @@ impl searchium::IndexUpdate {
     }
     fn scan_end() -> Self {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-        Self{
+        Self {
             timestamp,
             r#type: Some(searchium::index_update::Type::FilesystemScanEnd(
                 searchium::index_update::FilesystemScanEnd::default(),
@@ -74,7 +87,7 @@ impl searchium::IndexUpdate {
     }
     fn loaded() -> Self {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
-        Self{
+        Self {
             timestamp,
             r#type: Some(searchium::index_update::Type::FileContentsLoaded(
                 searchium::index_update::FileContentsLoaded::default(),
@@ -97,6 +110,7 @@ impl IndexServer {
     // TODO: Return result type and instrument
     async fn execute_command(&mut self, c: Command) {
         match c {
+            // TODO: Handle overlapping folders 
             Command::RegisterFolder(params, tx) => {
                 let span = info_span!("RegisterFolder");
                 let _ = span.enter();
@@ -111,7 +125,12 @@ impl IndexServer {
 
                 // Load the contents of all discovered files in the new root into memory
                 let contents = load_files(&new_root.all_files());
-                let contents : HashMap<PathBuf, _> = new_root.all_files().iter().map(Clone::clone).zip(contents).collect();
+                let contents: HashMap<PathBuf, _> = new_root
+                    .all_files()
+                    .iter()
+                    .map(Clone::clone)
+                    .zip(contents)
+                    .collect();
                 tx.send(Ok(searchium::IndexUpdate::loaded())).ok();
                 event!(Level::INFO, "Finished loading file contents");
                 // Add the root to make it available for searches
@@ -152,6 +171,36 @@ impl IndexServer {
                     prost_types::Duration::try_from(std::time::Instant::now() - start).ok();
                 tx.send(searchium::FilePathSearchResponse { results, duration })
                     .ok();
+            }
+            Command::FileContentsSearch(params, tx) => {
+                let token = CancellationToken::new();
+                for (root, contents) in self.roots.iter().zip(self.contents.iter()) {
+                    search_files_contents(
+                        root.directory().path(),
+                        contents,
+                        &params,
+                        |r| {
+                            tx.blocking_send(Ok(r)).ok();
+                        },
+                        token.clone(),
+                    );
+                }
+            }
+            Command::GetFileExtracts(request, tx) => {
+                tx.send({
+                    let path = PathBuf::from(request.file_path);
+                    if !path.is_absolute() {
+                        Err(Status::invalid_argument(
+                            "File argument must be an absolute path",
+                        ))
+                    } else if let Some(contents) = self.contents.iter().find_map(|map| map.get(&path)) {
+                        let file_extracts = get_file_extracts(contents, &request.spans, request.max_extract_length);
+                        Ok(searchium::FileExtractsResponse { file_path: path.to_string_lossy().to_string(), file_extracts })
+                    }
+                    else { 
+                        Err(Status::invalid_argument("File not found"))
+                    }
+                }).ok();
             }
         }
     }

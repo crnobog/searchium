@@ -34,6 +34,20 @@ pub mod searchium_service_server {
             &self,
             request: tonic::Request<tonic::Streaming<super::FilePathSearchRequest>>,
         ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status>;
+        /// Server streaming response type for the SearchFileContents method.
+        type SearchFileContentsStream: futures_core::Stream<
+                Item = Result<super::FileContentsSearchResponse, tonic::Status>,
+            >
+            + Send
+            + 'static;
+        async fn search_file_contents(
+            &self,
+            request: tonic::Request<super::FileContentsSearchRequest>,
+        ) -> Result<tonic::Response<Self::SearchFileContentsStream>, tonic::Status>;
+        async fn get_file_extracts(
+            &self,
+            request: tonic::Request<super::FileExtractsRequest>,
+        ) -> Result<tonic::Response<super::FileExtractsResponse>, tonic::Status>;
         async fn get_process_info(
             &self,
             request: tonic::Request<super::ProcessInfoRequest>,
@@ -255,6 +269,88 @@ pub mod searchium_service_server {
                                 send_compression_encodings,
                             );
                         let res = grpc.streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/SearchFileContents" => {
+                    #[allow(non_camel_case_types)]
+                    struct SearchFileContentsSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::ServerStreamingService<
+                        super::FileContentsSearchRequest,
+                    > for SearchFileContentsSvc<T> {
+                        type Response = super::FileContentsSearchResponse;
+                        type ResponseStream = T::SearchFileContentsStream;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::ResponseStream>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::FileContentsSearchRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).search_file_contents(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = SearchFileContentsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/GetFileExtracts" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetFileExtractsSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::UnaryService<super::FileExtractsRequest>
+                    for GetFileExtractsSvc<T> {
+                        type Response = super::FileExtractsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::FileExtractsRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).get_file_extracts(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetFileExtractsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

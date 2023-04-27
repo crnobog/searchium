@@ -6,8 +6,21 @@ pub enum FileContents {
     Ascii(Vec<u8>),
     Utf8(Vec<u8>),
     Utf16(Vec<u8>),
-    Binary,
-    Error(std::io::Error),
+    Binary,                // TODO: remove?
+    Error(std::io::Error), // TODO: remove
+}
+
+impl FileContents {
+    pub fn get_text(&self, start: usize, end: usize) -> String {
+        match self { 
+            FileContents::Ascii(vec) | FileContents::Utf8(vec) => { 
+                String::from_utf8_lossy(&vec[start..end]).to_string()
+            },
+            _ => { 
+                unimplemented!("TODO")
+            }
+        }
+    }
 }
 
 pub fn load_files(paths: &[PathBuf]) -> Vec<FileContents> {
@@ -24,12 +37,18 @@ pub fn load_files(paths: &[PathBuf]) -> Vec<FileContents> {
 fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {
     let mut contents = Vec::new();
     let mut file = File::open(path)?;
-    let _size = file.read_to_end(&mut contents)?;
-    // TODO: Check for and strip BOM - read in chunks so we can avoid moving contents of files?
+    // TODO: Load in chunks for large files
+    let size = file.read_to_end(&mut contents)?;
+    // TODO: Check for BOM of utf-16/32
+    // Discard utf8 BOM
+    // TODO: Optimize to avoid shifting large file
+    if size >= 3 && &contents[..3] == &[0xEF, 0xBB, 0xBF] {
+        contents = Vec::from(&contents[3..]);
+    }
     Ok(classify_file(contents))
 }
 
-// TODO: Move constants out so they can be shared with tests 
+// TODO: Move constants out so they can be shared with tests
 fn classify_file(contents: Vec<u8>) -> FileContents {
     let slice_count = 50;
     let slice_size = 4 * 1024;
@@ -40,7 +59,7 @@ fn classify_file(contents: Vec<u8>) -> FileContents {
         let chunk_size = contents.len() / slice_count;
         contents
             .chunks_exact(chunk_size)
-            .map(|chunk| { 
+            .map(|chunk| {
                 assert!(chunk.len() >= slice_size);
                 classify_slice(&chunk[0..slice_size])
             })
@@ -117,44 +136,44 @@ mod tests {
         let data = Vec::from("abcdefghijklmnop");
         assert!(data.len() < 200 * 1024);
         let file = classify_file(data);
-        match file { 
-            FileContents::Ascii(_) => {},
-            _ => assert!(false, "File not classified as ascii")
-        }
-    }
-    
-    #[test]
-    fn test_classify_200k_ascii() { 
-        let str = "abcdefghijklmnopqrstuvwxyz0123456789";
-        let vec : Vec<u8> = str.bytes().cycle().take(200 * 1024).collect();
-        assert_eq!(vec.len(), 200 * 1024);
-        let file = classify_file(vec);
-        match file { 
-            FileContents::Ascii(_) => {},
-            _ => assert!(false, "File not classified as ascii")
+        match file {
+            FileContents::Ascii(_) => {}
+            _ => assert!(false, "File not classified as ascii"),
         }
     }
 
     #[test]
-    fn test_classify_uneven_ascii() { 
+    fn test_classify_200k_ascii() {
         let str = "abcdefghijklmnopqrstuvwxyz0123456789";
-        // This size should ensure that there is a small leftover chunk when dividing into 50 chunks
-        let vec : Vec<u8> = str.bytes().cycle().take(200 * 1024 + 4).collect();
+        let vec: Vec<u8> = str.bytes().cycle().take(200 * 1024).collect();
+        assert_eq!(vec.len(), 200 * 1024);
         let file = classify_file(vec);
-        match file { 
-            FileContents::Ascii(_) => {},
-            _ => assert!(false, "File not classified as ascii")
+        match file {
+            FileContents::Ascii(_) => {}
+            _ => assert!(false, "File not classified as ascii"),
         }
     }
-    
+
     #[test]
-    fn test_classify_small_binary() { 
-        let data : Vec<u8> = std::iter::repeat(0xFF as u8).take(1024).collect(); 
+    fn test_classify_uneven_ascii() {
+        let str = "abcdefghijklmnopqrstuvwxyz0123456789";
+        // This size should ensure that there is a small leftover chunk when dividing into 50 chunks
+        let vec: Vec<u8> = str.bytes().cycle().take(200 * 1024 + 4).collect();
+        let file = classify_file(vec);
+        match file {
+            FileContents::Ascii(_) => {}
+            _ => assert!(false, "File not classified as ascii"),
+        }
+    }
+
+    #[test]
+    fn test_classify_small_binary() {
+        let data: Vec<u8> = std::iter::repeat(0xFF as u8).take(1024).collect();
         assert!(data.len() < 200 * 1024);
         let file = classify_file(data);
-        match file { 
-            FileContents::Binary => {},
-            _ => assert!(false, "File not classified as binary")
+        match file {
+            FileContents::Binary => {}
+            _ => assert!(false, "File not classified as binary"),
         }
     }
 }

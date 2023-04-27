@@ -3,6 +3,7 @@ mod fs_filter;
 mod fs_state;
 mod index_server;
 mod file_contents;
+mod search_engine;
 
 use index_server::*;
 
@@ -129,6 +130,29 @@ impl searchium::searchium_service_server::SearchiumService for Service {
             Box::pin(stream) as Self::SearchFilePathsStream
         ))
             
+    }
+
+    type SearchFileContentsStream = BoxStream<'static, TonicResult<searchium::FileContentsSearchResponse>>;
+
+    async fn search_file_contents(
+        &self,
+        request: tonic::Request<searchium::FileContentsSearchRequest>,
+    ) -> Result<tonic::Response<Self::SearchFileContentsStream>, tonic::Status> {
+        let (tx, rx) = mpsc::channel(16);
+        self.command_tx.send(Command::FileContentsSearch(request.into_inner(), tx)).await.map_err(|_| Status::internal(""))?;
+        let stream = tokio_stream::wrappers::ReceiverStream::from(rx);
+        Ok(Response::new(Box::pin(stream)))
+    }
+
+    async fn get_file_extracts(
+        &self,
+        request: tonic::Request<searchium::FileExtractsRequest>,
+    ) -> Result<tonic::Response<searchium::FileExtractsResponse>, tonic::Status>
+    {
+        let (tx, rx) = oneshot::channel();
+        self.command_tx.send(Command::GetFileExtracts(request.into_inner(), tx)).await.map_err(|_| Status::internal(""))?;
+        let result = rx.await.map_err(|_| Status::internal(""))??;
+        Ok(Response::new(result))
     }
 
     async fn get_process_info(

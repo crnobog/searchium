@@ -90,6 +90,72 @@ pub struct FilePathSearchResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileContentsSearchRequest {
+    #[prost(string, tag="1")]
+    pub query_string: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub file_path_pattern: ::prost::alloc::string::String,
+    #[prost(int32, tag="3")]
+    pub max_results: i32,
+    #[prost(bool, tag="4")]
+    pub match_case: bool,
+    #[prost(bool, tag="5")]
+    pub match_whole_word: bool,
+    #[prost(bool, tag="6")]
+    pub regex: bool,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Span {
+    #[prost(uint32, tag="1")]
+    pub offset_bytes: u32,
+    #[prost(uint32, tag="2")]
+    pub length_bytes: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileContentsSearchResponse {
+    #[prost(string, tag="1")]
+    pub root_path: ::prost::alloc::string::String,
+    #[prost(string, tag="2")]
+    pub file_relative_path: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="3")]
+    pub spans: ::prost::alloc::vec::Vec<Span>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileExtractsRequest {
+    #[prost(string, tag="1")]
+    pub file_path: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="2")]
+    pub spans: ::prost::alloc::vec::Vec<Span>,
+    #[prost(uint32, tag="3")]
+    pub max_extract_length: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileExtract {
+    #[prost(string, tag="1")]
+    pub text: ::prost::alloc::string::String,
+    #[prost(uint32, tag="2")]
+    pub offset: u32,
+    #[prost(uint32, tag="3")]
+    pub length: u32,
+    #[prost(uint32, tag="4")]
+    pub line_number: u32,
+    #[prost(uint32, tag="5")]
+    pub column_number: u32,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileExtractsResponse {
+    #[prost(string, tag="1")]
+    pub file_path: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="2")]
+    pub file_extracts: ::prost::alloc::vec::Vec<FileExtract>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ProcessInfoRequest {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

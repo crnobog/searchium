@@ -21,19 +21,24 @@ impl Root {
     }
 }
 
+#[allow(dead_code)]
 pub struct Directory {
-    _dir_path: PathBuf,
-    _child_directories: Vec<Directory>,
-    _files: Vec<PathBuf>,
+    dir_path: PathBuf,
+    child_directories: Vec<Directory>,
+    files: Vec<PathBuf>,
 }
 
 impl Directory {
-    fn new(_dir_path: PathBuf, _child_directories: Vec<Directory>, _files: Vec<PathBuf>) -> Self {
+    fn new(dir_path: PathBuf, child_directories: Vec<Directory>, files: Vec<PathBuf>) -> Self {
         Directory {
-            _dir_path,
-            _child_directories,
-            _files,
+            dir_path,
+            child_directories,
+            files,
         }
+    }
+    
+    pub fn path(&self) -> &Path { 
+        self.dir_path.as_path()
     }
 }
 
@@ -319,31 +324,31 @@ mod tests {
         let root = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
         let dir = root.directory;
         let p = |p| PathBuf::from(p);
-        assert_eq!(dir._dir_path, p("C:\\code\\projects"));
-        assert_eq!(dir._files, vec![p("C:\\code\\projects\\readme.md")]);
-        assert_eq!(dir._child_directories.len(), 1);
+        assert_eq!(dir.dir_path, p("C:\\code\\projects"));
+        assert_eq!(dir.files, vec![p("C:\\code\\projects\\readme.md")]);
+        assert_eq!(dir.child_directories.len(), 1);
 
-        let src = &dir._child_directories[0];
-        assert_eq!(src._dir_path, p("C:\\code\\projects\\src"));
+        let src = &dir.child_directories[0];
+        assert_eq!(src.dir_path, p("C:\\code\\projects\\src"));
         assert_eq!(
-            src._files,
+            src.files,
             vec![
                 p("C:\\code\\projects\\src\\main.cpp"),
                 p("C:\\code\\projects\\src\\module.h")
             ]
         );
-        assert_eq!(src._child_directories.len(), 1);
+        assert_eq!(src.child_directories.len(), 1);
 
-        let module = &src._child_directories[0];
-        assert_eq!(module._dir_path, p("C:\\code\\projects\\src\\module"));
+        let module = &src.child_directories[0];
+        assert_eq!(module.dir_path, p("C:\\code\\projects\\src\\module"));
         assert_eq!(
-            module._files,
+            module.files,
             vec![
                 p("C:\\code\\projects\\src\\module\\module1.cpp"),
                 p("C:\\code\\projects\\src\\module\\module2.cpp")
             ]
         );
-        assert_eq!(module._child_directories.len(), 0);
+        assert_eq!(module.child_directories.len(), 0);
     }
 
     #[test]
@@ -361,47 +366,47 @@ mod tests {
         let root = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
         let dir = root.directory;
         let p = |p| PathBuf::from(p);
-        assert_eq!(dir._dir_path, p("C:\\code\\projects"));
-        assert_eq!(dir._files, vec![p("C:\\code\\projects\\readme.md")]);
-        assert_eq!(dir._child_directories.len(), 1);
+        assert_eq!(dir.dir_path, p("C:\\code\\projects"));
+        assert_eq!(dir.files, vec![p("C:\\code\\projects\\readme.md")]);
+        assert_eq!(dir.child_directories.len(), 1);
 
-        let src = &dir._child_directories[0];
-        assert_eq!(src._dir_path, p("C:\\code\\projects\\src"));
+        let src = &dir.child_directories[0];
+        assert_eq!(src.dir_path, p("C:\\code\\projects\\src"));
         assert_eq!(
-            src._files,
+            src.files,
             vec![
                 p("C:\\code\\projects\\src\\main.cpp"),
                 p("C:\\code\\projects\\src\\module.h")
             ]
         );
-        assert_eq!(src._child_directories.len(), 1);
+        assert_eq!(src.child_directories.len(), 1);
 
-        let modules = &src._child_directories[0];
-        assert_eq!(modules._dir_path, p("C:\\code\\projects\\src\\modules"));
-        assert_eq!(modules._files.len(), 0);
-        assert_eq!(modules._child_directories.len(), 2);
+        let modules = &src.child_directories[0];
+        assert_eq!(modules.dir_path, p("C:\\code\\projects\\src\\modules"));
+        assert_eq!(modules.files.len(), 0);
+        assert_eq!(modules.child_directories.len(), 2);
 
-        let module2 = &modules._child_directories[0];
+        let module2 = &modules.child_directories[0];
         assert_eq!(
-            module2._dir_path,
+            module2.dir_path,
             p("C:\\code\\projects\\src\\modules\\module2")
         );
         assert_eq!(
-            module2._files,
+            module2.files,
             vec![p("C:\\code\\projects\\src\\modules\\module2\\module2.cpp")]
         );
-        assert_eq!(module2._child_directories.len(), 0);
+        assert_eq!(module2.child_directories.len(), 0);
 
-        let module1 = &modules._child_directories[1];
+        let module1 = &modules.child_directories[1];
         assert_eq!(
-            module1._dir_path,
+            module1.dir_path,
             p("C:\\code\\projects\\src\\modules\\module1")
         );
         assert_eq!(
-            module1._files,
+            module1.files,
             vec![p("C:\\code\\projects\\src\\modules\\module1\\module1.cpp")]
         );
-        assert_eq!(module1._child_directories.len(), 0);
+        assert_eq!(module1.child_directories.len(), 0);
     }
 
     enum TestDirOrFile {

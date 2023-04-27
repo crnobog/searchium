@@ -14,6 +14,8 @@ service SearchiumService {
   rpc UnregisterFolder(FolderUnregisterRequest) returns (GenericResponse);
   
   rpc SearchFilePaths(stream FilePathSearchRequest) returns (stream FilePathSearchResponse);
+  rpc SearchFileContents(FileContentsSearchRequest) returns (stream FileContentsSearchResponse);
+  rpc GetFileExtracts(FileExtractsRequest) returns (FileExtractsResponse);
   
   rpc GetProcessInfo(ProcessInfoRequest) returns (ProcessInfoResponse);
 }
@@ -66,6 +68,44 @@ message FilePathSearchRequest {
 message FilePathSearchResponse {
   repeated string results = 1;
   google.protobuf.Duration duration = 2;
+}
+
+message FileContentsSearchRequest {
+  string query_string = 1;
+  string file_path_pattern = 2;
+  int32 max_results = 3; 
+  bool match_case = 4;
+  bool match_whole_word = 5;
+  bool regex = 6;
+}
+
+message Span { 
+  uint32 offset_bytes = 1;
+  uint32 length_bytes = 2;
+}
+
+message FileContentsSearchResponse {
+  string root_path = 1;
+  string file_relative_path = 2;
+  repeated Span spans = 3;
+}
+
+message FileExtractsRequest { 
+  string file_path = 1;
+  repeated Span spans = 2;
+  uint32 max_extract_length = 3;
+}
+
+message FileExtract {
+  string text = 1;
+  uint32 offset = 2;
+  uint32 length = 3;
+  uint32 line_number = 4;
+  uint32 column_number = 5;
+}
+message FileExtractsResponse {
+  string file_path = 1;
+  repeated FileExtract file_extracts = 2;
 }
 
 message ProcessInfoRequest {

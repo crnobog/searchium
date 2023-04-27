@@ -7,6 +7,10 @@ import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
 import type { ProcessInfoResponse } from "./searchium";
 import type { ProcessInfoRequest } from "./searchium";
+import type { FileExtractsResponse } from "./searchium";
+import type { FileExtractsRequest } from "./searchium";
+import type { FileContentsSearchResponse } from "./searchium";
+import type { FileContentsSearchRequest } from "./searchium";
 import type { FilePathSearchResponse } from "./searchium";
 import type { FilePathSearchRequest } from "./searchium";
 import type { DuplexStreamingCall } from "@protobuf-ts/runtime-rpc";
@@ -42,6 +46,14 @@ export interface ISearchiumServiceClient {
      * @generated from protobuf rpc: SearchFilePaths(stream searchium.v2.FilePathSearchRequest) returns (stream searchium.v2.FilePathSearchResponse);
      */
     searchFilePaths(options?: RpcOptions): DuplexStreamingCall<FilePathSearchRequest, FilePathSearchResponse>;
+    /**
+     * @generated from protobuf rpc: SearchFileContents(searchium.v2.FileContentsSearchRequest) returns (stream searchium.v2.FileContentsSearchResponse);
+     */
+    searchFileContents(input: FileContentsSearchRequest, options?: RpcOptions): ServerStreamingCall<FileContentsSearchRequest, FileContentsSearchResponse>;
+    /**
+     * @generated from protobuf rpc: GetFileExtracts(searchium.v2.FileExtractsRequest) returns (searchium.v2.FileExtractsResponse);
+     */
+    getFileExtracts(input: FileExtractsRequest, options?: RpcOptions): UnaryCall<FileExtractsRequest, FileExtractsResponse>;
     /**
      * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
      */
@@ -87,10 +99,24 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
         return stackIntercept<FilePathSearchRequest, FilePathSearchResponse>("duplex", this._transport, method, opt);
     }
     /**
+     * @generated from protobuf rpc: SearchFileContents(searchium.v2.FileContentsSearchRequest) returns (stream searchium.v2.FileContentsSearchResponse);
+     */
+    searchFileContents(input: FileContentsSearchRequest, options?: RpcOptions): ServerStreamingCall<FileContentsSearchRequest, FileContentsSearchResponse> {
+        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        return stackIntercept<FileContentsSearchRequest, FileContentsSearchResponse>("serverStreaming", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetFileExtracts(searchium.v2.FileExtractsRequest) returns (searchium.v2.FileExtractsResponse);
+     */
+    getFileExtracts(input: FileExtractsRequest, options?: RpcOptions): UnaryCall<FileExtractsRequest, FileExtractsResponse> {
+        const method = this.methods[5], opt = this._transport.mergeOptions(options);
+        return stackIntercept<FileExtractsRequest, FileExtractsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
      */
     getProcessInfo(input: ProcessInfoRequest, options?: RpcOptions): UnaryCall<ProcessInfoRequest, ProcessInfoResponse> {
-        const method = this.methods[4], opt = this._transport.mergeOptions(options);
+        const method = this.methods[6], opt = this._transport.mergeOptions(options);
         return stackIntercept<ProcessInfoRequest, ProcessInfoResponse>("unary", this._transport, method, opt, input);
     }
 }

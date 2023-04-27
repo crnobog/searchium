@@ -104,7 +104,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         getLogger().logInformation`Initializing searchium`;
         const config = vscode.workspace.getConfiguration("searchium");
         const useLegacyServer = config.get<boolean>("useLegacyServer", true);
+        let searchManager, searchResultsProvider, controlsProvider;
 
+        const history = new SearchHistory(context);
         if (useLegacyServer) {
             const [proxy, channel] = await startLegacyServer(context);
             context.subscriptions.push(proxy);
@@ -121,16 +123,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             channel.on('event', (e) => getLogger().logDebug`event: ${e}`);
 
             const indexState = new IndexState(channel);
-            const history = new SearchHistory(context);
 
-            const searchResultsProvider = new SearchResultsProvider(channel);
+            searchResultsProvider = new SearchResultsProvider(channel);
             context.subscriptions.push(vscode.window.registerTreeDataProvider("searchium-results", searchResultsProvider));
             const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
                 { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
-            const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel, history);
+            searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, channel, history);
 
-            const controlsProvider = new ControlsProvider(context, context.extensionUri, indexState, history);
-            context.subscriptions.push(vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider));
+            controlsProvider = new ControlsProvider(context, context.extensionUri, history, indexState);
 
             context.subscriptions.push(new IndexProgressReporter(channel));
             context.subscriptions.push(new DocumentRegistrationService(context, channel, undefined));
@@ -148,12 +148,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
                 vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
 
-                // todo: rename commands 
-                vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),
-                vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
-                vscode.commands.registerCommand("searchium.clearHistory", controlsProvider.onClearHistory, controlsProvider),
-                vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
-
                 vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
                 vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),
                 vscode.commands.registerCommand("searchium.toggleRegex", controlsProvider.onToggleRegex, controlsProvider),
@@ -164,6 +158,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         else {
             const [process, client] = await startServer(context);
             const fileSearchManager = new FileSearchManager(client);
+            searchResultsProvider = new SearchResultsProvider(client);
+            const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
+                { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
+            searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, client, history);
+            controlsProvider = new ControlsProvider(context, context.extensionUri, history, undefined);
             context.subscriptions.push(
                 process,
                 new DocumentRegistrationService(context, undefined, client),
@@ -178,6 +177,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 getLogger().logInformation`Index server physical memory: ${toMbString(info.physicalMemory)} Virtual memory: ${toMbString(info.virtualMemory)}`;
             }, 10 * 1000);
         }
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider),
+
+            vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
+            vscode.commands.registerCommand('searchium.nextResult', searchManager.navigateToNextResult, searchManager),
+            vscode.commands.registerCommand('searchium.previousResult', searchManager.navigateToPreviousResult, searchManager),
+
+            // vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
+
+            // todo: rename commands 
+            vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),
+            vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
+            vscode.commands.registerCommand("searchium.clearHistory", controlsProvider.onClearHistory, controlsProvider),
+            vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
+
+            // vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
+            // vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),
+            // vscode.commands.registerCommand("searchium.toggleRegex", controlsProvider.onToggleRegex, controlsProvider),
+            // vscode.commands.registerCommand("searchium.previousQuery", controlsProvider.onPreviousQuery, controlsProvider),
+            // vscode.commands.registerCommand("searchium.nextQuery", controlsProvider.onNextQuery, controlsProvider),
+        );
     } catch (err) {
         getLogger().logError`Unexpected error initializing extension: ${err}`;
     }

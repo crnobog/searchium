@@ -25,10 +25,10 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly extensionUri: vscode.Uri,
-        private readonly indexState: IndexState,
-        private readonly history: SearchHistory
+        private readonly history: SearchHistory,
+        private readonly indexState: IndexState | undefined = undefined
     ) {
-        this.indexState.on('updated', (response: GetDatabaseStatisticsResponse) => {
+        this.indexState?.on('updated', (response: GetDatabaseStatisticsResponse) => {
             this.databaseStats = response;
             this.sendStatsToWebview();
         });
@@ -64,6 +64,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }).then(() => this.updateHistoryControls());
     }
     public async onSearchCurrentToken(editor: vscode.TextEditor, _edit: vscode.TextEditorEdit): Promise<void> {
+        // TODO: prevent getting text from a range that covers the whole document in some cases
         const range = editor.selection.isEmpty
             ? editor.document.getWordRangeAtPosition(editor.selection.start)
             : editor.selection;
