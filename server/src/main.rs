@@ -1,8 +1,8 @@
 mod concurrent_bag;
+mod file_contents;
 mod fs_filter;
 mod fs_state;
 mod index_server;
-mod file_contents;
 mod search_engine;
 
 use index_server::*;
@@ -10,6 +10,8 @@ use index_server::*;
 use futures::StreamExt;
 use futures_core::stream::BoxStream;
 use memory_stats::memory_stats;
+use std::fs::File;
+use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tonic::transport::server::TcpIncoming;
@@ -30,8 +32,8 @@ struct Service {
 impl Service {
     fn new() -> Self {
         let (command_tx, command_rx) = mpsc::channel(32);
-        let state = IndexServer::new(command_rx) ;
-        state.run(); // moves state 
+        let state = IndexServer::new(command_rx);
+        state.run(); // moves state
         Service { command_tx }
     }
 }
@@ -108,8 +110,9 @@ impl searchium::searchium_service_server::SearchiumService for Service {
         let mut requests = request.into_inner();
         let command_tx = self.command_tx.clone();
         let (results_tx, results_rx) = mpsc::channel(8);
-        tokio::spawn(async move { 
-            let mut one_result_rx : Option<oneshot::Receiver<searchium::FilePathSearchResponse>> = None;
+        tokio::spawn(async move {
+            let mut one_result_rx: Option<oneshot::Receiver<searchium::FilePathSearchResponse>> =
+                None;
             loop {
                 tokio::select! {
                     Some(query) = requests.next() => {
@@ -124,22 +127,25 @@ impl searchium::searchium_service_server::SearchiumService for Service {
                 }
             }
             // Ok::<(), tonic::Status>(())
-        });        
+        });
         let stream = tokio_stream::wrappers::ReceiverStream::from(results_rx);
         Ok(Response::new(
             Box::pin(stream) as Self::SearchFilePathsStream
         ))
-            
     }
 
-    type SearchFileContentsStream = BoxStream<'static, TonicResult<searchium::FileContentsSearchResponse>>;
+    type SearchFileContentsStream =
+        BoxStream<'static, TonicResult<searchium::FileContentsSearchResponse>>;
 
     async fn search_file_contents(
         &self,
         request: tonic::Request<searchium::FileContentsSearchRequest>,
     ) -> Result<tonic::Response<Self::SearchFileContentsStream>, tonic::Status> {
         let (tx, rx) = mpsc::channel(16);
-        self.command_tx.send(Command::FileContentsSearch(request.into_inner(), tx)).await.map_err(|_| Status::internal(""))?;
+        self.command_tx
+            .send(Command::FileContentsSearch(request.into_inner(), tx))
+            .await
+            .map_err(|_| Status::internal(""))?;
         let stream = tokio_stream::wrappers::ReceiverStream::from(rx);
         Ok(Response::new(Box::pin(stream)))
     }
@@ -147,10 +153,12 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn get_file_extracts(
         &self,
         request: tonic::Request<searchium::FileExtractsRequest>,
-    ) -> Result<tonic::Response<searchium::FileExtractsResponse>, tonic::Status>
-    {
+    ) -> Result<tonic::Response<searchium::FileExtractsResponse>, tonic::Status> {
         let (tx, rx) = oneshot::channel();
-        self.command_tx.send(Command::GetFileExtracts(request.into_inner(), tx)).await.map_err(|_| Status::internal(""))?;
+        self.command_tx
+            .send(Command::GetFileExtracts(request.into_inner(), tx))
+            .await
+            .map_err(|_| Status::internal(""))?;
         let result = rx.await.map_err(|_| Status::internal(""))??;
         Ok(Response::new(result))
     }
@@ -158,14 +166,36 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn get_process_info(
         &self,
         _request: tonic::Request<searchium::ProcessInfoRequest>,
-        ) -> Result<tonic::Response<searchium::ProcessInfoResponse>, tonic::Status>
-    {
+    ) -> Result<tonic::Response<searchium::ProcessInfoResponse>, tonic::Status> {
         let stats = memory_stats().ok_or_else(|| Status::internal(""))?;
-        Ok(Response::new(searchium::ProcessInfoResponse{
-            physical_memory : stats.physical_mem as u64,
-            virtual_memory : stats.virtual_mem as u64
+        Ok(Response::new(searchium::ProcessInfoResponse {
+            physical_memory: stats.physical_mem as u64,
+            virtual_memory: stats.virtual_mem as u64,
         }))
     }
+}
+
+fn setup_trace() {
+    let fmt = tracing_subscriber::fmt::layer()
+        .compact()
+        .with_file(false)
+        .with_line_number(false);
+    let log_file = if let Some(file) = File::create("searchium.log").ok() {
+        Some(
+            tracing_subscriber::fmt::layer()
+                .compact()
+                .with_ansi(false)
+                .with_writer(Arc::new(file)),
+        )
+    } else {
+        None
+    };
+    tracing_subscriber::registry()
+        .with(log_file)
+        .with(fmt)
+        .with(EnvFilter::from_env("SEARCHIUM_LOG"))
+        .init();
+    // tracing::subscriber::set_global_default(subscriber)?;
 }
 
 #[tokio::main]
@@ -180,16 +210,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     // Print address on stdout for client to connect
     println!("{}", addr);
-
-    let fmt = tracing_subscriber::fmt::layer()
-        .compact()
-        .with_file(false)
-        .with_line_number(false);
-    tracing_subscriber::registry()
-        .with(fmt)
-        .with(EnvFilter::from_env("SEARCHIUM_LOG"))
-        .init();
-    // tracing::subscriber::set_global_default(subscriber)?;
+    setup_trace();
 
     event!(Level::INFO, "Building searchium index server");
 

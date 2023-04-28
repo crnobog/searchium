@@ -15,11 +15,15 @@ pub struct PathGlobFilter {
 }
 
 impl PathGlobFilter {
-    pub fn new(root: PathBuf, globs: Vec<String>) -> Self {
+    pub fn new<Globs, S>(root: PathBuf, globs: Globs) -> Self
+    where
+        Globs: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         let mut builder = ignore::gitignore::GitignoreBuilder::new(root);
-        for glob in &globs {
-            if let Err(e) = builder.add_line(None, glob) {
-                println!("Error parsing glob line {}: {}", glob, e);
+        for glob in globs.into_iter() {
+            if let Err(e) = builder.add_line(None, glob.as_ref()) {
+                println!("Error parsing glob line {}: {}", glob.as_ref(), e);
             }
         }
         PathGlobFilter {
@@ -36,4 +40,17 @@ impl PathFilter for PathGlobFilter {
     }
 }
 
-// TODO: tests 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_leading_two_asterisk() {
+        let root = PathBuf::from("C:\\projects");
+        let filter = PathGlobFilter::new(root, &["**/test"]);
+
+        assert!(filter.matches(PathBuf::from("C:\\projects\\test").as_path(), true));
+        assert!(filter.matches(PathBuf::from("C:\\projects\\test\\foo.txt").as_path(), false));
+    }
+}

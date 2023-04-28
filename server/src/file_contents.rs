@@ -1,5 +1,5 @@
 use rayon::prelude::*;
-use std::{fs::File, io::Read, path::Path, path::PathBuf};
+use std::{fs::File, io::Read, path::Path};
 
 #[allow(dead_code)]
 pub enum FileContents {
@@ -12,23 +12,27 @@ pub enum FileContents {
 
 impl FileContents {
     pub fn get_text(&self, start: usize, end: usize) -> String {
-        match self { 
-            FileContents::Ascii(vec) | FileContents::Utf8(vec) => { 
+        match self {
+            FileContents::Ascii(vec) | FileContents::Utf8(vec) => {
                 String::from_utf8_lossy(&vec[start..end]).to_string()
-            },
-            _ => { 
+            }
+            _ => {
                 unimplemented!("TODO")
             }
         }
     }
 }
 
-pub fn load_files(paths: &[PathBuf]) -> Vec<FileContents> {
+pub fn load_files<Paths, PathItem>(paths: Paths) -> Vec<FileContents>
+where
+    Paths: for<'a> rayon::iter::IntoParallelIterator<Item = PathItem>,
+    PathItem: AsRef<Path>,
+{
     let mut res = Vec::new();
     res.par_extend(
         paths
-            .par_iter()
-            .map(|p| read_file_contents(p.as_path()))
+            .into_par_iter()
+            .map(|p| read_file_contents(p.as_ref()))
             .map(|c| c.unwrap_or_else(|e| FileContents::Error(e))),
     );
     res

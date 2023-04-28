@@ -9,6 +9,7 @@ use tracing::{event, Level};
 pub struct Root {
     directory: Directory,
     all_files: Vec<PathBuf>,
+    searchable_files: Vec<PathBuf>,
 }
 
 #[allow(dead_code)]
@@ -18,6 +19,9 @@ impl Root {
     }
     pub fn all_files(&self) -> &[PathBuf] {
         &self.all_files
+    }
+    pub fn searchable_files(&self) -> &[PathBuf] {
+        &self.searchable_files
     }
 }
 
@@ -36,23 +40,44 @@ impl Directory {
             files,
         }
     }
-    
-    pub fn path(&self) -> &Path { 
+
+    pub fn path(&self) -> &Path {
         self.dir_path.as_path()
     }
 }
 
-type DirectoryWithFiles = (PathBuf, Vec<PathBuf>);
+#[derive(PartialEq, Eq, Debug)]
+struct DiscoveredDirectory {
+    path: PathBuf,
+    files: Vec<DiscoveredFile>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct DiscoveredFile {
+    path: PathBuf,
+    searchable: bool,
+}
 
 pub fn scan_filesystem<P: AsRef<Path> + Send>(
     root_path: P,
-    filter: &(impl PathFilter + Sync),
+    scan_filter: &(impl PathFilter + Sync),
+    search_filter: &(impl PathFilter + Sync),
 ) -> Root {
     let root_path = root_path.as_ref();
     event!(Level::INFO, root = ?root_path, "Scanning filesystem");
     let directories_with_files = Bag::new();
     rayon::scope(|s| {
-        s.spawn(|s| scan_directory_recursive(root_path, filter, (), &directories_with_files, s));
+        s.spawn(|s| {
+            scan_directory_recursive(
+                root_path,
+                scan_filter,
+                search_filter,
+                (),
+                &directories_with_files,
+                s,
+                true,
+            )
+        });
     });
     event!(Level::INFO, root = ?root_path, "Building filesystem");
     build_filesystem(root_path, directories_with_files)
@@ -60,7 +85,7 @@ pub fn scan_filesystem<P: AsRef<Path> + Send>(
 
 fn build_filesystem(
     root_path: &Path,
-    directories_with_files: impl IntoIterator<Item = DirectoryWithFiles>,
+    directories_with_files: impl IntoIterator<Item = DiscoveredDirectory>,
 ) -> Root {
     let mut directories_with_files: Vec<_> = directories_with_files.into_iter().collect();
     event!(
@@ -69,9 +94,10 @@ fn build_filesystem(
         directories_with_files.len()
     );
     let directories_to_files = {
-        let mut dirs: HashMap<&Path, Vec<PathBuf>> = HashMap::new();
-        for (path, files) in &mut directories_with_files {
-            dirs.insert(path.as_path(), mem::take(files));
+        let mut dirs: HashMap<&Path, _> = HashMap::new();
+        for dir in &mut directories_with_files {
+            let path = dir.path.as_path();
+            dirs.insert(path, mem::take(&mut dir.files));
             if *path == *root_path {
                 continue;
             }
@@ -87,7 +113,7 @@ fn build_filesystem(
 
     #[derive(Default)]
     struct DirectoryChildren<'a> {
-        files: Vec<PathBuf>,
+        files: Vec<DiscoveredFile>,
         dirs: Vec<&'a Path>,
     }
 
@@ -110,6 +136,7 @@ fn build_filesystem(
     }
 
     let mut all_files = Vec::new();
+    let mut searchable_files = Vec::new();
     let mut directories: Vec<_> = directory_to_children.into_iter().collect();
     directories.sort_by(|a, b| a.0.cmp(b.0).reverse());
     let mut directory_map: HashMap<&Path, Directory> = HashMap::new();
@@ -124,10 +151,17 @@ fn build_filesystem(
             })
             .collect();
         // TODO: avoid copies here? Borrow directory as mut and swap? Refcount path symbols so maps don't have to borrow?
-        all_files.extend_from_slice(&children.files);
+        let files = children.files.iter().map(|f| f.path.clone());
+        all_files.extend(files.clone());
+        searchable_files.extend(
+            children
+                .files
+                .iter()
+                .filter_map(|f| f.searchable.then(|| f.path.clone())),
+        );
         directory_map.insert(
             parent,
-            Directory::new(parent.to_owned(), child_dirs, children.files),
+            Directory::new(parent.to_owned(), child_dirs, files.clone().collect()),
         );
     }
     assert!(directory_map.len() == 1);
@@ -135,6 +169,7 @@ fn build_filesystem(
     Root {
         directory,
         all_files,
+        searchable_files,
     }
 }
 
@@ -203,14 +238,15 @@ impl DirScanner for () {
     }
 }
 
-fn scan_directory_recursive<'a, Filter, FS>(
+fn scan_directory_recursive<'a, FS>(
     dir_path: &Path,
-    filter: &'a Filter,
+    scan_filter: &'a (impl PathFilter + Sync),
+    search_filter: &'a (impl PathFilter + Sync),
     scanner: FS,
-    directories_with_files: &'a Bag<(PathBuf, Vec<PathBuf>)>,
+    directories_with_files: &'a Bag<DiscoveredDirectory>,
     scope: &rayon::Scope<'a>,
+    searchable : bool
 ) where
-    Filter: PathFilter + Sync,
     FS: DirScanner + Send + 'a + Clone,
 {
     let dir = match scanner.read_dir(dir_path) {
@@ -224,24 +260,39 @@ fn scan_directory_recursive<'a, Filter, FS>(
         .filter_map(|entry| {
             let path = entry.path().to_owned();
             let is_dir = entry.is_dir();
-            if filter.matches(&path, is_dir) {
+            if scan_filter.matches(&path, is_dir) {
                 event!(Level::DEBUG, ?path, "Skipping filtered path");
                 None
             } else if is_dir {
+                let child_searchable = searchable && !search_filter.matches(&path, is_dir);
+                event!(Level::DEBUG, ?path, "Discovered directory");
                 let scanner = scanner.clone();
                 scope.spawn(move |scope| {
-                    scan_directory_recursive(&path, filter, scanner, directories_with_files, scope)
+                    scan_directory_recursive(
+                        &path,
+                        scan_filter,
+                        search_filter,
+                        scanner,
+                        directories_with_files,
+                        scope,
+                        child_searchable
+                    )
                 });
                 None
             } else {
                 // add to this directory
-                Some(path)
+                let searchable = searchable && !search_filter.matches(&path, false);
+                event!(Level::DEBUG, ?path, ?searchable, "Discovered file");
+                Some(DiscoveredFile { path, searchable })
             }
         })
         .collect();
 
     if !files.is_empty() {
-        directories_with_files.push((dir_path, files));
+        directories_with_files.push(DiscoveredDirectory {
+            path: dir_path,
+            files,
+        });
     }
 }
 
@@ -250,17 +301,23 @@ mod tests {
     use super::*;
     use std::{collections::HashSet, path::PathBuf};
 
-    fn create_test_data(
-        root: &str,
-        children: Vec<(&str, Vec<&str>)>,
-    ) -> Vec<(PathBuf, Vec<PathBuf>)> {
+    fn create_test_data(root: &str, children: Vec<(&str, Vec<&str>)>) -> Vec<DiscoveredDirectory> {
         let root = PathBuf::from(root);
         children
             .into_iter()
             .map(|(dir, files)| {
                 let dir = root.join(dir);
-                let files: Vec<_> = files.iter().map(|file| dir.join(file)).collect();
-                (dir, files)
+                let files: Vec<_> = files
+                    .iter()
+                    .map(|file| DiscoveredFile {
+                        path: dir.join(file),
+                        searchable: true,
+                    })
+                    .collect();
+                DiscoveredDirectory {
+                    path: dir,
+                    files: files,
+                }
             })
             .collect()
     }
@@ -278,30 +335,49 @@ mod tests {
             ],
         );
 
-        assert_eq!(data[0].0, PathBuf::from("C:\\code\\project"));
+        assert_eq!(data[0].path, PathBuf::from("C:\\code\\project"));
         assert_eq!(
-            data[0].1,
+            data[0]
+                .files
+                .iter()
+                .map(|f| f.path.clone())
+                .collect::<Vec<_>>(),
             vec![PathBuf::from("C:\\code\\project\\readme.md")]
         );
 
-        assert_eq!(data[1].0, PathBuf::from("C:\\code\\project\\include"));
+        assert_eq!(data[1].path, PathBuf::from("C:\\code\\project\\include"));
         assert_eq!(
-            data[1].1,
+            data[1]
+                .files
+                .iter()
+                .map(|f| f.path.clone())
+                .collect::<Vec<_>>(),
             vec![PathBuf::from("C:\\code\\project\\include\\header.h")]
         );
 
-        assert_eq!(data[2].0, PathBuf::from("C:\\code\\project\\src"));
+        assert_eq!(data[2].path, PathBuf::from("C:\\code\\project\\src"));
         assert_eq!(
-            data[2].1,
+            data[2]
+                .files
+                .iter()
+                .map(|f| f.path.clone())
+                .collect::<Vec<_>>(),
             vec![
                 PathBuf::from("C:\\code\\project\\src\\main.cpp"),
                 PathBuf::from("C:\\code\\project\\src\\util.cpp")
             ]
         );
 
-        assert_eq!(data[3].0, PathBuf::from("C:\\code\\project\\src\\module"));
         assert_eq!(
-            data[3].1,
+            data[3].path,
+            PathBuf::from("C:\\code\\project\\src\\module")
+        );
+        assert_eq!(
+            data[3]
+                .files
+                .iter()
+                .map(|f| f.path.clone())
+                .collect::<Vec<_>>(),
             vec![
                 PathBuf::from("C:\\code\\project\\src\\module\\module1.cpp"),
                 PathBuf::from("C:\\code\\project\\src\\module\\module2.cpp")
@@ -313,7 +389,7 @@ mod tests {
     #[test]
     fn test_complete_tree() {
         let root_path = "C:\\code\\projects";
-        let directories_with_files = create_test_data(
+        let discovered_directories = create_test_data(
             root_path,
             vec![
                 ("", vec!["readme.md"]),
@@ -321,7 +397,7 @@ mod tests {
                 ("src/module", vec!["module1.cpp", "module2.cpp"]),
             ],
         );
-        let root = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
+        let root = build_filesystem(PathBuf::from(root_path).as_path(), discovered_directories);
         let dir = root.directory;
         let p = |p| PathBuf::from(p);
         assert_eq!(dir.dir_path, p("C:\\code\\projects"));
@@ -464,32 +540,43 @@ mod tests {
                 scan_directory_recursive(
                     &root_path,
                     &filter,
+                    &filter,
                     &test_data,
                     &directories_with_files,
                     s,
+                    true,
                 )
             });
         });
 
         let mut results: Vec<_> = directories_with_files.into_iter().collect();
-        results.sort_by(|a, b| a.0.cmp(&b.0));
+        results.sort_by(|a, b| a.path.cmp(&b.path));
         assert_eq!(results.len(), 2);
         assert_eq!(
             results[0],
-            (
-                p("C:\\code\\projects"),
-                vec![p("C:\\code\\projects\\readme.md")]
-            )
+            DiscoveredDirectory {
+                path: p("C:\\code\\projects"),
+                files: vec![DiscoveredFile {
+                    path: p("C:\\code\\projects\\readme.md"),
+                    searchable: true
+                }]
+            }
         );
         assert_eq!(
             results[1],
-            (
-                p("C:\\code\\projects\\src"),
-                vec![
-                    p("C:\\code\\projects\\src\\main.cpp"),
-                    p("C:\\code\\projects\\src\\util.h")
+            DiscoveredDirectory {
+                path: p("C:\\code\\projects\\src"),
+                files: vec![
+                    DiscoveredFile {
+                        path: p("C:\\code\\projects\\src\\main.cpp"),
+                        searchable: true
+                    },
+                    DiscoveredFile {
+                        path: p("C:\\code\\projects\\src\\util.h"),
+                        searchable: true
+                    },
                 ]
-            )
+            }
         );
     }
 
@@ -527,32 +614,43 @@ mod tests {
                 scan_directory_recursive(
                     &root_path,
                     &filter,
+                    &(),
                     &test_data,
                     &directories_with_files,
                     s,
+                    true,
                 )
             });
         });
 
         let mut results: Vec<_> = directories_with_files.into_iter().collect();
-        results.sort_by(|a, b| a.0.cmp(&b.0));
+        results.sort_by(|a, b| a.path.cmp(&b.path));
         assert_eq!(results.len(), 2);
         assert_eq!(
             results[0],
-            (
-                p("C:\\code\\projects"),
-                vec![p("C:\\code\\projects\\readme.md")]
-            )
+            DiscoveredDirectory {
+                path: p("C:\\code\\projects"),
+                files: vec![DiscoveredFile {
+                    path: p("C:\\code\\projects\\readme.md"),
+                    searchable: true
+                }]
+            }
         );
         assert_eq!(
             results[1],
-            (
-                p("C:\\code\\projects\\src"),
-                vec![
-                    p("C:\\code\\projects\\src\\main.cpp"),
-                    p("C:\\code\\projects\\src\\util.h")
+            DiscoveredDirectory {
+                path: p("C:\\code\\projects\\src"),
+                files: vec![
+                    DiscoveredFile {
+                        path: p("C:\\code\\projects\\src\\main.cpp"),
+                        searchable: true
+                    },
+                    DiscoveredFile {
+                        path: p("C:\\code\\projects\\src\\util.h"),
+                        searchable: true
+                    },
                 ]
-            )
+            }
         );
     }
 }

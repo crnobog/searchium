@@ -16,7 +16,8 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/vs-chromium-project.txt"
+    "workspaceContains:**/vs-chromium-project.txt",
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {

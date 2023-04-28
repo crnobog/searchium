@@ -24,7 +24,7 @@ pub fn get_file_extracts(
             let line_end = line_span.offset + line_span.length;
 
             let extract_start = span_start
-                .min(span_end + 5 - max_extract_len)
+                .min((span_end + 5).saturating_sub(max_extract_len))
                 .max(line_span.offset);
             let extract_end = span_end.max(extract_start + max_extract_len).min(line_end);
 
@@ -180,7 +180,8 @@ mod tests {
             find_line_span(&offsets, len, 12),
             LineSpan {
                 offset: 12,
-                length: 8
+                length: 8, 
+                line_number : 2 
             },
             "Line 2 span incorrect"
         );
@@ -189,7 +190,8 @@ mod tests {
             find_line_span(&offsets, len, 4),
             LineSpan {
                 offset: 0,
-                length: 12
+                length: 12,
+                line_number : 1
             },
             "Line 1 span incorrect"
         );
@@ -198,7 +200,8 @@ mod tests {
             find_line_span(&offsets, len, 30),
             LineSpan {
                 offset: 28,
-                length: 12
+                length: 12,
+                line_number : 4
             },
             "Last line span incorrect"
         );

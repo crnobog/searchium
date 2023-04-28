@@ -73,7 +73,6 @@
 			},
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"killserver",
 				"Build server"
 			],
 			"problemMatcher": {

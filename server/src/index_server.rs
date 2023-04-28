@@ -2,7 +2,7 @@ use crate::file_contents::load_files;
 use crate::file_contents::FileContents;
 use crate::fs_filter::*;
 use crate::fs_state::*;
-use crate::search_engine::{search_files_contents, get_file_extracts};
+use crate::search_engine::{get_file_extracts, search_files_contents};
 use crate::searchium;
 
 use rayon::prelude::*;
@@ -42,7 +42,7 @@ pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
     // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
-    // TODO: move contents into roots 
+    // TODO: move contents into roots
     contents: Vec<HashMap<PathBuf, FileContents>>,
 }
 
@@ -110,25 +110,29 @@ impl IndexServer {
     // TODO: Return result type and instrument
     async fn execute_command(&mut self, c: Command) {
         match c {
-            // TODO: Handle overlapping folders 
+            // TODO: Handle overlapping folders
             Command::RegisterFolder(params, tx) => {
                 let span = info_span!("RegisterFolder");
                 let _ = span.enter();
 
                 tx.send(Ok(searchium::IndexUpdate::scan_start())).ok(); // TODO: Handle error
                 event!(Level::DEBUG, ?params.ignore_file_globs, ?params.path, "Constructing path filter");
-                let filter =
+                let scan_filter =
                     PathGlobFilter::new(PathBuf::from(&params.path), params.ignore_file_globs);
+                event!(Level::INFO, ignore_search_globs = ?params.ignore_search_globs, "Constructing search filter");
+                let search_filter =
+                    PathGlobFilter::new(PathBuf::from(&params.path), params.ignore_search_globs);
                 // TODO: Dupe detection, check for different ignore globs
-                let new_root = scan_filesystem(Path::new(&params.path), &filter);
+                let new_root = scan_filesystem(Path::new(&params.path), &scan_filter, &search_filter);
                 tx.send(Ok(searchium::IndexUpdate::scan_end())).ok();
 
                 // Load the contents of all discovered files in the new root into memory
-                let contents = load_files(&new_root.all_files());
-                let contents: HashMap<PathBuf, _> = new_root
-                    .all_files()
+                let contents = load_files(new_root.searchable_files());
+                
+                // TODO: Accept results and filter out failures/binary files 
+                let contents: HashMap<PathBuf, _> = new_root.searchable_files()
                     .iter()
-                    .map(Clone::clone)
+                    .map(|p| p.to_path_buf())
                     .zip(contents)
                     .collect();
                 tx.send(Ok(searchium::IndexUpdate::loaded())).ok();
@@ -193,14 +197,20 @@ impl IndexServer {
                         Err(Status::invalid_argument(
                             "File argument must be an absolute path",
                         ))
-                    } else if let Some(contents) = self.contents.iter().find_map(|map| map.get(&path)) {
-                        let file_extracts = get_file_extracts(contents, &request.spans, request.max_extract_length);
-                        Ok(searchium::FileExtractsResponse { file_path: path.to_string_lossy().to_string(), file_extracts })
-                    }
-                    else { 
+                    } else if let Some(contents) =
+                        self.contents.iter().find_map(|map| map.get(&path))
+                    {
+                        let file_extracts =
+                            get_file_extracts(contents, &request.spans, request.max_extract_length);
+                        Ok(searchium::FileExtractsResponse {
+                            file_path: path.to_string_lossy().to_string(),
+                            file_extracts,
+                        })
+                    } else {
                         Err(Status::invalid_argument("File not found"))
                     }
-                }).ok();
+                })
+                .ok();
             }
         }
     }

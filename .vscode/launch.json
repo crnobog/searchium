@@ -10,6 +10,7 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
+				"C:/code/vscode-webview-ui-toolkit-samples/default/component-gallery",
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
