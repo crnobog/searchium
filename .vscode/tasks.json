@@ -58,6 +58,7 @@
 			],
 			"group": "build",
 			"label": "Build server",
+			"dependsOn": "killserver"
 		},
 		{
 			"type": "shell",

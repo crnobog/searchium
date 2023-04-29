@@ -10,14 +10,13 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"C:/code/vscode-webview-ui-toolkit-samples/default/component-gallery",
+				"C:/Program Files/Epic Games/UE_5.1",
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "prelaunch",
-			"postDebugTask": "killserver"
 		},
 		{
 			"name": "Extension Tests",

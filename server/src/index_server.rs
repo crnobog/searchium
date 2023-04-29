@@ -1,5 +1,6 @@
 use crate::file_contents::load_files;
 use crate::file_contents::FileContents;
+use crate::file_contents::FileLoadEvent;
 use crate::fs_filter::*;
 use crate::fs_state::*;
 use crate::search_engine::{get_file_extracts, search_files_contents};
@@ -94,6 +95,19 @@ impl searchium::IndexUpdate {
             )),
         }
     }
+    fn files_loaded(count: usize, total: usize, path: &Path) -> Self {
+        let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
+        Self {
+            timestamp,
+            r#type: Some(searchium::index_update::Type::FileContentsLoaded(
+                searchium::index_update::FileContentsLoaded {
+                    count: count as u32,
+                    total: total as u32,
+                    path: path.to_string_lossy().to_string(),
+                },
+            )),
+        }
+    }
 }
 
 // TODO: Setup directory watcher to feed update commands back into index state
@@ -115,6 +129,7 @@ impl IndexServer {
                 let span = info_span!("RegisterFolder");
                 let _ = span.enter();
 
+                let handle = tokio::runtime::Handle::current();
                 tx.send(Ok(searchium::IndexUpdate::scan_start())).ok(); // TODO: Handle error
                 event!(Level::DEBUG, ?params.ignore_file_globs, ?params.path, "Constructing path filter");
                 let scan_filter =
@@ -123,14 +138,43 @@ impl IndexServer {
                 let search_filter =
                     PathGlobFilter::new(PathBuf::from(&params.path), params.ignore_search_globs);
                 // TODO: Dupe detection, check for different ignore globs
-                let new_root = scan_filesystem(Path::new(&params.path), &scan_filter, &search_filter);
+                let new_root =
+                    scan_filesystem(Path::new(&params.path), &scan_filter, &search_filter);
                 tx.send(Ok(searchium::IndexUpdate::scan_end())).ok();
 
                 // Load the contents of all discovered files in the new root into memory
-                let contents = load_files(new_root.searchable_files());
-                
-                // TODO: Accept results and filter out failures/binary files 
-                let contents: HashMap<PathBuf, _> = new_root.searchable_files()
+                let contents : Vec<FileContents> = {
+                    let tx = tx.clone();
+                    let searchable_files = new_root.searchable_files();
+                    let (contents_tx, mut contents_rx) = mpsc::channel::<FileLoadEvent>(8);
+                    let total = searchable_files.len();
+                    let task = handle.spawn(async move {
+                        let mut loaded = 0;
+                        while let Some(e) = contents_rx.recv().await {
+                            loaded += e.count;
+                            if loaded % 100 == 0 {
+                                event!(Level::DEBUG, ?loaded, ?total, "Sending files loaded update");
+                                tx.send(Ok(searchium::IndexUpdate::files_loaded(
+                                    loaded,
+                                    total,
+                                    e.path.as_path(),
+                                )))
+                                .ok();
+                            }
+                        }
+                    });
+                    let searchable_files = searchable_files.to_vec();
+                    let contents = handle.spawn_blocking(move || { load_files(searchable_files, contents_tx) });
+                    let (_, contents) = tokio::join!(
+                        task,
+                        contents
+                    );
+                    contents.unwrap()
+                };
+
+                // TODO: Accept results and filter out failures/binary files
+                let contents: HashMap<PathBuf, _> = new_root
+                    .searchable_files()
                     .iter()
                     .map(|p| p.to_path_buf())
                     .zip(contents)

@@ -261,11 +261,11 @@ fn scan_directory_recursive<'a, FS>(
             let path = entry.path().to_owned();
             let is_dir = entry.is_dir();
             if scan_filter.matches(&path, is_dir) {
-                event!(Level::DEBUG, ?path, "Skipping filtered path");
+                // event!(Level::DEBUG, ?path, "Skipping filtered path");
                 None
             } else if is_dir {
                 let child_searchable = searchable && !search_filter.matches(&path, is_dir);
-                event!(Level::DEBUG, ?path, "Discovered directory");
+                // event!(Level::DEBUG, ?path, "Discovered directory");
                 let scanner = scanner.clone();
                 scope.spawn(move |scope| {
                     scan_directory_recursive(
@@ -282,7 +282,7 @@ fn scan_directory_recursive<'a, FS>(
             } else {
                 // add to this directory
                 let searchable = searchable && !search_filter.matches(&path, false);
-                event!(Level::DEBUG, ?path, ?searchable, "Discovered file");
+                // event!(Level::DEBUG, ?path, ?searchable, "Discovered file");
                 Some(DiscoveredFile { path, searchable })
             }
         })

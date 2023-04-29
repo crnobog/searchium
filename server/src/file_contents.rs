@@ -1,5 +1,9 @@
 use rayon::prelude::*;
-use std::{fs::File, io::Read, path::Path};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 #[allow(dead_code)]
 pub enum FileContents {
@@ -23,18 +27,29 @@ impl FileContents {
     }
 }
 
-pub fn load_files<Paths, PathItem>(paths: Paths) -> Vec<FileContents>
+pub struct FileLoadEvent {
+    pub count: usize,
+    pub path: PathBuf,
+}
+
+pub fn load_files<Paths, PathItem>(
+    paths: Paths,
+    events_tx: tokio::sync::mpsc::Sender<FileLoadEvent>,
+) -> Vec<FileContents>
 where
     Paths: for<'a> rayon::iter::IntoParallelIterator<Item = PathItem>,
     PathItem: AsRef<Path>,
 {
     let mut res = Vec::new();
-    res.par_extend(
-        paths
-            .into_par_iter()
-            .map(|p| read_file_contents(p.as_ref()))
-            .map(|c| c.unwrap_or_else(|e| FileContents::Error(e))),
-    );
+    let state = (events_tx, 0);
+    res.par_extend(paths.into_par_iter().map_with(state, |state, p| {
+        let contents = read_file_contents(p.as_ref()).unwrap_or_else(|e| FileContents::Error(e));
+        state.1 += 1; 
+        if state.0.try_send(FileLoadEvent { count: state.1, path: p.as_ref().to_path_buf() }).is_ok() {
+           state.1 = 0 
+        }
+        contents
+    }));
     res
 }
 

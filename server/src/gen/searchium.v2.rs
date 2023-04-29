@@ -60,6 +60,12 @@ pub mod index_update {
     #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct FileContentsLoaded {
+        #[prost(uint32, tag="1")]
+        pub count: u32,
+        #[prost(uint32, tag="2")]
+        pub total: u32,
+        #[prost(string, tag="3")]
+        pub path: ::prost::alloc::string::String,
     }
     #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Oneof)]

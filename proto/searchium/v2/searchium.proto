@@ -52,7 +52,11 @@ message IndexUpdate {
   google.protobuf.Timestamp timestamp = 1;
   message FilesystemScanStart {}
   message FilesystemScanEnd {}
-  message FileContentsLoaded {}
+  message FileContentsLoaded {
+    uint32 count = 1;
+    uint32 total = 2;
+    string path = 3;
+  }
   oneof type { 
     FilesystemScanStart filesystem_scan_start = 10; 
     FilesystemScanEnd filesystem_scan_end = 11; 
