@@ -109,10 +109,8 @@ fn calculate_line_offsets(contents: &FileContents) -> (Vec<usize>, usize) {
             todo!();
         }
         FileContents::Binary => (vec![], 0),
-        FileContents::Error(_) => {
-            todo!("Remove this case");
-        }
-    }
+
+    } 
 }
 
 #[derive(PartialEq, Eq, Debug)]

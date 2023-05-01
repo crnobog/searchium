@@ -1,17 +1,18 @@
-use rayon::prelude::*;
+use futures::{stream::FuturesUnordered, StreamExt};
 use std::{
     fs::File,
     io::Read,
     path::{Path, PathBuf},
+    pin::pin,
 };
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum FileContents {
     Ascii(Vec<u8>),
     Utf8(Vec<u8>),
     Utf16(Vec<u8>),
-    Binary,                // TODO: remove?
-    Error(std::io::Error), // TODO: remove
+    Binary, // TODO: remove?
 }
 
 impl FileContents {
@@ -32,25 +33,57 @@ pub struct FileLoadEvent {
     pub path: PathBuf,
 }
 
-pub fn load_files<Paths, PathItem>(
+pub async fn load_files<Paths, PathIter>(
     paths: Paths,
     events_tx: tokio::sync::mpsc::Sender<FileLoadEvent>,
 ) -> Vec<FileContents>
 where
-    Paths: for<'a> rayon::iter::IntoParallelIterator<Item = PathItem>,
-    PathItem: AsRef<Path>,
+    Paths: IntoIterator<Item = PathBuf, IntoIter = PathIter>,
+    PathIter: ExactSizeIterator<Item = PathBuf>,
 {
-    let mut res = Vec::new();
-    let state = (events_tx, 0);
-    res.par_extend(paths.into_par_iter().map_with(state, |state, p| {
-        let contents = read_file_contents(p.as_ref()).unwrap_or_else(|e| FileContents::Error(e));
-        state.1 += 1; 
-        if state.0.try_send(FileLoadEvent { count: state.1, path: p.as_ref().to_path_buf() }).is_ok() {
-           state.1 = 0 
+    let mut path_iter = paths.into_iter().enumerate().peekable();
+    let mut res = vec![None; path_iter.len()];
+    let max_tasks = 200;
+    let mut complete = 0;
+    let mut update_count = 0;
+    let handle = tokio::runtime::Handle::current();
+    // TODO: Consider FuturesOrdered
+    let mut futures = pin!(FuturesUnordered::new());
+    while complete < res.len() {
+        while futures.len() < max_tasks && path_iter.peek().is_some() {
+            let (index, path) = path_iter.next().unwrap();
+            let task = handle.spawn_blocking(move || {
+                let path_ref = path.as_ref();
+                let contents = read_file_contents(path_ref);
+                (path, contents, index)
+            });
+            futures.push(task);
         }
-        contents
-    }));
-    res
+
+        match futures.next().await {
+            None => {
+                continue;
+            }
+            Some(Err(_)) => {
+                panic!();
+            }
+            Some(Ok((path, contents, index))) => {
+                res[index] = contents.ok();
+                complete += 1;
+                update_count += 1;
+                if update_count >= 100 {
+                    events_tx
+                        .try_send(FileLoadEvent {
+                            count: update_count,
+                            path,
+                        })
+                        .ok();
+                    update_count = 0;
+                }
+            }
+        }
+    }
+    res.into_iter().map(|o| o.unwrap()).collect()
 }
 
 fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {

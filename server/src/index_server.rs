@@ -163,13 +163,11 @@ impl IndexServer {
                             }
                         }
                     });
-                    let searchable_files = searchable_files.to_vec();
-                    let contents = handle.spawn_blocking(move || { load_files(searchable_files, contents_tx) });
                     let (_, contents) = tokio::join!(
                         task,
-                        contents
+                        load_files(searchable_files.to_vec(), contents_tx)
                     );
-                    contents.unwrap()
+                    contents
                 };
 
                 // TODO: Accept results and filter out failures/binary files
