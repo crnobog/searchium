@@ -66,14 +66,16 @@
 			"configurations": [
 				"Run Extension",
 				"Run Debug Server"
-			]
+			],
+			"stopAll": true
 		},
 		{
 			"name": "Run Extension & Server",
 			"configurations": [
 				"Run Extension",
 				"Run Server"
-			]
+			],
+			"stopAll": true
 		}
 	]
 }
