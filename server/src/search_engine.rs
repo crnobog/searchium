@@ -108,7 +108,7 @@ fn calculate_line_offsets(contents: &FileContents) -> (Vec<usize>, usize) {
         FileContents::Utf16(_vec) => {
             todo!();
         }
-        FileContents::Binary => (vec![], 0),
+        FileContents::Binary(_) => (vec![], 0),
 
     } 
 }

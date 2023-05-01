@@ -1,4 +1,4 @@
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{stream::FuturesOrdered, StreamExt};
 use std::{
     fs::File,
     io::Read,
@@ -12,7 +12,7 @@ pub enum FileContents {
     Ascii(Vec<u8>),
     Utf8(Vec<u8>),
     Utf16(Vec<u8>),
-    Binary, // TODO: remove?
+    Binary(usize), // TODO: remove?
 }
 
 impl FileContents {
@@ -41,23 +41,26 @@ where
     Paths: IntoIterator<Item = PathBuf, IntoIter = PathIter>,
     PathIter: ExactSizeIterator<Item = PathBuf>,
 {
-    let mut path_iter = paths.into_iter().enumerate().peekable();
-    let mut res = vec![None; path_iter.len()];
+    let mut path_iter = paths.into_iter();
+    let num_paths = path_iter.len();
+    let mut res = Vec::new();
     let max_tasks = 200;
-    let mut complete = 0;
     let mut update_count = 0;
     let handle = tokio::runtime::Handle::current();
     // TODO: Consider FuturesOrdered
-    let mut futures = pin!(FuturesUnordered::new());
-    while complete < res.len() {
-        while futures.len() < max_tasks && path_iter.peek().is_some() {
-            let (index, path) = path_iter.next().unwrap();
-            let task = handle.spawn_blocking(move || {
-                let path_ref = path.as_ref();
-                let contents = read_file_contents(path_ref);
-                (path, contents, index)
-            });
-            futures.push(task);
+    let mut futures = pin!(FuturesOrdered::new());
+    while res.len() < num_paths {
+        while futures.len() < max_tasks {
+            if let Some(path) = path_iter.next() {
+                let task = handle.spawn_blocking(move || {
+                    let path_ref = path.as_ref();
+                    let contents = read_file_contents(path_ref);
+                    (path, contents)
+                });
+                futures.push_back(task);
+            } else {
+                break;
+            }
         }
 
         match futures.next().await {
@@ -67,9 +70,8 @@ where
             Some(Err(_)) => {
                 panic!();
             }
-            Some(Ok((path, contents, index))) => {
-                res[index] = contents.ok();
-                complete += 1;
+            Some(Ok((path, contents))) => {
+                res.push(contents.unwrap()); // TODO: propagate error
                 update_count += 1;
                 if update_count >= 100 {
                     events_tx
@@ -83,7 +85,7 @@ where
             }
         }
     }
-    res.into_iter().map(|o| o.unwrap()).collect()
+    res
 }
 
 fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {
@@ -101,6 +103,7 @@ fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {
 }
 
 // TODO: Move constants out so they can be shared with tests
+// TODO: Try and classify files as utf-16
 fn classify_file(contents: Vec<u8>) -> FileContents {
     let slice_count = 50;
     let slice_size = 4 * 1024;
@@ -120,7 +123,7 @@ fn classify_file(contents: Vec<u8>) -> FileContents {
     let total = classification.other_count + classification.utf8_count + classification.ascii_count;
     let other_ratio = classification.other_count as f64 / total as f64;
     if other_ratio > 0.1 {
-        FileContents::Binary
+        FileContents::Binary(contents.len())
     } else if classification.utf8_count == 0 {
         FileContents::Ascii(contents)
     } else {
@@ -221,10 +224,13 @@ mod tests {
     #[test]
     fn test_classify_small_binary() {
         let data: Vec<u8> = std::iter::repeat(0xFF as u8).take(1024).collect();
+        let datalen = data.len();
         assert!(data.len() < 200 * 1024);
         let file = classify_file(data);
         match file {
-            FileContents::Binary => {}
+            FileContents::Binary(size) => {
+                assert_eq!(size, datalen);
+            }
             _ => assert!(false, "File not classified as binary"),
         }
     }
