@@ -94,7 +94,7 @@ fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {
     // TODO: Check for BOM of utf-16/32
     // Discard utf8 BOM
     // TODO: Optimize to avoid shifting large file
-    if size >= 3 && &contents[..3] == &[0xEF, 0xBB, 0xBF] {
+    if size >= 3 && contents[..3] == [0xEF, 0xBB, 0xBF] {
         contents = Vec::from(&contents[3..]);
     }
     Ok(classify_file(contents))
@@ -147,7 +147,7 @@ impl Classification {
 
 fn classify_slice(mut slice: &[u8]) -> Classification {
     let mut c = Classification::default();
-    while slice.len() > 0 {
+    while !slice.is_empty() {
         if is_ascii(slice[0]) {
             c.ascii_count += 1;
             slice = &slice[1..];
@@ -158,7 +158,7 @@ fn classify_slice(mut slice: &[u8]) -> Classification {
                 c.other_count += 1;
                 slice = &slice[1..];
             }
-            n @ _ => {
+            n => {
                 c.utf8_count += 1;
                 slice = &slice[n..];
             }
@@ -168,7 +168,7 @@ fn classify_slice(mut slice: &[u8]) -> Classification {
 }
 
 fn is_ascii(c: u8) -> bool {
-    (c >= b' ' && c <= b'~') || c == b'\t' || c == b'\r' || c == b'\n'
+    (b' '..=b'~').contains(&c) || c == b'\t' || c == b'\r' || c == b'\n'
 }
 
 fn utf8_rune_length(cs: &[u8]) -> usize {

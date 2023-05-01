@@ -180,16 +180,12 @@ fn setup_trace() {
         .compact()
         .with_file(false)
         .with_line_number(false);
-    let log_file = if let Some(file) = File::create("searchium.log").ok() {
-        Some(
-            tracing_subscriber::fmt::layer()
-                .compact()
-                .with_ansi(false)
-                .with_writer(Arc::new(file)),
-        )
-    } else {
-        None
-    };
+    let log_file = File::create("searchium.log").ok().map(|f| {
+        tracing_subscriber::fmt::layer()
+            .compact()
+            .with_ansi(false)
+            .with_writer(Arc::new(f))
+    });
     tracing_subscriber::registry()
         .with(log_file)
         .with(fmt)

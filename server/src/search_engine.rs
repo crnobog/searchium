@@ -14,7 +14,7 @@ pub fn get_file_extracts(
 ) -> Vec<searchium::FileExtract> {
     let (line_offsets, contents_len) = calculate_line_offsets(contents); // TODO: is this worth caching?
     spans
-        .into_iter()
+        .iter()
         .map(|span| {
             // clamp so that we always return the match even if it's longer than the requested max extract
             let max_extract_len = max_extract_len.max(span.length_bytes) as usize;
@@ -49,7 +49,7 @@ pub fn search_files_contents(
     root_path: &Path,
     files: &HashMap<PathBuf, FileContents>,
     query: &searchium::FileContentsSearchRequest,
-    tx: impl Fn(searchium::FileContentsSearchResponse) -> () + Sync + Send,
+    tx: impl Fn(searchium::FileContentsSearchResponse) + Sync + Send,
     cancel: CancellationToken,
 ) {
     let finder = memmem::Finder::new(&query.query_string);
@@ -62,7 +62,7 @@ pub fn search_files_contents(
             }
 
             let spans: Vec<searchium::Span> = search_file_contents(contents, finder);
-            if spans.len() != 0 {
+            if !spans.is_empty() {
                 let file_relative_path = path
                     .strip_prefix(root_path)
                     .expect("file path not relative to root")
