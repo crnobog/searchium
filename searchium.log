@@ -1,3 +1,0 @@
-2023-04-29T16:10:04.517924Z  INFO searchium_server: Building searchium index server
-2023-04-29T16:10:04.522367Z  INFO searchium_server::index_server: Starting index state command loop
-2023-04-29T16:10:04.526066Z  INFO searchium_server: Starting searchium index server
