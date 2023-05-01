@@ -61,6 +61,7 @@ export class DocumentRegistrationService implements vscode.Disposable {
             vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Notification, cancellable: false, title: "Searchium" },
                 async (progress, _token) => {
+                    let lastCount = 0;
                     for await (const event of events) {
                         switch (event.type.oneofKind) {
                             case 'filesystemScanStart': {
@@ -75,7 +76,10 @@ export class DocumentRegistrationService implements vscode.Disposable {
                             }
                             case 'fileContentsLoaded': {
                                 getLogger().logInformation`File load ended at ${Timestamp.toDate(event.timestamp ?? Timestamp.now())}`;
-                                const increment = event.type.fileContentsLoaded.count / event.type.fileContentsLoaded.total / 100;
+                                const count = event.type.fileContentsLoaded.count;
+                                const total = event.type.fileContentsLoaded.total;
+                                const increment = (count - lastCount) / total * 100;
+                                lastCount = count;
                                 progress.report({ message: `${event.type.fileContentsLoaded.path}`, increment });
                                 break;
                             }
