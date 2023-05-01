@@ -16,7 +16,7 @@
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
-			"preLaunchTask": "prelaunch",
+			"preLaunchTask": "npm: build",
 		},
 		{
 			"name": "Extension Tests",
@@ -30,6 +30,50 @@
 				"${workspaceFolder}/out/test/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Run Debug Server",
+			"program": "${workspaceFolder}/target/debug/searchium-server.exe",
+			"args": [],
+			"env": {
+				"SEARCHIUM_LOG": "searchium_server=DEBUG,searchium_server::fs_state=DEBUG",
+				"RUST_BACKTRACE": "1"
+			},
+			"cwd": "${workspaceFolder}",
+			"preLaunchTask": "Build Debug Server",
+			"terminal": "integrated",
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Run Server",
+			"program": "${workspaceFolder}/target/release/searchium-server.exe",
+			"args": [],
+			"env": {
+				"SEARCHIUM_LOG": "searchium_server=INFO,searchium_server::fs_state=INFO",
+				"RUST_BACKTRACE": "1"
+			},
+			"cwd": "${workspaceFolder}",
+			"preLaunchTask": "Build Release Server",
+			"terminal": "integrated",
+		}
+	],
+	"compounds": [
+		{
+			"name": "Run Extension & Debug Server",
+			"configurations": [
+				"Run Extension",
+				"Run Debug Server"
+			]
+		},
+		{
+			"name": "Run Extension & Server",
+			"configurations": [
+				"Run Extension",
+				"Run Server"
+			]
 		}
 	]
 }
