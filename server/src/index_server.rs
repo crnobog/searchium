@@ -146,6 +146,7 @@ impl IndexServer {
                 let contents : Vec<FileContents> = {
                     let tx = tx.clone();
                     let searchable_files = new_root.searchable_files();
+                    event!(Level::INFO, count = ?searchable_files.len(), "Loading contents of indexed files");
                     let (contents_tx, mut contents_rx) = mpsc::channel::<FileLoadEvent>(8);
                     let total = searchable_files.len();
                     let task = handle.spawn(async move {

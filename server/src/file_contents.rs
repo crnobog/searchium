@@ -1,7 +1,7 @@
 use futures::{stream::FuturesOrdered, StreamExt};
 use std::{
     fs::File,
-    io::Read,
+    io::{Read, Seek},
     path::{Path, PathBuf},
     pin::pin,
 };
@@ -89,46 +89,66 @@ where
 }
 
 fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {
-    let mut contents = Vec::new();
-    let mut file = File::open(path)?;
+    // let mut contents = Vec::new();
+    let file = File::open(path)?;
     // TODO: Load in chunks for large files
-    let size = file.read_to_end(&mut contents)?;
+    // let size = file.read_to_end(&mut contents)?;
     // TODO: Check for BOM of utf-16/32
     // Discard utf8 BOM
     // TODO: Optimize to avoid shifting large file
-    if size >= 3 && contents[..3] == [0xEF, 0xBB, 0xBF] {
-        contents = Vec::from(&contents[3..]);
-    }
-    Ok(classify_file(contents))
+    // if size >= 3 && contents[..3] == [0xEF, 0xBB, 0xBF] {
+    //     contents = Vec::from(&contents[3..]);
+    // }
+    classify_file(file)
 }
+
+const CLASSIFY_SLICE_COUNT: u64 = 50;
+const CLASSIFY_SLICE_SIZE: u64 = 4 * 1024;
+const CLASSIFY_TOTAL_SAMPLE_BYTES: u64 = CLASSIFY_SLICE_COUNT * CLASSIFY_SLICE_SIZE;
 
 // TODO: Move constants out so they can be shared with tests
 // TODO: Try and classify files as utf-16
-fn classify_file(contents: Vec<u8>) -> FileContents {
-    let slice_count = 50;
-    let slice_size = 4 * 1024;
-    let total_sample = slice_count * slice_size;
-    let classification = if total_sample > contents.len() {
-        classify_slice(&contents)
+fn classify_file(mut file: impl Read + Seek) -> Result<FileContents, std::io::Error> {
+    file.seek(std::io::SeekFrom::End(0))?;
+    let total_len = file.stream_position()?;
+    file.seek(std::io::SeekFrom::Start(0))?;
+
+    let classification = if CLASSIFY_TOTAL_SAMPLE_BYTES >= total_len {
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+        let _has_bom = has_bom(&bytes);
+        classify_slice(&bytes)
     } else {
-        let chunk_size = contents.len() / slice_count;
-        contents
-            .chunks_exact(chunk_size)
-            .map(|chunk| {
-                assert!(chunk.len() >= slice_size);
-                classify_slice(&chunk[0..slice_size])
-            })
+        let chunk_size = total_len / CLASSIFY_SLICE_COUNT;
+        (0..CLASSIFY_SLICE_COUNT).map(|slice_index|{
+            let mut slice = vec![0u8; CLASSIFY_SLICE_SIZE as usize]; // TODO: usize confusion
+            file.seek(std::io::SeekFrom::Start(slice_index * chunk_size)).unwrap(); // TODO handle error 
+            file.read_exact(&mut slice).unwrap();
+            classify_slice(&slice)
+        })
             .fold(Classification::default(), Classification::combine)
     };
-    let total = classification.other_count + classification.utf8_count + classification.ascii_count;
-    let other_ratio = classification.other_count as f64 / total as f64;
+
+    let total_classified =
+        classification.other_count + classification.utf8_count + classification.ascii_count;
+    let other_ratio = classification.other_count as f64 / total_classified as f64;
+
     if other_ratio > 0.1 {
-        FileContents::Binary(contents.len())
-    } else if classification.utf8_count == 0 {
+        return Ok(FileContents::Binary(total_len as usize));
+    }
+
+    let mut contents = Vec::new();
+    file.seek(std::io::SeekFrom::Start(0)).unwrap();
+    file.read_to_end(&mut contents).unwrap();
+    Ok(if classification.utf8_count == 0 {
         FileContents::Ascii(contents)
     } else {
         FileContents::Utf8(contents)
-    }
+    })
+}
+
+fn has_bom(bytes: &[u8]) -> bool {
+    return bytes.len() >= 3 && bytes[..3] == [0xEF, 0xBB, 0xBF];
 }
 
 #[derive(Default)]
@@ -184,15 +204,18 @@ fn utf8_rune_length(cs: &[u8]) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
 
     #[test]
     fn test_classify_small_ascii() {
         let data = Vec::from("abcdefghijklmnop");
         assert!(data.len() < 200 * 1024);
+        let data = Cursor::new(data);
         let file = classify_file(data);
         match file {
-            FileContents::Ascii(_) => {}
+            Ok(FileContents::Ascii(_)) => {}
             _ => assert!(false, "File not classified as ascii"),
         }
     }
@@ -202,9 +225,10 @@ mod tests {
         let str = "abcdefghijklmnopqrstuvwxyz0123456789";
         let vec: Vec<u8> = str.bytes().cycle().take(200 * 1024).collect();
         assert_eq!(vec.len(), 200 * 1024);
-        let file = classify_file(vec);
+        let data = Cursor::new(vec);
+        let file = classify_file(data);
         match file {
-            FileContents::Ascii(_) => {}
+            Ok(FileContents::Ascii(_)) => {}
             _ => assert!(false, "File not classified as ascii"),
         }
     }
@@ -214,9 +238,10 @@ mod tests {
         let str = "abcdefghijklmnopqrstuvwxyz0123456789";
         // This size should ensure that there is a small leftover chunk when dividing into 50 chunks
         let vec: Vec<u8> = str.bytes().cycle().take(200 * 1024 + 4).collect();
-        let file = classify_file(vec);
+        let data = Cursor::new(vec);
+        let file = classify_file(data);
         match file {
-            FileContents::Ascii(_) => {}
+            Ok(FileContents::Ascii(_)) => {}
             _ => assert!(false, "File not classified as ascii"),
         }
     }
@@ -226,9 +251,10 @@ mod tests {
         let data: Vec<u8> = std::iter::repeat(0xFF as u8).take(1024).collect();
         let datalen = data.len();
         assert!(data.len() < 200 * 1024);
+        let data = Cursor::new(data);
         let file = classify_file(data);
         match file {
-            FileContents::Binary(size) => {
+            Ok(FileContents::Binary(size)) => {
                 assert_eq!(size, datalen);
             }
             _ => assert!(false, "File not classified as binary"),
