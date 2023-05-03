@@ -42,7 +42,7 @@ pub enum Command {
 
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
-    configuration : Configuration,
+    configuration: Configuration,
     // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
     // TODO: move contents into roots
@@ -53,7 +53,7 @@ impl IndexServer {
     pub fn new(command_rx: mpsc::Receiver<Command>) -> Self {
         IndexServer {
             command_rx,
-            configuration : Configuration::default(),
+            configuration: Configuration::default(),
             roots: Vec::new(),
             contents: Vec::new(),
         }
@@ -70,16 +70,16 @@ impl std::fmt::Debug for IndexServer {
     }
 }
 
-struct Configuration { 
-    concurrent_file_reads : u32,
-    max_file_size : u64,
+struct Configuration {
+    concurrent_file_reads: u32,
+    max_file_size: u64,
 }
 
-impl Default for Configuration { 
+impl Default for Configuration {
     fn default() -> Self {
-        Self { 
-            concurrent_file_reads : 200,
-            max_file_size : 10 * 1024 * 1024,
+        Self {
+            concurrent_file_reads: 200,
+            max_file_size: 10 * 1024 * 1024,
         }
     }
 }
@@ -141,14 +141,14 @@ impl IndexServer {
     // TODO: Return result type and instrument
     async fn execute_command(&mut self, c: Command) {
         match c {
-            Command::SetConfiguration(params) => { 
+            Command::SetConfiguration(params) => {
                 if params.concurrent_file_reads != 0 {
                     self.configuration.concurrent_file_reads = params.concurrent_file_reads;
                 }
-                if params.max_file_size != 0 { 
+                if params.max_file_size != 0 {
                     self.configuration.max_file_size = params.max_file_size;
                 }
-            },
+            }
             // TODO: Handle overlapping folders
             Command::RegisterFolder(params, tx) => {
                 let span = info_span!("RegisterFolder");
@@ -168,7 +168,7 @@ impl IndexServer {
                 tx.send(Ok(searchium::IndexUpdate::scan_end())).ok();
 
                 // Load the contents of all discovered files in the new root into memory
-                let contents: Vec<FileContents> = {
+                let contents: Vec<_> = {
                     let tx = tx.clone();
                     let searchable_files = new_root.searchable_files();
                     event!(Level::INFO, count = ?searchable_files.len(), "Loading contents of indexed files");
@@ -194,17 +194,24 @@ impl IndexServer {
                             }
                         }
                     });
-                    let (_, contents) =
-                        tokio::join!(task, load_files(searchable_files.to_vec(), contents_tx, self.configuration.concurrent_file_reads as usize, self.configuration.max_file_size));
+                    let (_, contents) = tokio::join!(
+                        task,
+                        load_files(
+                            searchable_files.to_vec(),
+                            contents_tx,
+                            self.configuration.concurrent_file_reads as usize,
+                            self.configuration.max_file_size
+                        )
+                    );
                     contents
                 };
 
-                // TODO: Accept results and filter out failures/binary files
                 let contents: HashMap<PathBuf, _> = new_root
                     .searchable_files()
                     .iter()
                     .map(|p| p.to_path_buf())
                     .zip(contents)
+                    .filter_map(|(p, r)| r.ok().map(|c| (p, c)))
                     .collect();
                 tx.send(Ok(searchium::IndexUpdate::loaded())).ok();
                 event!(Level::INFO, "Finished loading file contents");

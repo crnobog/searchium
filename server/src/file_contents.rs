@@ -1,4 +1,5 @@
 use futures::{stream::FuturesOrdered, StreamExt};
+use thiserror::Error;
 use std::{
     fs::File,
     io::{Read, Seek},
@@ -33,12 +34,20 @@ pub struct FileLoadEvent {
     pub path: PathBuf,
 }
 
+#[derive(Error, Debug )]
+pub enum FileLoadError {
+    #[error("File {0} larger than configured maximum {1}")]
+    TooLarge(u64, u64),
+    #[error("Io Error: {0}")]
+    Io(#[from] std::io::Error),
+}
+
 pub async fn load_files<Paths, PathIter>(
     paths: Paths,
     events_tx: tokio::sync::mpsc::Sender<FileLoadEvent>,
     max_tasks: usize,
-    max_file_size : u64
-) -> Vec<FileContents>
+    max_file_size: u64,
+) -> Vec<Result<FileContents, FileLoadError>>
 where
     Paths: IntoIterator<Item = PathBuf, IntoIter = PathIter>,
     PathIter: ExactSizeIterator<Item = PathBuf>,
@@ -72,7 +81,7 @@ where
                 panic!();
             }
             Some(Ok((path, contents))) => {
-                res.push(contents.unwrap()); // TODO: propagate error
+                res.push(contents); // TODO: propagate error
                 update_count += 1;
                 if update_count >= 100 {
                     events_tx
@@ -89,12 +98,12 @@ where
     res
 }
 
-fn read_file_contents(path: &Path, max_size: u64) -> Result<FileContents, std::io::Error> {
+fn read_file_contents(path: &Path, max_size: u64) -> Result<FileContents, FileLoadError> {
     // let mut contents = Vec::new();
     let file = File::open(path)?;
     let file_size = file.metadata()?.len();
     if file_size > max_size as u64 {
-        unimplemented!("Error handling for large files");
+        Err(FileLoadError::TooLarge(file_size, max_size))
     } else {
         classify_file(file, file_size)
     }
@@ -106,7 +115,10 @@ const CLASSIFY_TOTAL_SAMPLE_BYTES: u64 = CLASSIFY_SLICE_COUNT * CLASSIFY_SLICE_S
 
 // TODO: Move constants out so they can be shared with tests
 // TODO: Try and classify files as utf-16
-fn classify_file(mut file: impl Read + Seek, total_len: u64) -> Result<FileContents, std::io::Error> {
+fn classify_file(
+    mut file: impl Read + Seek,
+    total_len: u64,
+) -> Result<FileContents, FileLoadError> {
     let (classification, has_bom) = if CLASSIFY_TOTAL_SAMPLE_BYTES >= total_len {
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes)?;

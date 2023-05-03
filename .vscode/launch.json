@@ -42,7 +42,6 @@
 				"RUST_BACKTRACE": "1"
 			},
 			"cwd": "${workspaceFolder}",
-			"preLaunchTask": "Build Debug Server",
 			"terminal": "integrated",
 		},
 		{
@@ -56,13 +55,13 @@
 				"RUST_BACKTRACE": "1"
 			},
 			"cwd": "${workspaceFolder}",
-			"preLaunchTask": "Build Release Server",
 			"terminal": "integrated",
 		}
 	],
 	"compounds": [
 		{
 			"name": "Run Extension & Debug Server",
+			"preLaunchTask": "Build Debug Server",
 			"configurations": [
 				"Run Extension",
 				"Run Debug Server"
@@ -71,6 +70,7 @@
 		},
 		{
 			"name": "Run Extension & Server",
+			"preLaunchTask": "Build Release Server",
 			"configurations": [
 				"Run Extension",
 				"Run Server"

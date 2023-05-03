@@ -28,3 +28,4 @@ https://swtch.com/~rsc/regexp/regexp4.html
 - [ ] Progress for file contents reading
 - [x] search.exclude filtering
 - [ ] index info  
+- [ ] Fix off by one error in navigating to search results - something to do with range/column? 
