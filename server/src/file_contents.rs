@@ -1,11 +1,11 @@
 use futures::{stream::FuturesOrdered, StreamExt};
-use thiserror::Error;
 use std::{
     fs::File,
     io::{Read, Seek},
     path::{Path, PathBuf},
     pin::pin,
 };
+use thiserror::Error;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -13,10 +13,17 @@ pub enum FileContents {
     Ascii(Vec<u8>),
     Utf8(Vec<u8>),
     Utf16(Vec<u8>),
-    Binary(usize), // TODO: remove?
+    Binary(u64), // TODO: remove?
 }
 
 impl FileContents {
+    pub fn file_size(&self) -> u64 {
+        match self {
+            FileContents::Ascii(vec) | FileContents::Utf8(vec) => vec.len() as u64,
+            FileContents::Utf16(vec) => vec.len() as u64,
+            FileContents::Binary(size) => *size,
+        }
+    }
     pub fn get_text(&self, start: usize, end: usize) -> String {
         match self {
             FileContents::Ascii(vec) | FileContents::Utf8(vec) => {
@@ -34,7 +41,7 @@ pub struct FileLoadEvent {
     pub path: PathBuf,
 }
 
-#[derive(Error, Debug )]
+#[derive(Error, Debug)]
 pub enum FileLoadError {
     #[error("File {0} larger than configured maximum {1}")]
     TooLarge(u64, u64),
@@ -152,7 +159,7 @@ fn classify_file(
     let other_ratio = classification.other_count as f64 / total_classified as f64;
 
     if other_ratio > 0.1 {
-        return Ok(FileContents::Binary(total_len as usize));
+        return Ok(FileContents::Binary(total_len));
     }
 
     let mut contents = Vec::new();
@@ -271,10 +278,10 @@ mod tests {
     #[test]
     fn test_classify_small_binary() {
         let data: Vec<u8> = std::iter::repeat(0xFF as u8).take(1024).collect();
-        let datalen = data.len();
+        let datalen = data.len() as u64;
         assert!(datalen < 200 * 1024);
         let data = Cursor::new(data);
-        let file = classify_file(data, datalen as u64);
+        let file = classify_file(data, datalen);
         match file {
             Ok(FileContents::Binary(size)) => {
                 assert_eq!(size, datalen);

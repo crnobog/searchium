@@ -194,6 +194,34 @@ pub struct ProcessInfoResponse {
     #[prost(uint64, tag="2")]
     pub virtual_memory: u64,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DatabaseDetailsRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DatabaseDetailsRoot {
+    #[prost(string, tag="1")]
+    pub root_path: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub num_files_scanned: u64,
+    #[prost(uint64, tag="3")]
+    pub num_directories_scanned: u64,
+    #[prost(uint64, tag="4")]
+    pub num_searchable_files: u64,
+    #[prost(uint64, tag="5")]
+    pub searchable_files_bytes: u64,
+    #[prost(uint64, tag="6")]
+    pub num_binary_files: u64,
+    #[prost(uint64, tag="7")]
+    pub binary_files_bytes: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DatabaseDetailsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub roots: ::prost::alloc::vec::Vec<DatabaseDetailsRoot>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum GenericError {

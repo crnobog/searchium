@@ -180,6 +180,17 @@ impl searchium::searchium_service_server::SearchiumService for Service {
             virtual_memory: stats.virtual_mem as u64,
         }))
     }
+
+    async fn get_database_details(
+        &self,
+        _request: tonic::Request<searchium::DatabaseDetailsRequest>,
+    ) -> Result<tonic::Response<searchium::DatabaseDetailsResponse>, tonic::Status>
+    {
+        let (tx, rx) = oneshot::channel();
+        self.command_tx.send(Command::GetDatabaseDetails(tx)).await.map_err(|_| Status::internal(""))?;
+        
+        Ok(Response::new(rx.await.map_err(|_| Status::internal(""))??))
+    }
 }
 
 fn setup_trace() {

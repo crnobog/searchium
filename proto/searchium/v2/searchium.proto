@@ -19,6 +19,7 @@ service SearchiumService {
   
   rpc SetConfiguration(ConfigurationRequest) returns (ConfigurationResponse);
   rpc GetProcessInfo(ProcessInfoRequest) returns (ProcessInfoResponse);
+  rpc GetDatabaseDetails(DatabaseDetailsRequest) returns (DatabaseDetailsResponse);
 }
 
 message HelloRequest {
@@ -134,4 +135,20 @@ message ProcessInfoRequest {
 message ProcessInfoResponse {
   uint64 physical_memory = 1;
   uint64 virtual_memory = 2;
+}
+
+message DatabaseDetailsRequest {
+}
+
+message DatabaseDetailsRoot {
+  string root_path = 1;
+  uint64 num_files_scanned = 2;
+  uint64 num_directories_scanned = 3;
+  uint64 num_searchable_files = 4;
+  uint64 searchable_files_bytes = 5;
+  uint64 num_binary_files = 6;
+  uint64 binary_files_bytes = 7;
+}
+message DatabaseDetailsResponse {
+  repeated DatabaseDetailsRoot roots = 1;  
 }

@@ -50,6 +50,9 @@ class IndexServerClient implements IndexClient {
     public async getProcessInfo(): Promise<pb.ProcessInfoResponse> {
         return await this.client.getProcessInfo({}).response;
     }
+    public async getDatabaseDetails(): Promise<pb.DatabaseDetailsResponse> {
+        return await this.client.getDatabaseDetails({}).response;
+    }
 }
 
 export async function startServer(context: vscode.ExtensionContext): Promise<[IndexServerProcess, IndexClient]> {

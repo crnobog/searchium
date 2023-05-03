@@ -104,7 +104,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         getLogger().logInformation`Initializing searchium`;
         const config = vscode.workspace.getConfiguration("searchium");
         const useLegacyServer = config.get<boolean>("useLegacyServer", true);
-        let searchManager, searchResultsProvider, controlsProvider;
+        let searchManager, searchResultsProvider, controlsProvider, detailsPanelProvider;
 
         const history = new SearchHistory(context);
         if (useLegacyServer) {
@@ -136,7 +136,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             context.subscriptions.push(new DocumentRegistrationService(context, channel, undefined));
 
             // const fileSearchManager = new FileSearchManager(channel);
-            const detailsPanelProvider = new DetailsPanelProvider(context, channel);
+            detailsPanelProvider = new DetailsPanelProvider(context, channel);
 
             context.subscriptions.push(
                 vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
@@ -146,7 +146,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 // Not working very well with chromium server
                 // vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager),
 
-                vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
+                // vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
 
                 vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
                 vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),
@@ -163,6 +163,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
             searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, client, history);
             controlsProvider = new ControlsProvider(context, context.extensionUri, history, undefined);
+            detailsPanelProvider = new DetailsPanelProvider(context, client);
             context.subscriptions.push(
                 process,
                 new DocumentRegistrationService(context, undefined, client),
@@ -184,7 +185,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             vscode.commands.registerCommand('searchium.nextResult', searchManager.navigateToNextResult, searchManager),
             vscode.commands.registerCommand('searchium.previousResult', searchManager.navigateToPreviousResult, searchManager),
 
-            // vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
+            vscode.commands.registerCommand("searchium.openDetails", detailsPanelProvider.openDetails, detailsPanelProvider),
 
             // todo: rename commands 
             vscode.commands.registerCommand("searchium.focusSearch", controlsProvider.onJumpToSearchInput, controlsProvider),

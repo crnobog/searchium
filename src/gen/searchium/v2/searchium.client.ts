@@ -5,6 +5,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
+import type { DatabaseDetailsResponse } from "./searchium";
+import type { DatabaseDetailsRequest } from "./searchium";
 import type { ProcessInfoResponse } from "./searchium";
 import type { ProcessInfoRequest } from "./searchium";
 import type { ConfigurationResponse } from "./searchium";
@@ -64,6 +66,10 @@ export interface ISearchiumServiceClient {
      * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
      */
     getProcessInfo(input: ProcessInfoRequest, options?: RpcOptions): UnaryCall<ProcessInfoRequest, ProcessInfoResponse>;
+    /**
+     * @generated from protobuf rpc: GetDatabaseDetails(searchium.v2.DatabaseDetailsRequest) returns (searchium.v2.DatabaseDetailsResponse);
+     */
+    getDatabaseDetails(input: DatabaseDetailsRequest, options?: RpcOptions): UnaryCall<DatabaseDetailsRequest, DatabaseDetailsResponse>;
 }
 /**
  * @generated from protobuf service searchium.v2.SearchiumService
@@ -131,5 +137,12 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
     getProcessInfo(input: ProcessInfoRequest, options?: RpcOptions): UnaryCall<ProcessInfoRequest, ProcessInfoResponse> {
         const method = this.methods[7], opt = this._transport.mergeOptions(options);
         return stackIntercept<ProcessInfoRequest, ProcessInfoResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetDatabaseDetails(searchium.v2.DatabaseDetailsRequest) returns (searchium.v2.DatabaseDetailsResponse);
+     */
+    getDatabaseDetails(input: DatabaseDetailsRequest, options?: RpcOptions): UnaryCall<DatabaseDetailsRequest, DatabaseDetailsResponse> {
+        const method = this.methods[8], opt = this._transport.mergeOptions(options);
+        return stackIntercept<DatabaseDetailsRequest, DatabaseDetailsResponse>("unary", this._transport, method, opt, input);
     }
 }

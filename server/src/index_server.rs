@@ -38,6 +38,7 @@ pub enum Command {
         searchium::FileExtractsRequest,
         oneshot::Sender<TonicResult<searchium::FileExtractsResponse>>,
     ),
+    GetDatabaseDetails(oneshot::Sender<TonicResult<searchium::DatabaseDetailsResponse>>),
 }
 
 pub struct IndexServer {
@@ -256,8 +257,8 @@ impl IndexServer {
             }
             Command::FileContentsSearch(params, tx) => {
                 let token = CancellationToken::new();
-                // TODO: Respect max results across multiple roots 
-                let roots : Vec<_> = self
+                // TODO: Respect max results across multiple roots
+                let roots: Vec<_> = self
                     .roots
                     .iter()
                     .zip(self.contents.iter())
@@ -268,8 +269,9 @@ impl IndexServer {
                             &params,
                             token.clone(),
                         )
-                    }).collect();
-                tx.send(Ok(searchium::FileContentsSearchResponse{ roots }))
+                    })
+                    .collect();
+                tx.send(Ok(searchium::FileContentsSearchResponse { roots }))
                     .ok();
             }
             Command::GetFileExtracts(request, tx) => {
@@ -292,6 +294,42 @@ impl IndexServer {
                         Err(Status::invalid_argument("File not found"))
                     }
                 })
+                .ok();
+            }
+            Command::GetDatabaseDetails(tx) => {
+                tx.send(Ok(searchium::DatabaseDetailsResponse {
+                    roots: self
+                        .roots
+                        .iter()
+                        .zip(self.contents.iter())
+                        .map(|(root, contents)| {
+                            let (num_binary_files, binary_files_bytes) = root
+                                .searchable_files()
+                                .iter()
+                                .filter_map(|p| {
+                                    contents.get(p).and_then(|c| match c {
+                                        FileContents::Binary(size) => Some((1, *size)),
+                                        _ => None
+                                    })
+                                })
+                                .fold((0, 0), |acc, i| (acc.0 + i.0, acc.1 + i.1));
+                            searchium::DatabaseDetailsRoot {
+                                root_path: root.directory().path().to_string_lossy().to_string(),
+                                num_files_scanned: root.all_files().len() as u64,
+                                num_directories_scanned: root.directory().total_child_directories()
+                                    as u64,
+                                num_searchable_files: root.searchable_files().len() as u64,
+                                searchable_files_bytes: root
+                                    .searchable_files()
+                                    .iter()
+                                    .filter_map(|f| contents.get(f).map(|c| c.file_size()))
+                                    .sum(),
+                                num_binary_files,
+                                binary_files_bytes,
+                            }
+                        })
+                        .collect(),
+                }))
                 .ok();
             }
         }

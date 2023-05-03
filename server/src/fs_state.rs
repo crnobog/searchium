@@ -29,20 +29,31 @@ impl Root {
 pub struct Directory {
     dir_path: PathBuf,
     child_directories: Vec<Directory>,
+    total_child_directories: usize,
     files: Vec<PathBuf>,
 }
 
 impl Directory {
-    fn new(dir_path: PathBuf, child_directories: Vec<Directory>, files: Vec<PathBuf>) -> Self {
+    fn new(
+        dir_path: PathBuf,
+        child_directories: Vec<Directory>,
+        total_child_directories: usize,
+        files: Vec<PathBuf>,
+    ) -> Self {
         Directory {
             dir_path,
             child_directories,
+            total_child_directories,
             files,
         }
     }
 
     pub fn path(&self) -> &Path {
         self.dir_path.as_path()
+    }
+
+    pub fn total_child_directories(&self) -> usize {
+        self.total_child_directories
     }
 }
 
@@ -151,8 +162,11 @@ fn build_filesystem(
             })
             .collect();
         child_dirs.sort_by(|a, b| a.dir_path.cmp(&b.dir_path));
+        let total_grandchild_directories: usize =
+            child_dirs.iter().map(|d| d.total_child_directories()).sum();
+        let total_child_directories = total_grandchild_directories + child_dirs.len();
         // TODO: avoid copies here? Borrow directory as mut and swap? Refcount path symbols so maps don't have to borrow?
-        let mut files : Vec<_> = children.files.iter().map(|f| f.path.clone()).collect();
+        let mut files: Vec<_> = children.files.iter().map(|f| f.path.clone()).collect();
         files.sort();
         all_files.extend(files.iter().cloned());
         searchable_files.extend(
@@ -163,7 +177,12 @@ fn build_filesystem(
         );
         directory_map.insert(
             parent,
-            Directory::new(parent.to_owned(), child_dirs, files),
+            Directory::new(
+                parent.to_owned(),
+                child_dirs,
+                total_child_directories,
+                files,
+            ),
         );
     }
     assert!(directory_map.len() == 1);
@@ -247,7 +266,7 @@ fn scan_directory_recursive<'a, FS>(
     scanner: FS,
     directories_with_files: &'a Bag<DiscoveredDirectory>,
     scope: &rayon::Scope<'a>,
-    searchable : bool
+    searchable: bool,
 ) where
     FS: DirScanner + Send + 'a + Clone,
 {
@@ -277,7 +296,7 @@ fn scan_directory_recursive<'a, FS>(
                         scanner,
                         directories_with_files,
                         scope,
-                        child_searchable
+                        child_searchable,
                     )
                 });
                 None

@@ -50,6 +50,10 @@ pub mod searchium_service_server {
             &self,
             request: tonic::Request<super::ProcessInfoRequest>,
         ) -> Result<tonic::Response<super::ProcessInfoResponse>, tonic::Status>;
+        async fn get_database_details(
+            &self,
+            request: tonic::Request<super::DatabaseDetailsRequest>,
+        ) -> Result<tonic::Response<super::DatabaseDetailsResponse>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct SearchiumServiceServer<T: SearchiumService> {
@@ -420,6 +424,46 @@ pub mod searchium_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = GetProcessInfoSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/GetDatabaseDetails" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetDatabaseDetailsSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::UnaryService<super::DatabaseDetailsRequest>
+                    for GetDatabaseDetailsSvc<T> {
+                        type Response = super::DatabaseDetailsResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::DatabaseDetailsRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).get_database_details(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetDatabaseDetailsSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

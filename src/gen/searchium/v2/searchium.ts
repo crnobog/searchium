@@ -325,6 +325,53 @@ export interface ProcessInfoResponse {
     virtualMemory: bigint;
 }
 /**
+ * @generated from protobuf message searchium.v2.DatabaseDetailsRequest
+ */
+export interface DatabaseDetailsRequest {
+}
+/**
+ * @generated from protobuf message searchium.v2.DatabaseDetailsRoot
+ */
+export interface DatabaseDetailsRoot {
+    /**
+     * @generated from protobuf field: string root_path = 1;
+     */
+    rootPath: string;
+    /**
+     * @generated from protobuf field: uint64 num_files_scanned = 2;
+     */
+    numFilesScanned: bigint;
+    /**
+     * @generated from protobuf field: uint64 num_directories_scanned = 3;
+     */
+    numDirectoriesScanned: bigint;
+    /**
+     * @generated from protobuf field: uint64 num_searchable_files = 4;
+     */
+    numSearchableFiles: bigint;
+    /**
+     * @generated from protobuf field: uint64 searchable_files_bytes = 5;
+     */
+    searchableFilesBytes: bigint;
+    /**
+     * @generated from protobuf field: uint64 num_binary_files = 6;
+     */
+    numBinaryFiles: bigint;
+    /**
+     * @generated from protobuf field: uint64 binary_files_bytes = 7;
+     */
+    binaryFilesBytes: bigint;
+}
+/**
+ * @generated from protobuf message searchium.v2.DatabaseDetailsResponse
+ */
+export interface DatabaseDetailsResponse {
+    /**
+     * @generated from protobuf field: repeated searchium.v2.DatabaseDetailsRoot roots = 1;
+     */
+    roots: DatabaseDetailsRoot[];
+}
+/**
  * @generated from protobuf enum searchium.v2.GenericError
  */
 export enum GenericError {
@@ -1528,6 +1575,168 @@ class ProcessInfoResponse$Type extends MessageType<ProcessInfoResponse> {
  * @generated MessageType for protobuf message searchium.v2.ProcessInfoResponse
  */
 export const ProcessInfoResponse = new ProcessInfoResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DatabaseDetailsRequest$Type extends MessageType<DatabaseDetailsRequest> {
+    constructor() {
+        super("searchium.v2.DatabaseDetailsRequest", []);
+    }
+    create(value?: PartialMessage<DatabaseDetailsRequest>): DatabaseDetailsRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<DatabaseDetailsRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DatabaseDetailsRequest): DatabaseDetailsRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: DatabaseDetailsRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.DatabaseDetailsRequest
+ */
+export const DatabaseDetailsRequest = new DatabaseDetailsRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DatabaseDetailsRoot$Type extends MessageType<DatabaseDetailsRoot> {
+    constructor() {
+        super("searchium.v2.DatabaseDetailsRoot", [
+            { no: 1, name: "root_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "num_files_scanned", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "num_directories_scanned", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 4, name: "num_searchable_files", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 5, name: "searchable_files_bytes", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 6, name: "num_binary_files", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 7, name: "binary_files_bytes", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<DatabaseDetailsRoot>): DatabaseDetailsRoot {
+        const message = { rootPath: "", numFilesScanned: 0n, numDirectoriesScanned: 0n, numSearchableFiles: 0n, searchableFilesBytes: 0n, numBinaryFiles: 0n, binaryFilesBytes: 0n };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<DatabaseDetailsRoot>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DatabaseDetailsRoot): DatabaseDetailsRoot {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string root_path */ 1:
+                    message.rootPath = reader.string();
+                    break;
+                case /* uint64 num_files_scanned */ 2:
+                    message.numFilesScanned = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 num_directories_scanned */ 3:
+                    message.numDirectoriesScanned = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 num_searchable_files */ 4:
+                    message.numSearchableFiles = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 searchable_files_bytes */ 5:
+                    message.searchableFilesBytes = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 num_binary_files */ 6:
+                    message.numBinaryFiles = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 binary_files_bytes */ 7:
+                    message.binaryFilesBytes = reader.uint64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: DatabaseDetailsRoot, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string root_path = 1; */
+        if (message.rootPath !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.rootPath);
+        /* uint64 num_files_scanned = 2; */
+        if (message.numFilesScanned !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.numFilesScanned);
+        /* uint64 num_directories_scanned = 3; */
+        if (message.numDirectoriesScanned !== 0n)
+            writer.tag(3, WireType.Varint).uint64(message.numDirectoriesScanned);
+        /* uint64 num_searchable_files = 4; */
+        if (message.numSearchableFiles !== 0n)
+            writer.tag(4, WireType.Varint).uint64(message.numSearchableFiles);
+        /* uint64 searchable_files_bytes = 5; */
+        if (message.searchableFilesBytes !== 0n)
+            writer.tag(5, WireType.Varint).uint64(message.searchableFilesBytes);
+        /* uint64 num_binary_files = 6; */
+        if (message.numBinaryFiles !== 0n)
+            writer.tag(6, WireType.Varint).uint64(message.numBinaryFiles);
+        /* uint64 binary_files_bytes = 7; */
+        if (message.binaryFilesBytes !== 0n)
+            writer.tag(7, WireType.Varint).uint64(message.binaryFilesBytes);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.DatabaseDetailsRoot
+ */
+export const DatabaseDetailsRoot = new DatabaseDetailsRoot$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class DatabaseDetailsResponse$Type extends MessageType<DatabaseDetailsResponse> {
+    constructor() {
+        super("searchium.v2.DatabaseDetailsResponse", [
+            { no: 1, name: "roots", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => DatabaseDetailsRoot }
+        ]);
+    }
+    create(value?: PartialMessage<DatabaseDetailsResponse>): DatabaseDetailsResponse {
+        const message = { roots: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<DatabaseDetailsResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: DatabaseDetailsResponse): DatabaseDetailsResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated searchium.v2.DatabaseDetailsRoot roots */ 1:
+                    message.roots.push(DatabaseDetailsRoot.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: DatabaseDetailsResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated searchium.v2.DatabaseDetailsRoot roots = 1; */
+        for (let i = 0; i < message.roots.length; i++)
+            DatabaseDetailsRoot.internalBinaryWrite(message.roots[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.DatabaseDetailsResponse
+ */
+export const DatabaseDetailsResponse = new DatabaseDetailsResponse$Type();
 /**
  * @generated ServiceType for protobuf service searchium.v2.SearchiumService
  */
@@ -1539,5 +1748,6 @@ export const SearchiumService = new ServiceType("searchium.v2.SearchiumService",
     { name: "SearchFileContents", options: {}, I: FileContentsSearchRequest, O: FileContentsSearchResponse },
     { name: "GetFileExtracts", options: {}, I: FileExtractsRequest, O: FileExtractsResponse },
     { name: "SetConfiguration", options: {}, I: ConfigurationRequest, O: ConfigurationResponse },
-    { name: "GetProcessInfo", options: {}, I: ProcessInfoRequest, O: ProcessInfoResponse }
+    { name: "GetProcessInfo", options: {}, I: ProcessInfoRequest, O: ProcessInfoResponse },
+    { name: "GetDatabaseDetails", options: {}, I: DatabaseDetailsRequest, O: DatabaseDetailsResponse }
 ]);

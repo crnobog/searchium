@@ -1,6 +1,8 @@
 // TODO: Use protobuf-generated types here or not?
 import * as pb from "gen/searchium/v2/searchium";
 
+// TODO: re-export types from pb?
+
 export interface DuplexStreamingMethod<In, Out> {
     send(message: In): Promise<void>;
     complete(): Promise<void>;
@@ -20,4 +22,5 @@ export interface IndexClient {
     searchFileContents(request: pb.FileContentsSearchRequest): Promise<pb.FileContentsSearchResponse>;
     getFileExtracts(filePath: string, extracts: pb.Span[], maxLen: number): Promise<pb.FileExtractsResponse>;
     getProcessInfo(): Promise<pb.ProcessInfoResponse>;
+    getDatabaseDetails(): Promise<pb.DatabaseDetailsResponse>;
 }
