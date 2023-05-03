@@ -358,7 +358,7 @@ export class SearchManager {
             // TODO: cancellation/interrupting with new search 
             execute = async (_progress: vscode.Progress<{ increment: number, message: string }>, _token: vscode.CancellationToken): Promise<void> => {
                 try {
-                    const stream = client.searchFileContents({
+                    const rootResults = await client.searchFileContents({
                         queryString: options.query ?? "",
                         filePathPattern: options.pathFilter ?? "",
                         maxResults,
@@ -368,41 +368,44 @@ export class SearchManager {
                     });
                     let resultCount = 0;
                     const resultMap: Map<string, DirectoryResult> = new Map();
-                    for await (const result of stream) {
+                    for (const root of rootResults.roots) {
                         // TODO: populate results as they come in 
-                        resultCount += result.spans.length;
-                        let directory = resultMap.get(result.rootPath);
+                        let directory = resultMap.get(root.rootPath);
                         if (!directory) {
                             directory = <DirectoryResult>{
-                                name: result.rootPath,
-                                path: result.rootPath,
+                                name: root.rootPath,
+                                path: root.rootPath,
                                 children: [],
                                 parent: undefined,
                                 type: "directory",
                                 next: undefined,
                                 prev: undefined,
                             };
-                            resultMap.set(result.rootPath, directory);
+                            resultMap.set(root.rootPath, directory);
                         }
-                        const fileResult: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
-                            name: result.fileRelativePath,
-                            path: path.join(result.rootPath, result.fileRelativePath), // TODO: Difference betewen name and path
-                            parent: directory,
-                            positions: result.spans.map(s => { return { offset: s.offsetBytes, length: s.lengthBytes }; }),
-                            type: "file",
-                            uri: vscode.Uri.file(path.join(result.rootPath, result.fileRelativePath)),
-                            prev: directory.children.last(),
-                            _extracts: undefined,
-                            extracts: async function (): Promise<ExtractResult[]> {
-                                if (this._extracts) { this._extracts; }
-                                this._extracts = getFileExtractsFromClient(client, this);
-                                return this._extracts;
-                            },
-                        };
-                        if (fileResult.prev) {
-                            fileResult.prev.next = fileResult;
+                        for (const result of root.hits) {
+                            resultCount += result.spans.length;
+                            const filePath = path.join(root.rootPath, result.fileRelativePath);
+                            const fileResult: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
+                                name: result.fileRelativePath,
+                                path: filePath, // TODO: Difference betewen name and path
+                                parent: directory,
+                                positions: result.spans.map(s => { return { offset: s.offsetBytes, length: s.lengthBytes }; }),
+                                type: "file",
+                                uri: vscode.Uri.file(filePath),
+                                prev: directory.children.last(),
+                                _extracts: undefined,
+                                extracts: async function (): Promise<ExtractResult[]> {
+                                    if (this._extracts) { this._extracts; }
+                                    this._extracts = getFileExtractsFromClient(client, this);
+                                    return this._extracts;
+                                },
+                            };
+                            if (fileResult.prev) {
+                                fileResult.prev.next = fileResult;
+                            }
+                            directory.children.push(fileResult);
                         }
-                        directory.children.push(fileResult);
                     }
                     let prefix = "";
                     if (resultCount > maxResults) {

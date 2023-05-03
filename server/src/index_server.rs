@@ -32,7 +32,7 @@ pub enum Command {
     ),
     FileContentsSearch(
         searchium::FileContentsSearchRequest,
-        mpsc::Sender<TonicResult<searchium::FileContentsSearchResponse>>,
+        oneshot::Sender<TonicResult<searchium::FileContentsSearchResponse>>,
     ),
     GetFileExtracts(
         searchium::FileExtractsRequest,
@@ -256,17 +256,21 @@ impl IndexServer {
             }
             Command::FileContentsSearch(params, tx) => {
                 let token = CancellationToken::new();
-                for (root, contents) in self.roots.iter().zip(self.contents.iter()) {
-                    search_files_contents(
-                        root.directory().path(),
-                        contents,
-                        &params,
-                        |r| {
-                            tx.blocking_send(Ok(r)).ok();
-                        },
-                        token.clone(),
-                    );
-                }
+                // TODO: Respect max results across multiple roots 
+                let roots : Vec<_> = self
+                    .roots
+                    .iter()
+                    .zip(self.contents.iter())
+                    .map(|(root, contents)| {
+                        search_files_contents(
+                            root.directory().path(),
+                            contents,
+                            &params,
+                            token.clone(),
+                        )
+                    }).collect();
+                tx.send(Ok(searchium::FileContentsSearchResponse{ roots }))
+                    .ok();
             }
             Command::GetFileExtracts(request, tx) => {
                 tx.send({

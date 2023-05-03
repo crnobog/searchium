@@ -187,7 +187,7 @@ export interface FileContentsSearchRequest {
      */
     filePathPattern: string;
     /**
-     * @generated from protobuf field: int32 max_results = 3;
+     * @generated from protobuf field: uint32 max_results = 3;
      */
     maxResults: number;
     /**
@@ -217,21 +217,39 @@ export interface Span {
     lengthBytes: number;
 }
 /**
- * @generated from protobuf message searchium.v2.FileContentsSearchResponse
+ * @generated from protobuf message searchium.v2.FileContentsSearchHit
  */
-export interface FileContentsSearchResponse {
+export interface FileContentsSearchHit {
+    /**
+     * @generated from protobuf field: string file_relative_path = 1;
+     */
+    fileRelativePath: string;
+    /**
+     * @generated from protobuf field: repeated searchium.v2.Span spans = 2;
+     */
+    spans: Span[];
+}
+/**
+ * @generated from protobuf message searchium.v2.FileContentsSearchRootResult
+ */
+export interface FileContentsSearchRootResult {
     /**
      * @generated from protobuf field: string root_path = 1;
      */
     rootPath: string;
     /**
-     * @generated from protobuf field: string file_relative_path = 2;
+     * @generated from protobuf field: repeated searchium.v2.FileContentsSearchHit hits = 2;
      */
-    fileRelativePath: string;
+    hits: FileContentsSearchHit[];
+}
+/**
+ * @generated from protobuf message searchium.v2.FileContentsSearchResponse
+ */
+export interface FileContentsSearchResponse {
     /**
-     * @generated from protobuf field: repeated searchium.v2.Span spans = 3;
+     * @generated from protobuf field: repeated searchium.v2.FileContentsSearchRootResult roots = 1;
      */
-    spans: Span[];
+    roots: FileContentsSearchRootResult[];
 }
 /**
  * @generated from protobuf message searchium.v2.FileExtractsRequest
@@ -955,7 +973,7 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
         super("searchium.v2.FileContentsSearchRequest", [
             { no: 1, name: "query_string", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 2, name: "file_path_pattern", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "max_results", kind: "scalar", T: 5 /*ScalarType.INT32*/ },
+            { no: 3, name: "max_results", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 4, name: "match_case", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 5, name: "match_whole_word", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 6, name: "regex", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
@@ -979,8 +997,8 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
                 case /* string file_path_pattern */ 2:
                     message.filePathPattern = reader.string();
                     break;
-                case /* int32 max_results */ 3:
-                    message.maxResults = reader.int32();
+                case /* uint32 max_results */ 3:
+                    message.maxResults = reader.uint32();
                     break;
                 case /* bool match_case */ 4:
                     message.matchCase = reader.bool();
@@ -1009,9 +1027,9 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
         /* string file_path_pattern = 2; */
         if (message.filePathPattern !== "")
             writer.tag(2, WireType.LengthDelimited).string(message.filePathPattern);
-        /* int32 max_results = 3; */
+        /* uint32 max_results = 3; */
         if (message.maxResults !== 0)
-            writer.tag(3, WireType.Varint).int32(message.maxResults);
+            writer.tag(3, WireType.Varint).uint32(message.maxResults);
         /* bool match_case = 4; */
         if (message.matchCase !== false)
             writer.tag(4, WireType.Varint).bool(message.matchCase);
@@ -1086,33 +1104,29 @@ class Span$Type extends MessageType<Span> {
  */
 export const Span = new Span$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class FileContentsSearchResponse$Type extends MessageType<FileContentsSearchResponse> {
+class FileContentsSearchHit$Type extends MessageType<FileContentsSearchHit> {
     constructor() {
-        super("searchium.v2.FileContentsSearchResponse", [
-            { no: 1, name: "root_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "file_relative_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 3, name: "spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Span }
+        super("searchium.v2.FileContentsSearchHit", [
+            { no: 1, name: "file_relative_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Span }
         ]);
     }
-    create(value?: PartialMessage<FileContentsSearchResponse>): FileContentsSearchResponse {
-        const message = { rootPath: "", fileRelativePath: "", spans: [] };
+    create(value?: PartialMessage<FileContentsSearchHit>): FileContentsSearchHit {
+        const message = { fileRelativePath: "", spans: [] };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            reflectionMergePartial<FileContentsSearchResponse>(this, message, value);
+            reflectionMergePartial<FileContentsSearchHit>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FileContentsSearchResponse): FileContentsSearchResponse {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FileContentsSearchHit): FileContentsSearchHit {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string root_path */ 1:
-                    message.rootPath = reader.string();
-                    break;
-                case /* string file_relative_path */ 2:
+                case /* string file_relative_path */ 1:
                     message.fileRelativePath = reader.string();
                     break;
-                case /* repeated searchium.v2.Span spans */ 3:
+                case /* repeated searchium.v2.Span spans */ 2:
                     message.spans.push(Span.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
@@ -1126,16 +1140,114 @@ class FileContentsSearchResponse$Type extends MessageType<FileContentsSearchResp
         }
         return message;
     }
-    internalBinaryWrite(message: FileContentsSearchResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: FileContentsSearchHit, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* string file_relative_path = 1; */
+        if (message.fileRelativePath !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.fileRelativePath);
+        /* repeated searchium.v2.Span spans = 2; */
+        for (let i = 0; i < message.spans.length; i++)
+            Span.internalBinaryWrite(message.spans[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.FileContentsSearchHit
+ */
+export const FileContentsSearchHit = new FileContentsSearchHit$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FileContentsSearchRootResult$Type extends MessageType<FileContentsSearchRootResult> {
+    constructor() {
+        super("searchium.v2.FileContentsSearchRootResult", [
+            { no: 1, name: "root_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "hits", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FileContentsSearchHit }
+        ]);
+    }
+    create(value?: PartialMessage<FileContentsSearchRootResult>): FileContentsSearchRootResult {
+        const message = { rootPath: "", hits: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<FileContentsSearchRootResult>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FileContentsSearchRootResult): FileContentsSearchRootResult {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* string root_path */ 1:
+                    message.rootPath = reader.string();
+                    break;
+                case /* repeated searchium.v2.FileContentsSearchHit hits */ 2:
+                    message.hits.push(FileContentsSearchHit.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FileContentsSearchRootResult, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* string root_path = 1; */
         if (message.rootPath !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.rootPath);
-        /* string file_relative_path = 2; */
-        if (message.fileRelativePath !== "")
-            writer.tag(2, WireType.LengthDelimited).string(message.fileRelativePath);
-        /* repeated searchium.v2.Span spans = 3; */
-        for (let i = 0; i < message.spans.length; i++)
-            Span.internalBinaryWrite(message.spans[i], writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* repeated searchium.v2.FileContentsSearchHit hits = 2; */
+        for (let i = 0; i < message.hits.length; i++)
+            FileContentsSearchHit.internalBinaryWrite(message.hits[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.FileContentsSearchRootResult
+ */
+export const FileContentsSearchRootResult = new FileContentsSearchRootResult$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class FileContentsSearchResponse$Type extends MessageType<FileContentsSearchResponse> {
+    constructor() {
+        super("searchium.v2.FileContentsSearchResponse", [
+            { no: 1, name: "roots", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FileContentsSearchRootResult }
+        ]);
+    }
+    create(value?: PartialMessage<FileContentsSearchResponse>): FileContentsSearchResponse {
+        const message = { roots: [] };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<FileContentsSearchResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FileContentsSearchResponse): FileContentsSearchResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated searchium.v2.FileContentsSearchRootResult roots */ 1:
+                    message.roots.push(FileContentsSearchRootResult.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: FileContentsSearchResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated searchium.v2.FileContentsSearchRootResult roots = 1; */
+        for (let i = 0; i < message.roots.length; i++)
+            FileContentsSearchRootResult.internalBinaryWrite(message.roots[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1424,7 +1536,7 @@ export const SearchiumService = new ServiceType("searchium.v2.SearchiumService",
     { name: "RegisterFolder", serverStreaming: true, options: {}, I: FolderRegisterRequest, O: IndexUpdate },
     { name: "UnregisterFolder", options: {}, I: FolderUnregisterRequest, O: GenericResponse },
     { name: "SearchFilePaths", serverStreaming: true, clientStreaming: true, options: {}, I: FilePathSearchRequest, O: FilePathSearchResponse },
-    { name: "SearchFileContents", serverStreaming: true, options: {}, I: FileContentsSearchRequest, O: FileContentsSearchResponse },
+    { name: "SearchFileContents", options: {}, I: FileContentsSearchRequest, O: FileContentsSearchResponse },
     { name: "GetFileExtracts", options: {}, I: FileExtractsRequest, O: FileExtractsResponse },
     { name: "SetConfiguration", options: {}, I: ConfigurationRequest, O: ConfigurationResponse },
     { name: "GetProcessInfo", options: {}, I: ProcessInfoRequest, O: ProcessInfoResponse }

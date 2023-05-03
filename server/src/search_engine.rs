@@ -49,35 +49,40 @@ pub fn search_files_contents(
     root_path: &Path,
     files: &HashMap<PathBuf, FileContents>,
     query: &searchium::FileContentsSearchRequest,
-    tx: impl Fn(searchium::FileContentsSearchResponse) + Sync + Send,
     cancel: CancellationToken,
-) {
+) -> searchium::FileContentsSearchRootResult {
     let finder = memmem::Finder::new(&query.query_string);
-    let root_path_string = root_path.to_string_lossy().to_string();
-    files
+    let hits: Vec<_> = files
         .par_iter()
-        .try_for_each_with(finder, |finder, (path, contents)| -> Result<(), ()> {
-            if cancel.is_cancelled() {
-                return Err(());
-            }
-
-            let spans: Vec<searchium::Span> = search_file_contents(contents, finder);
-            if !spans.is_empty() {
-                let file_relative_path = path
-                    .strip_prefix(root_path)
-                    .expect("file path not relative to root")
-                    .to_string_lossy()
-                    .to_string();
-                let response = searchium::FileContentsSearchResponse {
-                    root_path: root_path_string.clone(),
-                    file_relative_path,
-                    spans,
-                };
-                tx(response);
-            }
-            Ok(())
-        })
-        .ok();
+        .map_with(
+            finder,
+            |finder, (path, contents)| -> Option<searchium::FileContentsSearchHit> {
+                let spans: Vec<searchium::Span> = search_file_contents(contents, finder);
+                if spans.is_empty() {
+                    None
+                } else {
+                    let file_relative_path = path
+                        .strip_prefix(root_path)
+                        .expect("file path not relative to root")
+                        .to_string_lossy()
+                        .to_string();
+                    let response = searchium::FileContentsSearchHit {
+                        file_relative_path,
+                        spans,
+                    };
+                    Some(response)
+                }
+            },
+        )
+        .filter_map(|r| r)
+        .take_any_while(|_| !cancel.is_cancelled())
+        // TODO: Cap number of results not number of files - maybe change format and flat_map over spans? 
+        .take_any(query.max_results as usize)
+        .collect();
+    searchium::FileContentsSearchRootResult {
+        root_path: root_path.to_string_lossy().to_string(),
+        hits,
+    }
 }
 
 fn search_file_contents(contents: &FileContents, finder: &memmem::Finder) -> Vec<searchium::Span> {
@@ -109,8 +114,7 @@ fn calculate_line_offsets(contents: &FileContents) -> (Vec<usize>, usize) {
             todo!();
         }
         FileContents::Binary(_) => (vec![], 0),
-
-    } 
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -178,8 +182,8 @@ mod tests {
             find_line_span(&offsets, len, 12),
             LineSpan {
                 offset: 12,
-                length: 8, 
-                line_number : 2 
+                length: 8,
+                line_number: 2
             },
             "Line 2 span incorrect"
         );
@@ -189,7 +193,7 @@ mod tests {
             LineSpan {
                 offset: 0,
                 length: 12,
-                line_number : 1
+                line_number: 1
             },
             "Line 1 span incorrect"
         );
@@ -199,7 +203,7 @@ mod tests {
             LineSpan {
                 offset: 28,
                 length: 12,
-                line_number : 4
+                line_number: 4
             },
             "Last line span incorrect"
         );

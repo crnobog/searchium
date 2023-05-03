@@ -111,8 +111,8 @@ pub struct FileContentsSearchRequest {
     pub query_string: ::prost::alloc::string::String,
     #[prost(string, tag="2")]
     pub file_path_pattern: ::prost::alloc::string::String,
-    #[prost(int32, tag="3")]
-    pub max_results: i32,
+    #[prost(uint32, tag="3")]
+    pub max_results: u32,
     #[prost(bool, tag="4")]
     pub match_case: bool,
     #[prost(bool, tag="5")]
@@ -130,13 +130,25 @@ pub struct Span {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FileContentsSearchResponse {
+pub struct FileContentsSearchHit {
+    #[prost(string, tag="1")]
+    pub file_relative_path: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag="2")]
+    pub spans: ::prost::alloc::vec::Vec<Span>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileContentsSearchRootResult {
     #[prost(string, tag="1")]
     pub root_path: ::prost::alloc::string::String,
-    #[prost(string, tag="2")]
-    pub file_relative_path: ::prost::alloc::string::String,
-    #[prost(message, repeated, tag="3")]
-    pub spans: ::prost::alloc::vec::Vec<Span>,
+    #[prost(message, repeated, tag="2")]
+    pub hits: ::prost::alloc::vec::Vec<FileContentsSearchHit>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileContentsSearchResponse {
+    #[prost(message, repeated, tag="1")]
+    pub roots: ::prost::alloc::vec::Vec<FileContentsSearchRootResult>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

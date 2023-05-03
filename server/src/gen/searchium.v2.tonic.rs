@@ -34,16 +34,10 @@ pub mod searchium_service_server {
             &self,
             request: tonic::Request<tonic::Streaming<super::FilePathSearchRequest>>,
         ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status>;
-        /// Server streaming response type for the SearchFileContents method.
-        type SearchFileContentsStream: futures_core::Stream<
-                Item = Result<super::FileContentsSearchResponse, tonic::Status>,
-            >
-            + Send
-            + 'static;
         async fn search_file_contents(
             &self,
             request: tonic::Request<super::FileContentsSearchRequest>,
-        ) -> Result<tonic::Response<Self::SearchFileContentsStream>, tonic::Status>;
+        ) -> Result<tonic::Response<super::FileContentsSearchResponse>, tonic::Status>;
         async fn get_file_extracts(
             &self,
             request: tonic::Request<super::FileExtractsRequest>,
@@ -282,13 +276,11 @@ pub mod searchium_service_server {
                     struct SearchFileContentsSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
                         T: SearchiumService,
-                    > tonic::server::ServerStreamingService<
-                        super::FileContentsSearchRequest,
-                    > for SearchFileContentsSvc<T> {
+                    > tonic::server::UnaryService<super::FileContentsSearchRequest>
+                    for SearchFileContentsSvc<T> {
                         type Response = super::FileContentsSearchResponse;
-                        type ResponseStream = T::SearchFileContentsStream;
                         type Future = BoxFuture<
-                            tonic::Response<Self::ResponseStream>,
+                            tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
@@ -314,7 +306,7 @@ pub mod searchium_service_server {
                                 accept_compression_encodings,
                                 send_compression_encodings,
                             );
-                        let res = grpc.server_streaming(method, req).await;
+                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

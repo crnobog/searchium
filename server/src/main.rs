@@ -145,20 +145,16 @@ impl searchium::searchium_service_server::SearchiumService for Service {
         ))
     }
 
-    type SearchFileContentsStream =
-        BoxStream<'static, TonicResult<searchium::FileContentsSearchResponse>>;
-
     async fn search_file_contents(
         &self,
         request: tonic::Request<searchium::FileContentsSearchRequest>,
-    ) -> Result<tonic::Response<Self::SearchFileContentsStream>, tonic::Status> {
-        let (tx, rx) = mpsc::channel(16);
+    ) -> Result<tonic::Response<searchium::FileContentsSearchResponse>, tonic::Status> {
+        let (tx, rx) = oneshot::channel();
         self.command_tx
             .send(Command::FileContentsSearch(request.into_inner(), tx))
             .await
             .map_err(|_| Status::internal(""))?;
-        let stream = tokio_stream::wrappers::ReceiverStream::from(rx);
-        Ok(Response::new(Box::pin(stream)))
+        Ok(Response::new(rx.await.map_err(|_| Status::internal(""))??))
     }
 
     async fn get_file_extracts(

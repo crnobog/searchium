@@ -14,7 +14,7 @@ service SearchiumService {
   rpc UnregisterFolder(FolderUnregisterRequest) returns (GenericResponse);
   
   rpc SearchFilePaths(stream FilePathSearchRequest) returns (stream FilePathSearchResponse);
-  rpc SearchFileContents(FileContentsSearchRequest) returns (stream FileContentsSearchResponse);
+  rpc SearchFileContents(FileContentsSearchRequest) returns (FileContentsSearchResponse);
   rpc GetFileExtracts(FileExtractsRequest) returns (FileExtractsResponse);
   
   rpc SetConfiguration(ConfigurationRequest) returns (ConfigurationResponse);
@@ -85,7 +85,7 @@ message FilePathSearchResponse {
 message FileContentsSearchRequest {
   string query_string = 1;
   string file_path_pattern = 2;
-  int32 max_results = 3; 
+  uint32 max_results = 3; 
   bool match_case = 4;
   bool match_whole_word = 5;
   bool regex = 6;
@@ -96,10 +96,18 @@ message Span {
   uint32 length_bytes = 2;
 }
 
-message FileContentsSearchResponse {
+message FileContentsSearchHit {
+  string file_relative_path = 1;
+  repeated Span spans = 2;
+}
+
+message FileContentsSearchRootResult { 
   string root_path = 1;
-  string file_relative_path = 2;
-  repeated Span spans = 3;
+  repeated FileContentsSearchHit hits = 2;
+}
+
+message FileContentsSearchResponse {
+  repeated FileContentsSearchRootResult roots = 1;
 }
 
 message FileExtractsRequest { 
