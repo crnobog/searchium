@@ -51,6 +51,6 @@ mod tests {
         let filter = PathGlobFilter::new(root, &["**/test"]);
 
         assert!(filter.matches(PathBuf::from("C:\\projects\\test").as_path(), true));
-        assert!(filter.matches(PathBuf::from("C:\\projects\\test\\foo.txt").as_path(), false));
+        assert!(!filter.matches(PathBuf::from("C:\\projects\\test\\foo.txt").as_path(), false));
     }
 }

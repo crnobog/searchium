@@ -7,6 +7,8 @@ import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
 import type { ProcessInfoResponse } from "./searchium";
 import type { ProcessInfoRequest } from "./searchium";
+import type { ConfigurationResponse } from "./searchium";
+import type { ConfigurationRequest } from "./searchium";
 import type { FileExtractsResponse } from "./searchium";
 import type { FileExtractsRequest } from "./searchium";
 import type { FileContentsSearchResponse } from "./searchium";
@@ -54,6 +56,10 @@ export interface ISearchiumServiceClient {
      * @generated from protobuf rpc: GetFileExtracts(searchium.v2.FileExtractsRequest) returns (searchium.v2.FileExtractsResponse);
      */
     getFileExtracts(input: FileExtractsRequest, options?: RpcOptions): UnaryCall<FileExtractsRequest, FileExtractsResponse>;
+    /**
+     * @generated from protobuf rpc: SetConfiguration(searchium.v2.ConfigurationRequest) returns (searchium.v2.ConfigurationResponse);
+     */
+    setConfiguration(input: ConfigurationRequest, options?: RpcOptions): UnaryCall<ConfigurationRequest, ConfigurationResponse>;
     /**
      * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
      */
@@ -113,10 +119,17 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
         return stackIntercept<FileExtractsRequest, FileExtractsResponse>("unary", this._transport, method, opt, input);
     }
     /**
+     * @generated from protobuf rpc: SetConfiguration(searchium.v2.ConfigurationRequest) returns (searchium.v2.ConfigurationResponse);
+     */
+    setConfiguration(input: ConfigurationRequest, options?: RpcOptions): UnaryCall<ConfigurationRequest, ConfigurationResponse> {
+        const method = this.methods[6], opt = this._transport.mergeOptions(options);
+        return stackIntercept<ConfigurationRequest, ConfigurationResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
      * @generated from protobuf rpc: GetProcessInfo(searchium.v2.ProcessInfoRequest) returns (searchium.v2.ProcessInfoResponse);
      */
     getProcessInfo(input: ProcessInfoRequest, options?: RpcOptions): UnaryCall<ProcessInfoRequest, ProcessInfoResponse> {
-        const method = this.methods[6], opt = this._transport.mergeOptions(options);
+        const method = this.methods[7], opt = this._transport.mergeOptions(options);
         return stackIntercept<ProcessInfoRequest, ProcessInfoResponse>("unary", this._transport, method, opt, input);
     }
 }

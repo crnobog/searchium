@@ -48,6 +48,10 @@ pub mod searchium_service_server {
             &self,
             request: tonic::Request<super::FileExtractsRequest>,
         ) -> Result<tonic::Response<super::FileExtractsResponse>, tonic::Status>;
+        async fn set_configuration(
+            &self,
+            request: tonic::Request<super::ConfigurationRequest>,
+        ) -> Result<tonic::Response<super::ConfigurationResponse>, tonic::Status>;
         async fn get_process_info(
             &self,
             request: tonic::Request<super::ProcessInfoRequest>,
@@ -344,6 +348,46 @@ pub mod searchium_service_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = GetFileExtractsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/searchium.v2.SearchiumService/SetConfiguration" => {
+                    #[allow(non_camel_case_types)]
+                    struct SetConfigurationSvc<T: SearchiumService>(pub Arc<T>);
+                    impl<
+                        T: SearchiumService,
+                    > tonic::server::UnaryService<super::ConfigurationRequest>
+                    for SetConfigurationSvc<T> {
+                        type Response = super::ConfigurationResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::ConfigurationRequest>,
+                        ) -> Self::Future {
+                            let inner = self.0.clone();
+                            let fut = async move {
+                                (*inner).set_configuration(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = SetConfigurationSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

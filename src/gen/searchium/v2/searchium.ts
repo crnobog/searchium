@@ -34,9 +34,20 @@ export interface HelloResponse {
     id: string;
 }
 /**
- * @generated from protobuf message searchium.v2.EmptyRequest
+ * @generated from protobuf message searchium.v2.ConfigurationRequest
  */
-export interface EmptyRequest {
+export interface ConfigurationRequest {
+    /**
+     * @generated from protobuf field: uint32 concurrent_file_reads = 1;
+     */
+    concurrentFileReads: number; // Max number of files to try and load simultaneously     /**
+     * @generated from protobuf field: uint64 max_file_size = 2;
+     */
+    maxFileSize: bigint; // Max size of files to index}
+/**
+ * @generated from protobuf message searchium.v2.ConfigurationResponse
+ */
+export interface ConfigurationResponse {
 }
 /**
  * @generated from protobuf message searchium.v2.GenericResponse
@@ -399,21 +410,49 @@ class HelloResponse$Type extends MessageType<HelloResponse> {
  */
 export const HelloResponse = new HelloResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class EmptyRequest$Type extends MessageType<EmptyRequest> {
+class ConfigurationRequest$Type extends MessageType<ConfigurationRequest> {
     constructor() {
-        super("searchium.v2.EmptyRequest", []);
+        super("searchium.v2.ConfigurationRequest", [
+            { no: 1, name: "concurrent_file_reads", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "max_file_size", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
     }
-    create(value?: PartialMessage<EmptyRequest>): EmptyRequest {
-        const message = {};
+    create(value?: PartialMessage<ConfigurationRequest>): ConfigurationRequest {
+        const message = { concurrentFileReads: 0, maxFileSize: 0n };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            reflectionMergePartial<EmptyRequest>(this, message, value);
+            reflectionMergePartial<ConfigurationRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: EmptyRequest): EmptyRequest {
-        return target ?? this.create();
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ConfigurationRequest): ConfigurationRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 concurrent_file_reads */ 1:
+                    message.concurrentFileReads = reader.uint32();
+                    break;
+                case /* uint64 max_file_size */ 2:
+                    message.maxFileSize = reader.uint64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
     }
-    internalBinaryWrite(message: EmptyRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: ConfigurationRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 concurrent_file_reads = 1; */
+        if (message.concurrentFileReads !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.concurrentFileReads);
+        /* uint64 max_file_size = 2; */
+        if (message.maxFileSize !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.maxFileSize);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -421,9 +460,35 @@ class EmptyRequest$Type extends MessageType<EmptyRequest> {
     }
 }
 /**
- * @generated MessageType for protobuf message searchium.v2.EmptyRequest
+ * @generated MessageType for protobuf message searchium.v2.ConfigurationRequest
  */
-export const EmptyRequest = new EmptyRequest$Type();
+export const ConfigurationRequest = new ConfigurationRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class ConfigurationResponse$Type extends MessageType<ConfigurationResponse> {
+    constructor() {
+        super("searchium.v2.ConfigurationResponse", []);
+    }
+    create(value?: PartialMessage<ConfigurationResponse>): ConfigurationResponse {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<ConfigurationResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ConfigurationResponse): ConfigurationResponse {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: ConfigurationResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.ConfigurationResponse
+ */
+export const ConfigurationResponse = new ConfigurationResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class GenericResponse$Type extends MessageType<GenericResponse> {
     constructor() {
@@ -1361,5 +1426,6 @@ export const SearchiumService = new ServiceType("searchium.v2.SearchiumService",
     { name: "SearchFilePaths", serverStreaming: true, clientStreaming: true, options: {}, I: FilePathSearchRequest, O: FilePathSearchResponse },
     { name: "SearchFileContents", serverStreaming: true, options: {}, I: FileContentsSearchRequest, O: FileContentsSearchResponse },
     { name: "GetFileExtracts", options: {}, I: FileExtractsRequest, O: FileExtractsResponse },
+    { name: "SetConfiguration", options: {}, I: ConfigurationRequest, O: ConfigurationResponse },
     { name: "GetProcessInfo", options: {}, I: ProcessInfoRequest, O: ProcessInfoResponse }
 ]);

@@ -36,6 +36,8 @@ pub struct FileLoadEvent {
 pub async fn load_files<Paths, PathIter>(
     paths: Paths,
     events_tx: tokio::sync::mpsc::Sender<FileLoadEvent>,
+    max_tasks: usize,
+    max_file_size : u64
 ) -> Vec<FileContents>
 where
     Paths: IntoIterator<Item = PathBuf, IntoIter = PathIter>,
@@ -44,7 +46,6 @@ where
     let mut path_iter = paths.into_iter();
     let num_paths = path_iter.len();
     let mut res = Vec::new();
-    let max_tasks = 200;
     let mut update_count = 0;
     let handle = tokio::runtime::Handle::current();
     // TODO: Consider FuturesOrdered
@@ -54,7 +55,7 @@ where
             if let Some(path) = path_iter.next() {
                 let task = handle.spawn_blocking(move || {
                     let path_ref = path.as_ref();
-                    let contents = read_file_contents(path_ref);
+                    let contents = read_file_contents(path_ref, max_file_size);
                     (path, contents)
                 });
                 futures.push_back(task);
@@ -88,18 +89,15 @@ where
     res
 }
 
-fn read_file_contents(path: &Path) -> Result<FileContents, std::io::Error> {
+fn read_file_contents(path: &Path, max_size: u64) -> Result<FileContents, std::io::Error> {
     // let mut contents = Vec::new();
     let file = File::open(path)?;
-    // TODO: Load in chunks for large files
-    // let size = file.read_to_end(&mut contents)?;
-    // TODO: Check for BOM of utf-16/32
-    // Discard utf8 BOM
-    // TODO: Optimize to avoid shifting large file
-    // if size >= 3 && contents[..3] == [0xEF, 0xBB, 0xBF] {
-    //     contents = Vec::from(&contents[3..]);
-    // }
-    classify_file(file)
+    let file_size = file.metadata()?.len();
+    if file_size > max_size as u64 {
+        unimplemented!("Error handling for large files");
+    } else {
+        classify_file(file, file_size)
+    }
 }
 
 const CLASSIFY_SLICE_COUNT: u64 = 50;
@@ -108,11 +106,7 @@ const CLASSIFY_TOTAL_SAMPLE_BYTES: u64 = CLASSIFY_SLICE_COUNT * CLASSIFY_SLICE_S
 
 // TODO: Move constants out so they can be shared with tests
 // TODO: Try and classify files as utf-16
-fn classify_file(mut file: impl Read + Seek) -> Result<FileContents, std::io::Error> {
-    file.seek(std::io::SeekFrom::End(0))?;
-    let total_len = file.stream_position()?;
-    file.seek(std::io::SeekFrom::Start(0))?;
-
+fn classify_file(mut file: impl Read + Seek, total_len: u64) -> Result<FileContents, std::io::Error> {
     let (classification, has_bom) = if CLASSIFY_TOTAL_SAMPLE_BYTES >= total_len {
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes)?;
@@ -224,9 +218,10 @@ mod tests {
     #[test]
     fn test_classify_small_ascii() {
         let data = Vec::from("abcdefghijklmnop");
-        assert!(data.len() < 200 * 1024);
+        let len = data.len();
+        assert!(len < 200 * 1024);
         let data = Cursor::new(data);
-        let file = classify_file(data);
+        let file = classify_file(data, len as u64);
         match file {
             Ok(FileContents::Ascii(_)) => {}
             _ => assert!(false, "File not classified as ascii"),
@@ -237,9 +232,10 @@ mod tests {
     fn test_classify_200k_ascii() {
         let str = "abcdefghijklmnopqrstuvwxyz0123456789";
         let vec: Vec<u8> = str.bytes().cycle().take(200 * 1024).collect();
-        assert_eq!(vec.len(), 200 * 1024);
+        let len = vec.len();
+        assert_eq!(len, 200 * 1024);
         let data = Cursor::new(vec);
-        let file = classify_file(data);
+        let file = classify_file(data, len as u64);
         match file {
             Ok(FileContents::Ascii(_)) => {}
             _ => assert!(false, "File not classified as ascii"),
@@ -251,8 +247,9 @@ mod tests {
         let str = "abcdefghijklmnopqrstuvwxyz0123456789";
         // This size should ensure that there is a small leftover chunk when dividing into 50 chunks
         let vec: Vec<u8> = str.bytes().cycle().take(200 * 1024 + 4).collect();
+        let len = vec.len();
         let data = Cursor::new(vec);
-        let file = classify_file(data);
+        let file = classify_file(data, len as u64);
         match file {
             Ok(FileContents::Ascii(_)) => {}
             _ => assert!(false, "File not classified as ascii"),
@@ -263,9 +260,9 @@ mod tests {
     fn test_classify_small_binary() {
         let data: Vec<u8> = std::iter::repeat(0xFF as u8).take(1024).collect();
         let datalen = data.len();
-        assert!(data.len() < 200 * 1024);
+        assert!(datalen < 200 * 1024);
         let data = Cursor::new(data);
-        let file = classify_file(data);
+        let file = classify_file(data, datalen as u64);
         match file {
             Ok(FileContents::Binary(size)) => {
                 assert_eq!(size, datalen);

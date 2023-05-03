@@ -141,7 +141,7 @@ fn build_filesystem(
     directories.sort_by(|a, b| a.0.cmp(b.0).reverse());
     let mut directory_map: HashMap<&Path, Directory> = HashMap::new();
     for (parent, children) in directories {
-        let child_dirs: Vec<_> = children
+        let mut child_dirs: Vec<_> = children
             .dirs
             .into_iter()
             .map(|child_path| {
@@ -150,9 +150,11 @@ fn build_filesystem(
                     .unwrap_or_else(|| panic!("Missing child {:?} of {:?}", child_path, parent))
             })
             .collect();
+        child_dirs.sort_by(|a, b| a.dir_path.cmp(&b.dir_path));
         // TODO: avoid copies here? Borrow directory as mut and swap? Refcount path symbols so maps don't have to borrow?
-        let files = children.files.iter().map(|f| f.path.clone());
-        all_files.extend(files.clone());
+        let mut files : Vec<_> = children.files.iter().map(|f| f.path.clone()).collect();
+        files.sort();
+        all_files.extend(files.iter().cloned());
         searchable_files.extend(
             children
                 .files
@@ -161,7 +163,7 @@ fn build_filesystem(
         );
         directory_map.insert(
             parent,
-            Directory::new(parent.to_owned(), child_dirs, files.clone().collect()),
+            Directory::new(parent.to_owned(), child_dirs, files),
         );
     }
     assert!(directory_map.len() == 1);
@@ -435,8 +437,8 @@ mod tests {
             vec![
                 ("", vec!["readme.md"]),
                 ("src", vec!["main.cpp", "module.h"]),
-                ("src/modules/module1", vec!["module1.cpp"]),
                 ("src/modules/module2", vec!["module2.cpp"]),
+                ("src/modules/module1", vec!["module1.cpp"]),
             ],
         );
         let root = build_filesystem(PathBuf::from(root_path).as_path(), directories_with_files);
@@ -462,7 +464,18 @@ mod tests {
         assert_eq!(modules.files.len(), 0);
         assert_eq!(modules.child_directories.len(), 2);
 
-        let module2 = &modules.child_directories[0];
+        let module1 = &modules.child_directories[0];
+        assert_eq!(
+            module1.dir_path,
+            p("C:\\code\\projects\\src\\modules\\module1")
+        );
+        assert_eq!(
+            module1.files,
+            vec![p("C:\\code\\projects\\src\\modules\\module1\\module1.cpp")]
+        );
+
+        assert_eq!(module1.child_directories.len(), 0);
+        let module2 = &modules.child_directories[1];
         assert_eq!(
             module2.dir_path,
             p("C:\\code\\projects\\src\\modules\\module2")
@@ -472,17 +485,6 @@ mod tests {
             vec![p("C:\\code\\projects\\src\\modules\\module2\\module2.cpp")]
         );
         assert_eq!(module2.child_directories.len(), 0);
-
-        let module1 = &modules.child_directories[1];
-        assert_eq!(
-            module1.dir_path,
-            p("C:\\code\\projects\\src\\modules\\module1")
-        );
-        assert_eq!(
-            module1.files,
-            vec![p("C:\\code\\projects\\src\\modules\\module1\\module1.cpp")]
-        );
-        assert_eq!(module1.child_directories.len(), 0);
     }
 
     enum TestDirOrFile {

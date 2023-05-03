@@ -57,6 +57,17 @@ impl searchium::searchium_service_server::SearchiumService for Service {
         Ok(Response::new(reply))
     }
 
+    async fn set_configuration(
+        &self,
+        request: tonic::Request<searchium::ConfigurationRequest>,
+    ) -> Result<tonic::Response<searchium::ConfigurationResponse>, tonic::Status> {
+        self.command_tx
+            .send(Command::SetConfiguration(request.into_inner()))
+            .await
+            .map_err(|_| Status::internal(""))?;
+        Ok(Response::new(searchium::ConfigurationResponse {}))
+    }
+
     type RegisterFolderStream = BoxStream<'static, TonicResult<searchium::IndexUpdate>>;
 
     #[instrument(err)]

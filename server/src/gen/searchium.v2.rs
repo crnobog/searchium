@@ -13,7 +13,17 @@ pub struct HelloResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct EmptyRequest {
+pub struct ConfigurationRequest {
+    /// Max number of files to try and load simultaneously 
+    #[prost(uint32, tag="1")]
+    pub concurrent_file_reads: u32,
+    /// Max size of files to index
+    #[prost(uint64, tag="2")]
+    pub max_file_size: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConfigurationResponse {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

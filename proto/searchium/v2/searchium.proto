@@ -17,6 +17,7 @@ service SearchiumService {
   rpc SearchFileContents(FileContentsSearchRequest) returns (stream FileContentsSearchResponse);
   rpc GetFileExtracts(FileExtractsRequest) returns (FileExtractsResponse);
   
+  rpc SetConfiguration(ConfigurationRequest) returns (ConfigurationResponse);
   rpc GetProcessInfo(ProcessInfoRequest) returns (ProcessInfoResponse);
 }
 
@@ -27,7 +28,14 @@ message HelloResponse {
   string id = 1;
 }
 
-message EmptyRequest {}
+message ConfigurationRequest {
+  uint32 concurrent_file_reads = 1; // Max number of files to try and load simultaneously 
+  uint64 max_file_size = 2; // Max size of files to index
+}
+
+message ConfigurationResponse { 
+
+}
 
 enum GenericError {
   GENERIC_ERROR_NONE = 0;
