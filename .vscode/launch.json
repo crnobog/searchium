@@ -39,7 +39,8 @@
 			"args": [],
 			"env": {
 				"SEARCHIUM_LOG": "searchium_server=DEBUG,searchium_server::fs_state=DEBUG",
-				"RUST_BACKTRACE": "1"
+				"RUST_BACKTRACE": "0",
+				"_NO_DEBUG_HEAP": "1"
 			},
 			"cwd": "${workspaceFolder}",
 			"terminal": "integrated",
@@ -52,7 +53,8 @@
 			"args": [],
 			"env": {
 				"SEARCHIUM_LOG": "searchium_server=INFO,searchium_server::fs_state=INFO",
-				"RUST_BACKTRACE": "1"
+				"RUST_BACKTRACE": "0",
+				"_NO_DEBUG_HEAP": "1"
 			},
 			"cwd": "${workspaceFolder}",
 			"terminal": "integrated",
