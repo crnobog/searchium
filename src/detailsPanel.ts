@@ -6,12 +6,7 @@ import * as ipcResponses from './ipcResponses';
 import * as FromWebview from './shared/fromDetailsWebview';
 import * as ToWebview from './shared/toDetailsWebview';
 import * as searchium_pb from "./gen/searchium";
-import * as pb from "./gen/searchium/v2/searchium";
 import { IndexClient } from "index/indexInterface";
-
-interface DatabaseDetails {
-    projects: ToWebview.ProjectDetails[];
-}
 
 export class DetailsPanelProvider {
     webview?: vscode.Webview;
@@ -36,60 +31,49 @@ export class DetailsPanelProvider {
         }
 
         const details = await this.getDatabaseDetails();
-        this.sendMessage({
-            type: "details",
-            projects: details.projects
-        });
+        this.sendMessage(details);
     }
 
     private sendMessage(msg: ToWebview.Message): void {
         this.webview?.postMessage(msg);
     }
 
-    private async getDatabaseDetails(): Promise<DatabaseDetails> {
-        const toMbString = (value: bigint): string =>
-            `${(Number(value / 1024n) / 1024.0).toFixed(2)} MB`;
+    private async getDatabaseDetails(): Promise<ToWebview.DetailsMessage> {
+        const toMb = (value: bigint): number =>
+            (Number(value / 1024n) / 1024.0);
+        // const toMbString = (value: bigint): string => toMb(value).toFixed(2);
         if (isChannel(this.channelOrClient)) {
             const response = await this.channelOrClient.sendRequest(new ipcRequests.GetDatabaseDetailsRequest(
                 100, 100
             )) as ipcResponses.GetDatabaseDetailsResponse;
             return {
-                projects: response.projects.map((p): ToWebview.ProjectDetails => {
-                    const mapByExtension = (details: searchium_pb.FileByExtensionDetails): ToWebview.FileByExtensionDetails => {
+                type: "details",
+                roots: response.projects.map((p): ToWebview.DatabaseDetailsRoot => {
+                    const mapByExtension = (details: searchium_pb.FileByExtensionDetails): ToWebview.FilesByExtensionDetails => {
                         return {
                             extension: details.fileExtension,
                             count: details.fileCount.toLocaleString(),
-                            size: toMbString(details.fileByteLength)
+                            mb: toMb(details.fileByteLength)
                         };
                     };
                     const mapLarge = (details: searchium_pb.LargeFileDetails): ToWebview.LargeFileDetails => {
                         return {
                             path: details.relativePath,
-                            size: toMbString(details.byteLength)
-                        };
-                    };
-                    const mapConfig = (details: searchium_pb.ProjectConfigurationSectionDetails | undefined): ToWebview.ConfigSection => {
-                        return {
-                            path: details?.containingFilePath ?? "",
-                            name: details?.name ?? "",
-                            contents: details?.contents ?? "",
+                            sizeMb: toMb(details.byteLength)
                         };
                     };
                     return {
                         rootPath: p.rootPath,
-                        numFiles: (p.directoryDetails?.fileCount ?? 0).toLocaleString(),
-                        numDirectories: (p.directoryDetails?.directoryCount ?? 0).toLocaleString(),
+                        numFilesScanned: (p.directoryDetails?.fileCount ?? 0).toLocaleString(),
+                        numDirectoriesScanned: (p.directoryDetails?.directoryCount ?? 0).toLocaleString(),
                         numSearchableFiles: (p.directoryDetails?.searchableFilesCount ?? 0).toLocaleString(),
-                        searchableFilesMB: Number((p.directoryDetails?.searchableFilesByteLength ?? 0n) / 1024n) / 1024.0,
+                        searchableFilesMB: toMb(p.directoryDetails?.searchableFilesByteLength ?? 0n),
                         numBinaryFiles: (p.directoryDetails?.binaryFilesCount ?? 0).toLocaleString(),
-                        binaryFilesMB: Number((p.directoryDetails?.binaryFilesByteLength ?? 0n) / 1024n) / 1024.0,
-                        searchableByExtension: p.directoryDetails?.searchableFilesByExtensionDetails.map(mapByExtension) ?? [],
+                        binaryFilesMB: toMb(p.directoryDetails?.binaryFilesByteLength ?? 0n),
+                        searchableFilesByExtension: p.directoryDetails?.searchableFilesByExtensionDetails.map(mapByExtension) ?? [],
+                        binaryFilesByExtension: p.directoryDetails?.binaryFilesByExtensionDetails.map(mapByExtension) ?? [],
                         largeFiles: p.directoryDetails?.largeSearchableFileDetails.map(mapLarge) ?? [],
-                        binaryByExtension: p.directoryDetails?.binaryFilesByExtensionDetails.map(mapByExtension) ?? [],
                         largeBinaries: p.directoryDetails?.largeBinaryFilesDetails.map(mapLarge) ?? [],
-                        ignorePaths: mapConfig(p.projectConfigurationDetails?.ignorePathsSection),
-                        ignoreFiles: mapConfig(p.projectConfigurationDetails?.ignoreSearchableFilesSection),
-                        includeFiles: mapConfig(p.projectConfigurationDetails?.includeSearchableFilesSection),
                     };
                 })
             };
@@ -97,23 +81,44 @@ export class DetailsPanelProvider {
         else {
             const response = await this.channelOrClient.getDatabaseDetails();
             return {
-                projects: response.roots.map((p: pb.DatabaseDetailsRoot) => {
-                    return {
-                        rootPath: p.rootPath,
-                        numFiles: p.numFilesScanned.toLocaleString(),
-                        numDirectories: p.numDirectoriesScanned.toLocaleString(),
-                        numSearchableFiles: p.numSearchableFiles.toLocaleString(),
-                        searchableFilesMB: Number((p.searchableFilesBytes ?? 0n) / 1024n) / 1024.0,
-                        numBinaryFiles: p.numBinaryFiles.toLocaleString(),
-                        binaryFilesMB: Number((p.binaryFilesBytes ?? 0n) / 1024n) / 1024.0,
-                        searchableByExtension: [],
-                        largeFiles: [],
-                        binaryByExtension: [],
-                        largeBinaries: [],
-                        ignorePaths: { path: "", name: "", contents: "" },
-                        ignoreFiles: { path: "", name: "", contents: "" },
-                        includeFiles: { path: "", name: "", contents: "" },
+                type: "details",
+                roots: response.roots.map(r => {
+                    const translated: ToWebview.DatabaseDetailsRoot = {
+                        rootPath: r.rootPath,
+                        numFilesScanned: r.numFilesScanned.toLocaleString(),
+                        numDirectoriesScanned: r.numDirectoriesScanned.toLocaleString(),
+                        numSearchableFiles: r.numSearchableFiles.toLocaleString(),
+                        searchableFilesMB: toMb(r.searchableFilesBytes),
+                        numBinaryFiles: r.numBinaryFiles.toLocaleString(),
+                        binaryFilesMB: toMb(r.binaryFilesBytes),
+                        searchableFilesByExtension: r.searchableFilesByExtension.map(x => {
+                            return {
+                                count: x.count.toLocaleString(),
+                                extension: x.extension,
+                                mb: toMb(x.bytes)
+                            };
+                        }),
+                        binaryFilesByExtension: r.binaryFilesByExtension.map(x => {
+                            return {
+                                count: x.count.toLocaleString(),
+                                extension: x.extension,
+                                mb: toMb(x.bytes)
+                            };
+                        }),
+                        largeFiles: r.largeSearchableFiles.map(x => {
+                            return {
+                                path: x.path,
+                                sizeMb: toMb(x.bytes),
+                            };
+                        }),
+                        largeBinaries: r.largeBinaryFiles.map(x => {
+                            return {
+                                path: x.path,
+                                sizeMb: toMb(x.bytes),
+                            };
+                        }),
                     };
+                    return translated;
                 })
             };
         }

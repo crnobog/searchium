@@ -200,6 +200,12 @@ pub struct DatabaseDetailsRequest {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DatabaseDetailsResponse {
+    #[prost(message, repeated, tag="1")]
+    pub roots: ::prost::alloc::vec::Vec<DatabaseDetailsRoot>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DatabaseDetailsRoot {
     #[prost(string, tag="1")]
     pub root_path: ::prost::alloc::string::String,
@@ -215,12 +221,32 @@ pub struct DatabaseDetailsRoot {
     pub num_binary_files: u64,
     #[prost(uint64, tag="7")]
     pub binary_files_bytes: u64,
+    #[prost(message, repeated, tag="8")]
+    pub searchable_files_by_extension: ::prost::alloc::vec::Vec<FilesByExtensionDetails>,
+    #[prost(message, repeated, tag="9")]
+    pub binary_files_by_extension: ::prost::alloc::vec::Vec<FilesByExtensionDetails>,
+    #[prost(message, repeated, tag="10")]
+    pub large_searchable_files: ::prost::alloc::vec::Vec<LargeFileDetails>,
+    #[prost(message, repeated, tag="11")]
+    pub large_binary_files: ::prost::alloc::vec::Vec<LargeFileDetails>,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct DatabaseDetailsResponse {
-    #[prost(message, repeated, tag="1")]
-    pub roots: ::prost::alloc::vec::Vec<DatabaseDetailsRoot>,
+pub struct FilesByExtensionDetails {
+    #[prost(string, tag="1")]
+    pub extension: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub count: u64,
+    #[prost(uint64, tag="3")]
+    pub bytes: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LargeFileDetails {
+    #[prost(string, tag="1")]
+    pub path: ::prost::alloc::string::String,
+    #[prost(uint64, tag="2")]
+    pub bytes: u64,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

@@ -21,8 +21,6 @@ import {
     vsCodeTextField,
     Option,
     DataGrid,
-    TextArea,
-    TextField
 } from "@vscode/webview-ui-toolkit";
 import * as FromWebView from '../shared/fromDetailsWebview';
 import * as ToWebView from '../shared/toDetailsWebview';
@@ -66,24 +64,12 @@ let detailsSizeSearchableFiles: HTMLElement;
 let detailsNumBinaryFiles: HTMLElement;
 let detailsSizeBinaryFiles: HTMLElement;
 
-let projects: ToWebView.ProjectDetails[] = [];
+let roots: ToWebView.DatabaseDetailsRoot[] = [];
 
 let extensionsGrid: DataGrid;
 let largeFilesGrid: DataGrid;
 let binariesGrid: DataGrid;
 let largeBinariesGrid: DataGrid;
-
-let ignorePathsPath: TextField;
-let ignorePathsSectionName: TextField;
-let ignorePathsContents: TextArea;
-
-let ignoreFilesPath: TextField;
-let ignoreFilesSectionName: TextField;
-let ignoreFilesContents: TextArea;
-
-let includeFilesPath: TextField;
-let includeFilesSectionName: TextField;
-let includeFilesContents: TextArea;
 
 window.addEventListener("load", () => {
     console.log("details view loaded");
@@ -104,21 +90,9 @@ window.addEventListener("load", () => {
     binariesGrid = document.getElementById("grid-binary-extensions") as DataGrid;
     largeBinariesGrid = document.getElementById("grid-large-binaries") as DataGrid;
 
-    ignorePathsPath = document.getElementById("ignore-paths-path") as TextField;
-    ignorePathsSectionName = document.getElementById("ignore-paths-name") as TextField;
-    ignorePathsContents = document.getElementById("ignore-paths-contents") as TextArea;
-
-    ignoreFilesPath = document.getElementById("ignore-files-path") as TextField;
-    ignoreFilesSectionName = document.getElementById("ignore-files-name") as TextField;
-    ignoreFilesContents = document.getElementById("ignore-files-contents") as TextArea;
-
-    includeFilesPath = document.getElementById("include-files-path") as TextField;
-    includeFilesSectionName = document.getElementById("include-files-name") as TextField;
-    includeFilesContents = document.getElementById("include-files-contents") as TextArea;
-
     vscode.postMessage({ type: 'ready' });
 
-    if (projects.length > 0) {
+    if (roots.length > 0) {
         onProjectsAvailable();
     }
 });
@@ -127,7 +101,7 @@ window.addEventListener("message", (event: { data: ToWebView.Message }) => {
     switch (msg.type) {
         case 'details':
             console.log("received details");
-            projects = msg.projects;
+            roots = msg.roots;
             onProjectsAvailable();
             break;
     }
@@ -140,68 +114,56 @@ function onProjectsAvailable(): void {
     detailsContainer.classList.remove("hidden");
 
     const options: Node[] = [];
-    for (const p of projects) {
-        const option = new Option(p.rootPath);
+    for (const r of roots) {
+        const option = new Option(r.rootPath);
         options.push(option);
     }
     projectsDropdown.replaceChildren(...options);
-    setProjectDetails(projects[0]);
+    setProjectDetails(roots[0]);
 }
 
 function onProjectChanged(): void {
-    const p = projects[projectsDropdown.selectedIndex];
+    const p = roots[projectsDropdown.selectedIndex];
     setProjectDetails(p);
 }
 
-function setProjectDetails(p: ToWebView.ProjectDetails): void {
+function setProjectDetails(p: ToWebView.DatabaseDetailsRoot): void {
     console.log(`Project changed to ${p.rootPath}`);
-    detailsNumFiles.textContent = p.numFiles;
-    detailsNumDirectories.textContent = p.numDirectories;
+    detailsNumFiles.textContent = p.numFilesScanned;
+    detailsNumDirectories.textContent = p.numDirectoriesScanned;
     detailsNumSearchableFiles.textContent = p.numSearchableFiles;
     detailsSizeSearchableFiles.textContent = `${p.searchableFilesMB.toFixed(2)} MB`;
     detailsNumBinaryFiles.textContent = p.numBinaryFiles;
     detailsSizeBinaryFiles.textContent = `${p.binaryFilesMB.toFixed(2)} MB`;
 
     /* eslint-disable @typescript-eslint/naming-convention */
-    extensionsGrid.rowsData = p.searchableByExtension.map((x: ToWebView.FileByExtensionDetails) => {
+    extensionsGrid.rowsData = p.searchableFilesByExtension.map((x: ToWebView.FilesByExtensionDetails) => {
         return {
             "File Extension": x.extension,
             "Count": x.count,
-            "Total Size": x.size,
+            "Total Size (MB)": x.mb.toFixed(2),
         };
     });
     largeFilesGrid.rowsData = p.largeFiles.map((x: ToWebView.LargeFileDetails) => {
         return {
             "Path": x.path,
-            "Size": x.size
+            "Size (MB)": x.sizeMb.toFixed(2)
         };
     });
-    binariesGrid.rowsData = p.binaryByExtension.map((x: ToWebView.FileByExtensionDetails) => {
+    binariesGrid.rowsData = p.binaryFilesByExtension.map((x: ToWebView.FilesByExtensionDetails) => {
         return {
             "File Extension": x.extension,
             "Count": x.count,
-            "Total Size": x.size,
+            "Total Size (MB)": x.mb.toFixed(2),
         };
     });
     largeBinariesGrid.rowsData = p.largeBinaries.map((x: ToWebView.LargeFileDetails) => {
         return {
             "Path": x.path,
-            "Size": x.size
+            "Size (MB)": x.sizeMb.toFixed(2)
         };
     });
     /* eslint-enable @typescript-eslint/naming-convention */
-
-    ignorePathsPath.value = p.ignorePaths.path;
-    ignorePathsSectionName.value = p.ignorePaths.name;
-    ignorePathsContents.value = p.ignorePaths.contents;
-
-    ignoreFilesPath.value = p.ignoreFiles.path;
-    ignoreFilesSectionName.value = p.ignoreFiles.name;
-    ignoreFilesContents.value = p.ignoreFiles.contents;
-
-    includeFilesPath.value = p.includeFiles.path;
-    includeFilesSectionName.value = p.includeFiles.name;
-    includeFilesContents.value = p.includeFiles.contents;
 }
 
 

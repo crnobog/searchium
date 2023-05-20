@@ -126,14 +126,26 @@ fn classify_file(
     mut file: impl Read + Seek,
     total_len: u64,
 ) -> Result<FileContents, FileLoadError> {
-    let (classification, has_bom) = if CLASSIFY_TOTAL_SAMPLE_BYTES >= total_len {
+    let (classification, has_bom, bytes) = if CLASSIFY_TOTAL_SAMPLE_BYTES >= total_len {
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes)?;
         if slice_starts_with_bom(&bytes) {
-            (classify_slice(&bytes[3..]), true)
+            (classify_slice(&bytes[3..]), true, Some(Vec::from(&bytes[3..])))
         } else {
-            (classify_slice(&bytes), false)
+            (classify_slice(&bytes), false, Some(bytes))
         }
+    } else if total_len <= (1024 * 1024) {
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;  
+        let has_bom = slice_starts_with_bom(&bytes);
+        let chunk_size = (bytes.len() as u64) / CLASSIFY_SLICE_COUNT;
+        let classification = bytes.chunks_exact(chunk_size as usize).enumerate().map(|(index, chunk)| {
+            let start : usize = if index == 0 && has_bom  { 3 } else { 0 };
+            let end : usize = (CLASSIFY_SLICE_SIZE - (start as u64)) as usize;
+            classify_slice(&chunk[start..=end])
+        }).fold(Classification::default(), Classification::combine);
+        let bytes = if has_bom { Vec::from(&bytes[3..])} else { bytes };
+        (classification, has_bom, Some(bytes))
     } else {
         let chunk_size = total_len / CLASSIFY_SLICE_COUNT;
         let mut has_bom = false;
@@ -151,7 +163,7 @@ fn classify_file(
                 }
             })
             .fold(Classification::default(), Classification::combine);
-        (classification, has_bom)
+        (classification, has_bom, None)
     };
 
     let total_classified =
@@ -162,10 +174,13 @@ fn classify_file(
         return Ok(FileContents::Binary(total_len));
     }
 
-    let mut contents = Vec::new();
-    file.seek(std::io::SeekFrom::Start(if has_bom { 3 } else { 0 }))
-        .unwrap();
-    file.read_to_end(&mut contents).unwrap();
+    let contents = bytes.unwrap_or_else(|| {
+        let mut contents = Vec::new();
+        file.seek(std::io::SeekFrom::Start(if has_bom { 3 } else { 0 }))
+            .unwrap();
+        file.read_to_end(&mut contents).unwrap();
+        contents
+    });
     Ok(if classification.utf8_count == 0 {
         FileContents::Ascii(contents)
     } else {

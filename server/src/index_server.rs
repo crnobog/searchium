@@ -8,6 +8,7 @@ use crate::searchium;
 
 use rayon::prelude::*;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::{fmt::Debug, time::SystemTime};
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -47,6 +48,7 @@ pub struct IndexServer {
     // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
     // TODO: move contents into roots
+    // TODO: document which files should be present in contents
     contents: Vec<HashMap<PathBuf, FileContents>>,
 }
 
@@ -74,13 +76,15 @@ impl std::fmt::Debug for IndexServer {
 struct Configuration {
     concurrent_file_reads: u32,
     max_file_size: u64,
+    large_file_threshold: u64,
 }
 
 impl Default for Configuration {
     fn default() -> Self {
         Self {
-            concurrent_file_reads: 200,
+            concurrent_file_reads: 64,
             max_file_size: 10 * 1024 * 1024,
+            large_file_threshold: 1024 * 1024,
         }
     }
 }
@@ -303,16 +307,109 @@ impl IndexServer {
                         .iter()
                         .zip(self.contents.iter())
                         .map(|(root, contents)| {
-                            let (num_binary_files, binary_files_bytes) = root
-                                .searchable_files()
+                            #[derive(Default)]
+                            struct CountAndSize {
+                                count: u64,
+                                bytes: u64,
+                            }
+                            #[derive(Default)]
+                            struct FileStats<'a> {
+                                total: CountAndSize,
+                                by_extension: HashMap<Option<&'a OsStr>, CountAndSize>,
+                            }
+                            #[derive(Default)]
+                            struct GlobalStats<'a> {
+                                searchable_files: FileStats<'a>,
+                                binary_files: FileStats<'a>,
+                            }
+                            let stats = root
+                                .searchable_files() // TODO: rename
                                 .iter()
                                 .filter_map(|p| {
-                                    contents.get(p).and_then(|c| match c {
-                                        FileContents::Binary(size) => Some((1, *size)),
-                                        _ => None
+                                    contents.get(p).and_then(|c| {
+                                        let extension = p.extension();
+                                        Some(match c {
+                                            FileContents::Binary(size) => (extension, *size, false),
+                                            FileContents::Ascii(vec)
+                                            | FileContents::Utf8(vec)
+                                            | FileContents::Utf16(vec) => {
+                                                (extension, vec.len() as u64, true)
+                                            }
+                                        })
                                     })
                                 })
-                                .fold((0, 0), |acc, i| (acc.0 + i.0, acc.1 + i.1));
+                                .fold(
+                                    GlobalStats::default(),
+                                    |mut stats, (ext, size, searchable)| {
+                                        let file_stats = if searchable {
+                                            &mut stats.searchable_files
+                                        } else {
+                                            &mut stats.binary_files
+                                        };
+                                        file_stats.total.count += 1;
+                                        file_stats.total.bytes += size;
+                                        let ext = file_stats.by_extension.entry(ext).or_default();
+                                        ext.count += 1;
+                                        ext.bytes += size;
+                                        stats
+                                    },
+                                );
+                            let mut searchable_files_by_extension: Vec<_> = stats
+                                .searchable_files
+                                .by_extension
+                                .iter()
+                                .map(|(k, v)| searchium::FilesByExtensionDetails {
+                                    extension: k
+                                        .map(|s| s.to_string_lossy().to_string())
+                                        .unwrap_or_default(),
+                                    count: v.count,
+                                    bytes: v.bytes,
+                                })
+                                .collect();
+                            searchable_files_by_extension.sort_by(|a, b| b.bytes.cmp(&a.bytes));
+                            let mut binary_files_by_extension: Vec<_> = stats
+                                .binary_files
+                                .by_extension
+                                .iter()
+                                .map(|(k, v)| searchium::FilesByExtensionDetails {
+                                    extension: k
+                                        .map(|s| s.to_string_lossy().to_string())
+                                        .unwrap_or_default(),
+                                    count: v.count,
+                                    bytes: v.bytes,
+                                })
+                                .collect();
+                            binary_files_by_extension.sort_by(|a, b| b.bytes.cmp(&a.bytes));
+                            let (mut large_searchable_files, mut large_binary_files) = root
+                                .searchable_files()
+                                .into_iter()
+                                .filter_map(|p| {
+                                    let contents = contents.get(p)?;
+                                    let (binary, size) = match contents {
+                                        FileContents::Binary(size) => (true, *size),
+                                        FileContents::Ascii(vec)
+                                        | FileContents::Utf16(vec)
+                                        | FileContents::Utf8(vec) => (false, vec.len() as u64),
+                                    };
+                                    if size >= self.configuration.large_file_threshold {
+                                        Some((
+                                            binary,
+                                            searchium::LargeFileDetails {
+                                                path: p.to_string_lossy().to_string(),
+                                                bytes: size,
+                                            },
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .fold((Vec::new(), Vec::new()), |mut acc, item| {
+                                    let v = if item.0 { &mut acc.1 } else { &mut acc.0 };
+                                    v.push(item.1);
+                                    acc
+                                });
+                            large_binary_files.sort_by(|a, b| b.bytes.cmp(&a.bytes));
+                            large_searchable_files.sort_by(|a, b| b.bytes.cmp(&a.bytes));
                             searchium::DatabaseDetailsRoot {
                                 root_path: root.directory().path().to_string_lossy().to_string(),
                                 num_files_scanned: root.all_files().len() as u64,
@@ -324,8 +421,12 @@ impl IndexServer {
                                     .iter()
                                     .filter_map(|f| contents.get(f).map(|c| c.file_size()))
                                     .sum(),
-                                num_binary_files,
-                                binary_files_bytes,
+                                num_binary_files: stats.binary_files.total.count,
+                                binary_files_bytes: stats.binary_files.total.bytes,
+                                searchable_files_by_extension,
+                                binary_files_by_extension,
+                                large_searchable_files,
+                                large_binary_files,
                             }
                         })
                         .collect(),

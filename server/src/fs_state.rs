@@ -20,7 +20,7 @@ impl Root {
     pub fn all_files(&self) -> &[PathBuf] {
         &self.all_files
     }
-    pub fn searchable_files(&self) -> &[PathBuf] {
+    pub fn searchable_files(&self) -> &[PathBuf] { 
         &self.searchable_files
     }
 }

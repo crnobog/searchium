@@ -6,7 +6,7 @@ import { ChannelCredentials } from "@grpc/grpc-js";
 import * as pb from "gen/searchium/v2/searchium";
 import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/v2/searchium.client';
 import { getLogger } from 'logger';
-import { DuplexStreamingMethod, IndexClient } from "./indexInterface";
+import { DuplexStreamingMethod, IndexClient, DatabaseDetails, DatabaseDetailsRoot } from "./indexInterface";
 
 class IndexServerProcess implements vscode.Disposable {
     constructor(
@@ -50,8 +50,25 @@ class IndexServerClient implements IndexClient {
     public async getProcessInfo(): Promise<pb.ProcessInfoResponse> {
         return await this.client.getProcessInfo({}).response;
     }
-    public async getDatabaseDetails(): Promise<pb.DatabaseDetailsResponse> {
-        return await this.client.getDatabaseDetails({}).response;
+    public async getDatabaseDetails(): Promise<DatabaseDetails> {
+        const response = await this.client.getDatabaseDetails({}).response;
+        return {
+            roots: response.roots.map((p: pb.DatabaseDetailsRoot): DatabaseDetailsRoot => {
+                return {
+                    rootPath: p.rootPath,
+                    numFilesScanned: p.numFilesScanned,
+                    numDirectoriesScanned: p.numDirectoriesScanned,
+                    numSearchableFiles: p.numSearchableFiles,
+                    searchableFilesBytes: p.searchableFilesBytes,
+                    numBinaryFiles: p.numBinaryFiles,
+                    binaryFilesBytes: p.binaryFilesBytes,
+                    searchableFilesByExtension: p.searchableFilesByExtension,
+                    binaryFilesByExtension: p.binaryFilesByExtension,
+                    largeSearchableFiles: p.largeSearchableFiles,
+                    largeBinaryFiles: p.largeBinaryFiles,
+                };
+            })
+        };
     }
 }
 
