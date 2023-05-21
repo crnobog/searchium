@@ -6,7 +6,8 @@ import * as ipcResponses from './ipcResponses';
 import * as FromWebview from './shared/fromDetailsWebview';
 import * as ToWebview from './shared/toDetailsWebview';
 import * as searchium_pb from "./gen/searchium";
-import { IndexClient } from "index/indexInterface";
+import { IndexClient } from 'index/indexInterface';
+import { toMb } from './utils';
 
 export class DetailsPanelProvider {
     webview?: vscode.Webview;
@@ -39,8 +40,6 @@ export class DetailsPanelProvider {
     }
 
     private async getDatabaseDetails(): Promise<ToWebview.DetailsMessage> {
-        const toMb = (value: bigint): number =>
-            (Number(value / 1024n) / 1024.0);
         // const toMbString = (value: bigint): string => toMb(value).toFixed(2);
         if (isChannel(this.channelOrClient)) {
             const response = await this.channelOrClient.sendRequest(new ipcRequests.GetDatabaseDetailsRequest(

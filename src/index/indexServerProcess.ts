@@ -6,7 +6,7 @@ import { ChannelCredentials } from "@grpc/grpc-js";
 import * as pb from "gen/searchium/v2/searchium";
 import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/v2/searchium.client';
 import { getLogger } from 'logger';
-import { DuplexStreamingMethod, IndexClient, DatabaseDetails, DatabaseDetailsRoot } from "./indexInterface";
+import { DuplexStreamingMethod, IndexClient, DatabaseDetails, DatabaseDetailsRoot, IndexStatus } from "./indexInterface";
 
 class IndexServerProcess implements vscode.Disposable {
     constructor(
@@ -69,6 +69,26 @@ class IndexServerClient implements IndexClient {
                 };
             })
         };
+    }
+    public async* getStatus(): AsyncIterable<IndexStatus> {
+        for await (const r of this.client.getStatus({}).responses) {
+            let state: IndexStatus["state"];
+            switch (r.state) {
+                case pb.IndexState.UNAVAILABLE:
+                    state = "Unavailable";
+                    break;
+                case pb.IndexState.READY:
+                    state = "Ready";
+                    break;
+                case pb.IndexState.INDEXING:
+                    state = "Indexing";
+                    break;
+                case pb.IndexState.PAUSED:
+                    state = "Paused";
+                    break;
+            }
+            yield { state, memUsage: r.memUsage, numSearchableFiles: r.numSearchableFiles };
+        }
     }
 }
 

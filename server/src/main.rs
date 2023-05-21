@@ -10,6 +10,7 @@ use index_server::*;
 use futures::StreamExt;
 use futures_core::stream::BoxStream;
 use memory_stats::memory_stats;
+use tokio_stream::wrappers::{BroadcastStream};
 use std::fs::File;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -184,12 +185,31 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn get_database_details(
         &self,
         _request: tonic::Request<searchium::DatabaseDetailsRequest>,
-    ) -> Result<tonic::Response<searchium::DatabaseDetailsResponse>, tonic::Status>
-    {
+    ) -> Result<tonic::Response<searchium::DatabaseDetailsResponse>, tonic::Status> {
         let (tx, rx) = oneshot::channel();
-        self.command_tx.send(Command::GetDatabaseDetails(tx)).await.map_err(|_| Status::internal(""))?;
-        
+        self.command_tx
+            .send(Command::GetDatabaseDetails(tx))
+            .await
+            .map_err(|_| Status::internal(""))?;
+
         Ok(Response::new(rx.await.map_err(|_| Status::internal(""))??))
+    }
+
+    type GetStatusStream = BoxStream<'static, Result<searchium::StatusResponse, tonic::Status>>;
+    async fn get_status(
+        &self,
+        _request: tonic::Request<searchium::StatusRequest>,
+    ) -> Result<tonic::Response<Self::GetStatusStream>, tonic::Status> {
+        let (tx, rx) = oneshot::channel();
+        self.command_tx.send(Command::GetStatusStream(tx)).await.map_err(|_| Status::internal(""))?;
+        let rx = rx.await.map_err(|_| Status::internal(""))?;
+        let stream = BroadcastStream::from(rx);
+        let stream = async_stream::try_stream! {
+            for await r in stream { 
+                yield r.map_err(|_| Status::internal(""))?;
+            }
+        };
+        Ok(Response::new(Box::pin(stream)))
     }
 }
 

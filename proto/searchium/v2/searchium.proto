@@ -20,6 +20,8 @@ service SearchiumService {
   rpc SetConfiguration(ConfigurationRequest) returns (ConfigurationResponse);
   rpc GetProcessInfo(ProcessInfoRequest) returns (ProcessInfoResponse);
   rpc GetDatabaseDetails(DatabaseDetailsRequest) returns (DatabaseDetailsResponse);
+  
+  rpc GetStatus(StatusRequest) returns (stream StatusResponse);
 }
 
 message HelloRequest {
@@ -164,4 +166,17 @@ message FilesByExtensionDetails {
 message LargeFileDetails { 
   string path = 1;
   uint64 bytes = 2;
+}
+
+message StatusRequest {}
+enum IndexState { 
+  UNAVAILABLE = 0;
+  READY = 1;
+  INDEXING = 2;
+  PAUSED = 3;
+}
+message StatusResponse { 
+  IndexState state = 1;
+  uint64 mem_usage = 2;  
+  uint64 num_searchable_files = 3;
 }

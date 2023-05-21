@@ -28,6 +28,11 @@ export interface LargeFileDetails {
     path: string,
     bytes: bigint,
 }
+export interface IndexStatus {
+    state: "Unavailable" | "Ready" | "Indexing" | "Paused";
+    memUsage: bigint;
+    numSearchableFiles: bigint;
+}
 
 export interface DuplexStreamingMethod<In, Out> {
     send(message: In): Promise<void>;
@@ -49,4 +54,5 @@ export interface IndexClient {
     getFileExtracts(filePath: string, extracts: pb.Span[], maxLen: number): Promise<pb.FileExtractsResponse>;
     getProcessInfo(): Promise<pb.ProcessInfoResponse>;
     getDatabaseDetails(): Promise<DatabaseDetails>;
+    getStatus(): AsyncIterable<IndexStatus>;
 }

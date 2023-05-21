@@ -2,13 +2,14 @@ import * as vscode from 'vscode';
 import { getLogger } from './logger';
 import { SearchOptions } from './search';
 import { IndexState } from './indexState';
+import { IndexStatus } from './index/indexInterface';
 import { GetDatabaseStatisticsResponse } from './ipcResponses';
 import { IndexingServerStatus } from './gen/searchium';
 import * as ToWebView from './shared/toControlsWebview';
 import * as FromWebView from './shared/fromControlsWebview';
 import { getUri, getNonce } from './webviewUtils';
 import { SearchHistory } from './history';
-import { assertUnreachable } from './utils';
+import { assertUnreachable, toMb } from './utils';
 
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
     query: "",
@@ -20,15 +21,33 @@ const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
 
 export class ControlsProvider implements vscode.WebviewViewProvider {
     webview?: vscode.Webview;
-    databaseStats?: GetDatabaseStatisticsResponse;
+    databaseStats?: IndexStatus;
 
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly extensionUri: vscode.Uri,
         private readonly history: SearchHistory,
-        private readonly indexState: IndexState | undefined = undefined
+        private readonly indexState: IndexState
     ) {
-        this.indexState?.on('updated', (response: GetDatabaseStatisticsResponse) => {
+        this.indexState.on('updatedLegacy', (response: GetDatabaseStatisticsResponse) => {
+            this.databaseStats = { state: "Unavailable", memUsage: response.serverNativeMemoryUsage, numSearchableFiles: response.searchableFileCount };
+            if (response.projectCount !== 0) {
+                switch (response.serverStatus) {
+                    case IndexingServerStatus.IDLE:
+                        this.databaseStats.state = "Ready";
+                        break;
+                    case IndexingServerStatus.BUSY:
+                        this.databaseStats.state = "Indexing";
+                        break;
+                    case IndexingServerStatus.PAUSED:
+                    case IndexingServerStatus.YIELD:
+                        this.databaseStats.state = "Paused";
+                        break;
+                }
+            }
+            this.sendStatsToWebview();
+        });
+        this.indexState.on('updated', (response: IndexStatus) => {
             this.databaseStats = response;
             this.sendStatsToWebview();
         });
@@ -86,15 +105,15 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             vscode.commands.executeCommand("searchium.query", options).then(() => this.updateHistoryControls());
         }
     }
-    public async onJumpToSearchInput() : Promise<void> {
+    public async onJumpToSearchInput(): Promise<void> {
         await vscode.commands.executeCommand("searchium-controls.focus");
         this.sendMessage(<ToWebView.FocusMessage>{ type: "focus" });
     }
-    public onClearHistory() : void {
+    public onClearHistory(): void {
         this.history.clearHistory();
         this.updateHistoryControls();
     }
-    public onToggleCaseSensitivity() : void  {
+    public onToggleCaseSensitivity(): void {
         const matchCase = !this.getControlsState().matchCase;
         getLogger().logInformation`ToggleCaseSensitive to ${matchCase}`;
         this.updateControlsState({ matchCase });
@@ -103,7 +122,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             matchCase
         });
     }
-    public onToggleWholeWord() : void {
+    public onToggleWholeWord(): void {
         const wholeWord = !this.getControlsState().wholeWord;
         getLogger().logInformation`ToggleWholeWord to ${wholeWord}`;
         this.updateControlsState({ wholeWord });
@@ -112,7 +131,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             wholeWord
         });
     }
-    public onToggleRegex() : void {
+    public onToggleRegex(): void {
         const regex = !this.getControlsState().regex;
         getLogger().logInformation`ToggleRegex to ${regex}`;
         this.updateControlsState({ regex });
@@ -121,7 +140,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             regex
         });
     }
-    public onPreviousQuery() :void {
+    public onPreviousQuery(): void {
         const query = this.history.prev();
         if (query !== undefined) {
             getLogger().logInformation`QueryPrev: '${query}'`;
@@ -135,7 +154,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }
         this.updateHistoryControls();
     }
-    public onNextQuery() :void {
+    public onNextQuery(): void {
         const query = this.history.next();
         if (query !== undefined) {
             getLogger().logInformation`QueryNext: '${query}'`;
@@ -149,50 +168,30 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         }
         this.updateHistoryControls();
     }
-    private updateHistoryControls() : void  {
+    private updateHistoryControls(): void {
         this.sendMessage({
             type: "setHistoryControls",
             nextEnabled: this.history.canNavigateNext(),
             prevEnabled: this.history.canNavigatePrev(),
         });
     }
-    private onViewDisposed(_webviewView: vscode.WebviewView) : void {
+    private onViewDisposed(_webviewView: vscode.WebviewView): void {
         getLogger().logDebug`Webview disposed`;
         this.webview = undefined;
     }
-    private setQueryString(query: string) : void {
+    private setQueryString(query: string): void {
         // Set state in case webview is not created yet 
         this.updateControlsState({ query });
         this.sendMessage({ type: "setQuery", query });
     }
 
-    private sendStatsToWebview() : void {
+    private sendStatsToWebview(): void {
         if (this.databaseStats && this.webview) {
-            if (this.databaseStats.projectCount === 0) {
-                this.sendMessage(<ToWebView.NoStatusMessage>{ type: "nostatus" });
-                return;
-            }
-            const mem = Number(this.databaseStats.serverNativeMemoryUsage) / 1024.0 / 1024.0;
-            let state = "Idle";
-            switch (this.databaseStats.serverStatus) {
-                case IndexingServerStatus.IDLE:
-                    state = 'Idle';
-                    break;
-                case IndexingServerStatus.BUSY:
-                    state = 'Busy';
-                    break;
-                case IndexingServerStatus.PAUSED:
-                    state = 'Paused';
-                    break;
-                case IndexingServerStatus.YIELD:
-                    state = 'Yield';
-                    break;
-            }
             this.sendMessage(<ToWebView.StatusMessage>{
                 type: 'status',
-                numFiles: `${this.databaseStats.searchableFileCount.toLocaleString()} files`,
-                memory: `${mem.toFixed(1)} MB`,
-                state
+                numFiles: `${this.databaseStats.numSearchableFiles.toLocaleString()} files`,
+                memory: `${toMb(this.databaseStats.memUsage).toFixed(1)} MB`,
+                state : this.databaseStats.state,
             });
         }
     }
@@ -224,9 +223,9 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
                 this.sendStatsToWebview();
                 break;
             case 'execute':
-                    getLogger().logInformation`Executing query from controls: '${msg.query}'`;
-                    vscode.commands.executeCommand("searchium.query", msg).then(() => this.updateHistoryControls());
-                    break;
+                getLogger().logInformation`Executing query from controls: '${msg.query}'`;
+                vscode.commands.executeCommand("searchium.query", msg).then(() => this.updateHistoryControls());
+                break;
             case 'setQuery':
                 this.updateControlsState({ query: msg.text });
                 break;
@@ -280,7 +279,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             <span slot="start" class="codicon codicon-search"></span>
 
             <input type="checkbox" id="check-case-sensitive" slot="end" class="search-inline-check monaco-custom-toggle"
-                ${initialState.matchCase ? "checked" : "" } />
+                ${initialState.matchCase ? "checked" : ""} />
             <label for="check-case-sensitive" slot="end" class="codicon codicon-case-sensitive search-inline-check-label">
             </label>
  
@@ -289,7 +288,7 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
             <label for="check-whole-word" slot="end" class="codicon codicon-whole-word search-inline-check-label">
             </label>
 
-            <input type="checkbox" id="check-regex" slot="end" ${initialState.regex ? "checked" : "" } class="search-inline-check" />
+            <input type="checkbox" id="check-regex" slot="end" ${initialState.regex ? "checked" : ""} class="search-inline-check" />
             <label for="check-regex" slot="end" class="codicon codicon-regex search-inline-check-label">
             </label>
         </vscode-text-field>

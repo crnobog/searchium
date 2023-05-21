@@ -1,30 +1,42 @@
-import { IpcChannel } from "./ipcChannel";
+import { IpcChannel, isChannel } from "./ipcChannel";
 import { TypedEvent } from "./ipcEvents";
 import * as ipcRequests from './ipcRequests';
 import * as ipcResponses from './ipcResponses';
 import { TypedEmitter } from "tiny-typed-emitter";
+import { IndexClient, IndexStatus } from "index/indexInterface";
+import { nextTick } from "process";
 
 interface IndexStateEvents {
-    'updated': (response: ipcResponses.GetDatabaseStatisticsResponse) => void,
+    'updatedLegacy': (response: ipcResponses.GetDatabaseStatisticsResponse) => void,
+    'updated': (response: IndexStatus) => void,
 }
 
 // TODO: Hook other evente to send state to listeners?
 export class IndexState extends TypedEmitter<IndexStateEvents> {
-    constructor(private readonly channel: IpcChannel) {
+    constructor(private readonly clientOrChannel: IpcChannel | IndexClient) {
         super();
-        channel.on('event', this.onEvent.bind(this));
-    }
-
-    private onEvent(event: TypedEvent): void {
-        switch (event.eventType) {
-            case 'indexingServerStateChanged':
-                this.updateIndexState();
-                break;
+        if (isChannel(this.clientOrChannel)) {
+            const channel = this.clientOrChannel;
+            this.clientOrChannel.on('event', (event: TypedEvent) => {
+                switch (event.eventType) {
+                    case 'indexingServerStateChanged':
+                        this.updateIndexState(channel);
+                        break;
+                }
+            });
+        }
+        else {
+            const client = this.clientOrChannel;
+            nextTick(async (): Promise<void> => {
+                for await (const status of client.getStatus()) {
+                    this.emit('updated', status);
+                }
+            });
         }
     }
 
-    private async updateIndexState(): Promise<void> {
-        const result = await this.channel.sendRequest(new ipcRequests.GetDatabaseStatisticsRequest()) as ipcResponses.GetDatabaseStatisticsResponse;
-        this.emit('updated', result);
+    private async updateIndexState(channel: IpcChannel): Promise<void> {
+        const result = await channel.sendRequest(new ipcRequests.GetDatabaseStatisticsRequest()) as ipcResponses.GetDatabaseStatisticsResponse;
+        this.emit('updatedLegacy', result);
     }
 }

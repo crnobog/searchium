@@ -6,6 +6,7 @@ use crate::fs_state::*;
 use crate::search_engine::{get_file_extracts, search_files_contents};
 use crate::searchium;
 
+use memory_stats::memory_stats;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -40,10 +41,12 @@ pub enum Command {
         oneshot::Sender<TonicResult<searchium::FileExtractsResponse>>,
     ),
     GetDatabaseDetails(oneshot::Sender<TonicResult<searchium::DatabaseDetailsResponse>>),
+    GetStatusStream(oneshot::Sender<broadcast::Receiver<searchium::StatusResponse>>),
 }
 
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
+    status_tx: broadcast::Sender<searchium::StatusResponse>,
     configuration: Configuration,
     // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
@@ -54,8 +57,10 @@ pub struct IndexServer {
 
 impl IndexServer {
     pub fn new(command_rx: mpsc::Receiver<Command>) -> Self {
+        let (status_tx, _) = broadcast::channel(8);
         IndexServer {
             command_rx,
+            status_tx,
             configuration: Configuration::default(),
             roots: Vec::new(),
             contents: Vec::new(),
@@ -64,6 +69,27 @@ impl IndexServer {
 
     pub fn run(self) {
         tokio::spawn(async move { self.run_internal().await });
+    }
+    
+    fn send_status(
+        &self,
+        state: searchium::IndexState,
+    ) -> Result<(), tonic::Status> {
+        let stats = memory_stats().ok_or_else(|| Status::internal(""))?;
+        let mem_usage = stats.physical_mem as u64;
+        let num_searchable_files = self.get_num_searchable_files();
+        self.status_tx
+            .send(searchium::StatusResponse {
+                state : state.into(),
+                mem_usage,
+                num_searchable_files,
+            })
+            .map_err(|_| Status::internal(""))?;
+        Ok(())
+    }
+    
+    fn get_num_searchable_files(&self) -> u64 {
+        self.roots.iter().map(|r| r.searchable_files().len()).sum::<usize>() as u64
     }
 }
 
@@ -154,10 +180,15 @@ impl IndexServer {
                     self.configuration.max_file_size = params.max_file_size;
                 }
             }
+            Command::GetStatusStream(tx) => {
+                tx.send(self.status_tx.subscribe()).ok();
+            }
             // TODO: Handle overlapping folders
             Command::RegisterFolder(params, tx) => {
                 let span = info_span!("RegisterFolder");
                 let _ = span.enter();
+                
+                self.send_status(searchium::IndexState::Indexing).ok();
 
                 let handle = tokio::runtime::Handle::current();
                 tx.send(Ok(searchium::IndexUpdate::scan_start())).ok(); // TODO: Handle error
@@ -223,6 +254,7 @@ impl IndexServer {
                 // Add the root to make it available for searches
                 self.roots.push(new_root);
                 self.contents.push(contents);
+                self.send_status(searchium::IndexState::Ready).ok();
             }
             Command::UnregisterFolder(_params) => {
                 // TODO: Remove root directory if it exists

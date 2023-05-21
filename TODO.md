@@ -27,7 +27,12 @@ https://swtch.com/~rsc/regexp/regexp4.html
 
 - [x] Progress for file contents reading
 - [x] search.exclude filtering
-- [ ] index info  
-- [ ] file stats
+- [x] file stats
+- [x] index info/state 
+- [ ] case-insensitive search
 - [ ] cancel/resume indexing
+    make indexing progress marker cancellable and connect that to pausing
 - [ ] Fix off by one error in navigating to search results - something to do with range/column? 
+- [ ] configure max extract len
+- [ ] regex search
+- [ ] wildcard search 

@@ -162,7 +162,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
                 { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
             searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, client, history);
-            controlsProvider = new ControlsProvider(context, context.extensionUri, history, undefined);
+            const indexState = new IndexState(client);
+            controlsProvider = new ControlsProvider(context, context.extensionUri, history, indexState);
             detailsPanelProvider = new DetailsPanelProvider(context, client);
             context.subscriptions.push(
                 process,

@@ -5,6 +5,8 @@
 import type { RpcTransport } from "@protobuf-ts/runtime-rpc";
 import type { ServiceInfo } from "@protobuf-ts/runtime-rpc";
 import { SearchiumService } from "./searchium";
+import type { StatusResponse } from "./searchium";
+import type { StatusRequest } from "./searchium";
 import type { DatabaseDetailsResponse } from "./searchium";
 import type { DatabaseDetailsRequest } from "./searchium";
 import type { ProcessInfoResponse } from "./searchium";
@@ -70,6 +72,10 @@ export interface ISearchiumServiceClient {
      * @generated from protobuf rpc: GetDatabaseDetails(searchium.v2.DatabaseDetailsRequest) returns (searchium.v2.DatabaseDetailsResponse);
      */
     getDatabaseDetails(input: DatabaseDetailsRequest, options?: RpcOptions): UnaryCall<DatabaseDetailsRequest, DatabaseDetailsResponse>;
+    /**
+     * @generated from protobuf rpc: GetStatus(searchium.v2.StatusRequest) returns (stream searchium.v2.StatusResponse);
+     */
+    getStatus(input: StatusRequest, options?: RpcOptions): ServerStreamingCall<StatusRequest, StatusResponse>;
 }
 /**
  * @generated from protobuf service searchium.v2.SearchiumService
@@ -144,5 +150,12 @@ export class SearchiumServiceClient implements ISearchiumServiceClient, ServiceI
     getDatabaseDetails(input: DatabaseDetailsRequest, options?: RpcOptions): UnaryCall<DatabaseDetailsRequest, DatabaseDetailsResponse> {
         const method = this.methods[8], opt = this._transport.mergeOptions(options);
         return stackIntercept<DatabaseDetailsRequest, DatabaseDetailsResponse>("unary", this._transport, method, opt, input);
+    }
+    /**
+     * @generated from protobuf rpc: GetStatus(searchium.v2.StatusRequest) returns (stream searchium.v2.StatusResponse);
+     */
+    getStatus(input: StatusRequest, options?: RpcOptions): ServerStreamingCall<StatusRequest, StatusResponse> {
+        const method = this.methods[9], opt = this._transport.mergeOptions(options);
+        return stackIntercept<StatusRequest, StatusResponse>("serverStreaming", this._transport, method, opt, input);
     }
 }

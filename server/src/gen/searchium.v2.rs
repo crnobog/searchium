@@ -248,6 +248,20 @@ pub struct LargeFileDetails {
     #[prost(uint64, tag="2")]
     pub bytes: u64,
 }
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StatusRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StatusResponse {
+    #[prost(enumeration="IndexState", tag="1")]
+    pub state: i32,
+    #[prost(uint64, tag="2")]
+    pub mem_usage: u64,
+    #[prost(uint64, tag="3")]
+    pub num_searchable_files: u64,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum GenericError {
@@ -267,6 +281,38 @@ impl GenericError {
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "GENERIC_ERROR_NONE" => Some(Self::None),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum IndexState {
+    Unavailable = 0,
+    Ready = 1,
+    Indexing = 2,
+    Paused = 3,
+}
+impl IndexState {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            IndexState::Unavailable => "UNAVAILABLE",
+            IndexState::Ready => "READY",
+            IndexState::Indexing => "INDEXING",
+            IndexState::Paused => "PAUSED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "UNAVAILABLE" => Some(Self::Unavailable),
+            "READY" => Some(Self::Ready),
+            "INDEXING" => Some(Self::Indexing),
+            "PAUSED" => Some(Self::Paused),
             _ => None,
         }
     }

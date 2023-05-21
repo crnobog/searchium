@@ -418,6 +418,28 @@ export interface LargeFileDetails {
     bytes: bigint;
 }
 /**
+ * @generated from protobuf message searchium.v2.StatusRequest
+ */
+export interface StatusRequest {
+}
+/**
+ * @generated from protobuf message searchium.v2.StatusResponse
+ */
+export interface StatusResponse {
+    /**
+     * @generated from protobuf field: searchium.v2.IndexState state = 1;
+     */
+    state: IndexState;
+    /**
+     * @generated from protobuf field: uint64 mem_usage = 2;
+     */
+    memUsage: bigint;
+    /**
+     * @generated from protobuf field: uint64 num_searchable_files = 3;
+     */
+    numSearchableFiles: bigint;
+}
+/**
  * @generated from protobuf enum searchium.v2.GenericError
  */
 export enum GenericError {
@@ -425,6 +447,27 @@ export enum GenericError {
      * @generated from protobuf enum value: GENERIC_ERROR_NONE = 0;
      */
     NONE = 0
+}
+/**
+ * @generated from protobuf enum searchium.v2.IndexState
+ */
+export enum IndexState {
+    /**
+     * @generated from protobuf enum value: UNAVAILABLE = 0;
+     */
+    UNAVAILABLE = 0,
+    /**
+     * @generated from protobuf enum value: READY = 1;
+     */
+    READY = 1,
+    /**
+     * @generated from protobuf enum value: INDEXING = 2;
+     */
+    INDEXING = 2,
+    /**
+     * @generated from protobuf enum value: PAUSED = 3;
+     */
+    PAUSED = 3
 }
 // @generated message type with reflection information, may provide speed optimized methods
 class HelloRequest$Type extends MessageType<HelloRequest> {
@@ -1926,6 +1969,93 @@ class LargeFileDetails$Type extends MessageType<LargeFileDetails> {
  * @generated MessageType for protobuf message searchium.v2.LargeFileDetails
  */
 export const LargeFileDetails = new LargeFileDetails$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class StatusRequest$Type extends MessageType<StatusRequest> {
+    constructor() {
+        super("searchium.v2.StatusRequest", []);
+    }
+    create(value?: PartialMessage<StatusRequest>): StatusRequest {
+        const message = {};
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<StatusRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: StatusRequest): StatusRequest {
+        return target ?? this.create();
+    }
+    internalBinaryWrite(message: StatusRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.StatusRequest
+ */
+export const StatusRequest = new StatusRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class StatusResponse$Type extends MessageType<StatusResponse> {
+    constructor() {
+        super("searchium.v2.StatusResponse", [
+            { no: 1, name: "state", kind: "enum", T: () => ["searchium.v2.IndexState", IndexState] },
+            { no: 2, name: "mem_usage", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "num_searchable_files", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
+        ]);
+    }
+    create(value?: PartialMessage<StatusResponse>): StatusResponse {
+        const message = { state: 0, memUsage: 0n, numSearchableFiles: 0n };
+        globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
+        if (value !== undefined)
+            reflectionMergePartial<StatusResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: StatusResponse): StatusResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* searchium.v2.IndexState state */ 1:
+                    message.state = reader.int32();
+                    break;
+                case /* uint64 mem_usage */ 2:
+                    message.memUsage = reader.uint64().toBigInt();
+                    break;
+                case /* uint64 num_searchable_files */ 3:
+                    message.numSearchableFiles = reader.uint64().toBigInt();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: StatusResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* searchium.v2.IndexState state = 1; */
+        if (message.state !== 0)
+            writer.tag(1, WireType.Varint).int32(message.state);
+        /* uint64 mem_usage = 2; */
+        if (message.memUsage !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.memUsage);
+        /* uint64 num_searchable_files = 3; */
+        if (message.numSearchableFiles !== 0n)
+            writer.tag(3, WireType.Varint).uint64(message.numSearchableFiles);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message searchium.v2.StatusResponse
+ */
+export const StatusResponse = new StatusResponse$Type();
 /**
  * @generated ServiceType for protobuf service searchium.v2.SearchiumService
  */
@@ -1938,5 +2068,6 @@ export const SearchiumService = new ServiceType("searchium.v2.SearchiumService",
     { name: "GetFileExtracts", options: {}, I: FileExtractsRequest, O: FileExtractsResponse },
     { name: "SetConfiguration", options: {}, I: ConfigurationRequest, O: ConfigurationResponse },
     { name: "GetProcessInfo", options: {}, I: ProcessInfoRequest, O: ProcessInfoResponse },
-    { name: "GetDatabaseDetails", options: {}, I: DatabaseDetailsRequest, O: DatabaseDetailsResponse }
+    { name: "GetDatabaseDetails", options: {}, I: DatabaseDetailsRequest, O: DatabaseDetailsResponse },
+    { name: "GetStatus", serverStreaming: true, options: {}, I: StatusRequest, O: StatusResponse }
 ]);
