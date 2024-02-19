@@ -5,7 +5,7 @@ pub struct TimeSpan {
     /// the size of the timespan (in units of the selected scale)
     #[prost(sint64, tag="1")]
     pub value: i64,
-    /// the scale of the timespan [default = DAYS]
+    /// the scale of the timespan \[default = DAYS\]
     #[prost(enumeration="time_span::TimeSpanScale", tag="2")]
     pub scale: i32,
 }
@@ -60,10 +60,10 @@ pub struct DateTime {
     /// the offset (in units of the selected scale) from 1970/01/01
     #[prost(sint64, tag="1")]
     pub value: i64,
-    /// the scale of the timespan [default = DAYS]
+    /// the scale of the timespan \[default = DAYS\]
     #[prost(enumeration="date_time::TimeSpanScale", tag="2")]
     pub scale: i32,
-    /// the kind of date/time being represented [default = UNSPECIFIED]
+    /// the kind of date/time being represented \[default = UNSPECIFIED\]
     #[prost(enumeration="date_time::DateTimeKind", tag="3")]
     pub kind: i32,
 }

@@ -9,67 +9,90 @@ pub mod searchium_service_server {
         async fn hello(
             &self,
             request: tonic::Request<super::HelloRequest>,
-        ) -> Result<tonic::Response<super::HelloResponse>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::HelloResponse>, tonic::Status>;
         /// Server streaming response type for the RegisterFolder method.
-        type RegisterFolderStream: futures_core::Stream<
-                Item = Result<super::IndexUpdate, tonic::Status>,
+        type RegisterFolderStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<super::IndexUpdate, tonic::Status>,
             >
             + Send
             + 'static;
         async fn register_folder(
             &self,
             request: tonic::Request<super::FolderRegisterRequest>,
-        ) -> Result<tonic::Response<Self::RegisterFolderStream>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<Self::RegisterFolderStream>,
+            tonic::Status,
+        >;
         async fn unregister_folder(
             &self,
             request: tonic::Request<super::FolderUnregisterRequest>,
-        ) -> Result<tonic::Response<super::GenericResponse>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::GenericResponse>, tonic::Status>;
         /// Server streaming response type for the SearchFilePaths method.
-        type SearchFilePathsStream: futures_core::Stream<
-                Item = Result<super::FilePathSearchResponse, tonic::Status>,
+        type SearchFilePathsStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<super::FilePathSearchResponse, tonic::Status>,
             >
             + Send
             + 'static;
         async fn search_file_paths(
             &self,
             request: tonic::Request<tonic::Streaming<super::FilePathSearchRequest>>,
-        ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<Self::SearchFilePathsStream>,
+            tonic::Status,
+        >;
         async fn search_file_contents(
             &self,
             request: tonic::Request<super::FileContentsSearchRequest>,
-        ) -> Result<tonic::Response<super::FileContentsSearchResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::FileContentsSearchResponse>,
+            tonic::Status,
+        >;
         async fn get_file_extracts(
             &self,
             request: tonic::Request<super::FileExtractsRequest>,
-        ) -> Result<tonic::Response<super::FileExtractsResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::FileExtractsResponse>,
+            tonic::Status,
+        >;
         async fn set_configuration(
             &self,
             request: tonic::Request<super::ConfigurationRequest>,
-        ) -> Result<tonic::Response<super::ConfigurationResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::ConfigurationResponse>,
+            tonic::Status,
+        >;
         async fn get_process_info(
             &self,
             request: tonic::Request<super::ProcessInfoRequest>,
-        ) -> Result<tonic::Response<super::ProcessInfoResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::ProcessInfoResponse>,
+            tonic::Status,
+        >;
         async fn get_database_details(
             &self,
             request: tonic::Request<super::DatabaseDetailsRequest>,
-        ) -> Result<tonic::Response<super::DatabaseDetailsResponse>, tonic::Status>;
+        ) -> std::result::Result<
+            tonic::Response<super::DatabaseDetailsResponse>,
+            tonic::Status,
+        >;
         /// Server streaming response type for the GetStatus method.
-        type GetStatusStream: futures_core::Stream<
-                Item = Result<super::StatusResponse, tonic::Status>,
+        type GetStatusStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<super::StatusResponse, tonic::Status>,
             >
             + Send
             + 'static;
         async fn get_status(
             &self,
             request: tonic::Request<super::StatusRequest>,
-        ) -> Result<tonic::Response<Self::GetStatusStream>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<Self::GetStatusStream>, tonic::Status>;
     }
     #[derive(Debug)]
     pub struct SearchiumServiceServer<T: SearchiumService> {
         inner: _Inner<T>,
         accept_compression_encodings: EnabledCompressionEncodings,
         send_compression_encodings: EnabledCompressionEncodings,
+        max_decoding_message_size: Option<usize>,
+        max_encoding_message_size: Option<usize>,
     }
     struct _Inner<T>(Arc<T>);
     impl<T: SearchiumService> SearchiumServiceServer<T> {
@@ -82,6 +105,8 @@ pub mod searchium_service_server {
                 inner,
                 accept_compression_encodings: Default::default(),
                 send_compression_encodings: Default::default(),
+                max_decoding_message_size: None,
+                max_encoding_message_size: None,
             }
         }
         pub fn with_interceptor<F>(
@@ -105,6 +130,22 @@ pub mod searchium_service_server {
             self.send_compression_encodings.enable(encoding);
             self
         }
+        /// Limits the maximum size of a decoded message.
+        ///
+        /// Default: `4MB`
+        #[must_use]
+        pub fn max_decoding_message_size(mut self, limit: usize) -> Self {
+            self.max_decoding_message_size = Some(limit);
+            self
+        }
+        /// Limits the maximum size of an encoded message.
+        ///
+        /// Default: `usize::MAX`
+        #[must_use]
+        pub fn max_encoding_message_size(mut self, limit: usize) -> Self {
+            self.max_encoding_message_size = Some(limit);
+            self
+        }
     }
     impl<T, B> tonic::codegen::Service<http::Request<B>> for SearchiumServiceServer<T>
     where
@@ -118,7 +159,7 @@ pub mod searchium_service_server {
         fn poll_ready(
             &mut self,
             _cx: &mut Context<'_>,
-        ) -> Poll<Result<(), Self::Error>> {
+        ) -> Poll<std::result::Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
@@ -139,13 +180,17 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::HelloRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move { (*inner).hello(request).await };
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SearchiumService>::hello(&inner, request).await
+                            };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -155,6 +200,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -178,15 +227,18 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::FolderRegisterRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).register_folder(request).await
+                                <T as SearchiumService>::register_folder(&inner, request)
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -196,6 +248,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.server_streaming(method, req).await;
                         Ok(res)
@@ -218,15 +274,18 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::FolderUnregisterRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).unregister_folder(request).await
+                                <T as SearchiumService>::unregister_folder(&inner, request)
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -236,6 +295,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -261,15 +324,18 @@ pub mod searchium_service_server {
                                 tonic::Streaming<super::FilePathSearchRequest>,
                             >,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).search_file_paths(request).await
+                                <T as SearchiumService>::search_file_paths(&inner, request)
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -279,6 +345,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.streaming(method, req).await;
                         Ok(res)
@@ -301,15 +371,21 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::FileContentsSearchRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).search_file_contents(request).await
+                                <T as SearchiumService>::search_file_contents(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -319,6 +395,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -341,15 +421,18 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::FileExtractsRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).get_file_extracts(request).await
+                                <T as SearchiumService>::get_file_extracts(&inner, request)
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -359,6 +442,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -381,15 +468,18 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::ConfigurationRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).set_configuration(request).await
+                                <T as SearchiumService>::set_configuration(&inner, request)
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -399,6 +489,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -421,15 +515,18 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::ProcessInfoRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).get_process_info(request).await
+                                <T as SearchiumService>::get_process_info(&inner, request)
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -439,6 +536,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -461,15 +562,21 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::DatabaseDetailsRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
+                            let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).get_database_details(request).await
+                                <T as SearchiumService>::get_database_details(
+                                        &inner,
+                                        request,
+                                    )
+                                    .await
                             };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -479,6 +586,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
                         Ok(res)
@@ -502,13 +613,17 @@ pub mod searchium_service_server {
                             &mut self,
                             request: tonic::Request<super::StatusRequest>,
                         ) -> Self::Future {
-                            let inner = self.0.clone();
-                            let fut = async move { (*inner).get_status(request).await };
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as SearchiumService>::get_status(&inner, request).await
+                            };
                             Box::pin(fut)
                         }
                     }
                     let accept_compression_encodings = self.accept_compression_encodings;
                     let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
@@ -518,6 +633,10 @@ pub mod searchium_service_server {
                             .apply_compression_config(
                                 accept_compression_encodings,
                                 send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
                             );
                         let res = grpc.server_streaming(method, req).await;
                         Ok(res)
@@ -546,12 +665,14 @@ pub mod searchium_service_server {
                 inner,
                 accept_compression_encodings: self.accept_compression_encodings,
                 send_compression_encodings: self.send_compression_encodings,
+                max_decoding_message_size: self.max_decoding_message_size,
+                max_encoding_message_size: self.max_encoding_message_size,
             }
         }
     }
     impl<T: SearchiumService> Clone for _Inner<T> {
         fn clone(&self) -> Self {
-            Self(self.0.clone())
+            Self(Arc::clone(&self.0))
         }
     }
     impl<T: std::fmt::Debug> std::fmt::Debug for _Inner<T> {

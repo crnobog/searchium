@@ -2,17 +2,17 @@ version: v1
 managed:
   enabled: true
 plugins:
-  - plugin: buf.build/community/timostamm-protobuf-ts
+  - plugin: buf.build/community/timostamm-protobuf-ts:v2.9.0
     out: src/gen
     opt: 
       - output_legacy_commonjs
       - eslint_disable
-  - plugin: buf.build/community/neoeinstein-prost
+  - plugin: buf.build/community/neoeinstein-prost:v0.3.1
     out: server/src/gen
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::prost_types
-  - plugin: buf.build/community/neoeinstein-tonic
+  - plugin: buf.build/community/neoeinstein-tonic:v0.4.0
     out: server/src/gen
     opt:
       - no_client
