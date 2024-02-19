@@ -95,11 +95,18 @@ class IndexServerClient implements IndexClient {
 export async function startServer(context: vscode.ExtensionContext): Promise<[IndexServerProcess, IndexClient]> {
     let host = vscode.workspace.getConfiguration("searchium").get<string>("debugIndexHost");
     let childProc: child_process.ChildProcessWithoutNullStreams | undefined;
-    if (!host) {
+    if (host) {
+        getLogger().logInformation`Connecting to existing debug server on ${host}`;
+    }
+    else {
         const serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
         const proc = child_process.spawn(serverExePath, [], { detached: true });
+        if (!proc) {
+            throw new Error("Failed to create server process");
+        }
         childProc = proc;
-        host = await new Promise<string>((resolve, _reject) => {
+        // Wait for the first line of output from the new process telling us its host address/port
+        host = await new Promise<string>((resolve, reject) => {
             let msg = "";
             const listener = (s: string): void => {
                 msg += s;
@@ -110,8 +117,20 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
                 }
             };
             proc.stdout.on('data', listener);
-            // TODO: Error conditions
+
+            let err = "";
+            const errListener = (s: string): void => {
+                err += s;
+                const i = err.indexOf('\n');
+                if (i !== -1) {
+                    proc.stderr.off('data', errListener);
+                    reject(msg.substring(0, i));
+                }
+            };
+            proc.stderr.on('data', errListener);
+            // TODO: More error conditions?
         });
+        getLogger().logInformation`server at ${host}`;
     }
     const transport = new GrpcTransport({
         host,
@@ -122,10 +141,11 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
     await client.hello({ id: "node" })
         .then((resp) => {
             const r = resp.response;
-            getLogger().logInformation`grpc response ${JSON.stringify(r)}`;
+            getLogger().logInformation`hello grpc response ${JSON.stringify(r)}`;
         })
         .catch((err: Error) => {
-            getLogger().logError`Error ${err}`;
+            getLogger().logError`Connection error ${err}`;
+            throw err;
         });
 
     return [new IndexServerProcess(childProc, transport), new IndexServerClient(client)];
