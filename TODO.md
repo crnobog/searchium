@@ -20,10 +20,18 @@
 - [ ] Rewrite-modify server - token suggestions 
 - [ ] Search file paths - with quick pick?
 - [ ] Search file paths - side view?
+- [ ] implement go to definition by heuristics 
+
+# Path filtering
+
+- [ ] Include in search history
+- [ ] Autocomplete?
+- [ ] Change syntax to match e.g. path configuration in vs code settings 
 
 # Server rewrite
 
 https://swtch.com/~rsc/regexp/regexp4.html
+https://en.wikipedia.org/wiki/FM-index
 
 - [x] Progress for file contents reading
 - [x] search.exclude filtering
@@ -36,3 +44,5 @@ https://swtch.com/~rsc/regexp/regexp4.html
 - [ ] configure max extract len
 - [ ] regex search
 - [ ] wildcard search 
+- [ ] filesystem watching / re-indexing 
+- [ ] token suggestion

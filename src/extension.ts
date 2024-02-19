@@ -156,6 +156,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             );
         }
         else {
+            // TODO: Progress bar/status bar update for this? 
             const [process, client] = await startServer(context);
             const fileSearchManager = new FileSearchManager(client);
             searchResultsProvider = new SearchResultsProvider(client);
