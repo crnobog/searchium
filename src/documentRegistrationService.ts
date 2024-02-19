@@ -75,11 +75,11 @@ export class DocumentRegistrationService implements vscode.Disposable {
                                 break;
                             }
                             case 'fileContentsLoaded': {
-                                getLogger().logInformation`File load ended at ${Timestamp.toDate(event.timestamp ?? Timestamp.now())}`;
                                 const count = event.type.fileContentsLoaded.count;
                                 const total = event.type.fileContentsLoaded.total;
                                 const increment = (count - lastCount) / total * 100;
                                 lastCount = count;
+                                getLogger().logInformation`Scan status ${count}/${total} at ${Timestamp.toDate(event.timestamp ?? Timestamp.now())}`;
                                 progress.report({ message: `${event.type.fileContentsLoaded.path}`, increment });
                                 break;
                             }
