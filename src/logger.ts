@@ -35,13 +35,13 @@ export class Logger {
         this.logInternal(this.debug, strings, ...insertions);
     }
     public logInformation(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.debug, strings, ...insertions);
+        this.logInternal(this.information, strings, ...insertions);
     }
     public logWarning(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.debug, strings, ...insertions);
+        this.logInternal(this.warning, strings, ...insertions);
     }
     public logError(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.debug, strings, ...insertions);
+        this.logInternal(this.error, strings, ...insertions);
     }
 
     private logInternal(level: boolean, strings: TemplateStringsArray, ...insertions: any[]): void {
