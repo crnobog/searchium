@@ -79,7 +79,6 @@
 			},
 			"detail": "Build server & extension & lint",
 			"dependsOn": [
-				"Build Release Server",
 				"npm: build",
 				"npm: lint"
 			]

@@ -72,9 +72,6 @@ const webviewConfig: esbuild.BuildOptions = {
         if (prod) { 
             await fs.copyFile("./target/release/searchium-server.exe", "./bin/searchium-server.exe");
         }
-        else {
-            await fs.copyFile("./target/debug/searchium-server.exe", "./bin/searchium-server.exe");
-        }
     } catch (err: any) {
         console.error(err.toString());
         console.error(err.stack);
