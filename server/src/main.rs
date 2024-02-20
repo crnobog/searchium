@@ -10,7 +10,7 @@ use index_server::*;
 use futures::StreamExt;
 use futures_core::stream::BoxStream;
 use memory_stats::memory_stats;
-use tokio_stream::wrappers::{BroadcastStream};
+use tokio_stream::wrappers::BroadcastStream;
 use std::fs::File;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, oneshot};
@@ -61,7 +61,7 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn set_configuration(
         &self,
         request: tonic::Request<searchium::ConfigurationRequest>,
-    ) -> Result<tonic::Response<searchium::ConfigurationResponse>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<searchium::ConfigurationResponse>> {
         self.command_tx
             .send(Command::SetConfiguration(request.into_inner()))
             .await
@@ -118,7 +118,7 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn search_file_paths(
         &self,
         request: tonic::Request<tonic::Streaming<searchium::FilePathSearchRequest>>,
-    ) -> Result<tonic::Response<Self::SearchFilePathsStream>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<Self::SearchFilePathsStream>> {
         let mut requests = request.into_inner();
         let command_tx = self.command_tx.clone();
         let (results_tx, results_rx) = mpsc::channel(8);
@@ -149,7 +149,7 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn search_file_contents(
         &self,
         request: tonic::Request<searchium::FileContentsSearchRequest>,
-    ) -> Result<tonic::Response<searchium::FileContentsSearchResponse>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<searchium::FileContentsSearchResponse>> {
         let (tx, rx) = oneshot::channel();
         self.command_tx
             .send(Command::FileContentsSearch(request.into_inner(), tx))
@@ -161,7 +161,7 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn get_file_extracts(
         &self,
         request: tonic::Request<searchium::FileExtractsRequest>,
-    ) -> Result<tonic::Response<searchium::FileExtractsResponse>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<searchium::FileExtractsResponse>> {
         let (tx, rx) = oneshot::channel();
         self.command_tx
             .send(Command::GetFileExtracts(request.into_inner(), tx))
@@ -174,7 +174,7 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn get_process_info(
         &self,
         _request: tonic::Request<searchium::ProcessInfoRequest>,
-    ) -> Result<tonic::Response<searchium::ProcessInfoResponse>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<searchium::ProcessInfoResponse>> {
         let stats = memory_stats().ok_or_else(|| Status::internal(""))?;
         Ok(Response::new(searchium::ProcessInfoResponse {
             physical_memory: stats.physical_mem as u64,
@@ -185,7 +185,7 @@ impl searchium::searchium_service_server::SearchiumService for Service {
     async fn get_database_details(
         &self,
         _request: tonic::Request<searchium::DatabaseDetailsRequest>,
-    ) -> Result<tonic::Response<searchium::DatabaseDetailsResponse>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<searchium::DatabaseDetailsResponse>> {
         let (tx, rx) = oneshot::channel();
         self.command_tx
             .send(Command::GetDatabaseDetails(tx))
@@ -195,11 +195,11 @@ impl searchium::searchium_service_server::SearchiumService for Service {
         Ok(Response::new(rx.await.map_err(|_| Status::internal(""))??))
     }
 
-    type GetStatusStream = BoxStream<'static, Result<searchium::StatusResponse, tonic::Status>>;
+    type GetStatusStream = BoxStream<'static, TonicResult<searchium::StatusResponse>> ;
     async fn get_status(
         &self,
         _request: tonic::Request<searchium::StatusRequest>,
-    ) -> Result<tonic::Response<Self::GetStatusStream>, tonic::Status> {
+    ) -> TonicResult<tonic::Response<Self::GetStatusStream>> {
         let (tx, rx) = oneshot::channel();
         self.command_tx.send(Command::GetStatusStream(tx)).await.map_err(|_| Status::internal(""))?;
         let rx = rx.await.map_err(|_| Status::internal(""))?;
