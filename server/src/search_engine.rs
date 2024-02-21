@@ -1,5 +1,6 @@
 use crate::file_contents::FileContents;
-use crate::searchium;
+use crate::gen::{Span, FileExtract};
+use crate::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types? 
 
 use memchr::memmem;
 use rayon::prelude::*;
@@ -9,9 +10,9 @@ use tokio_util::sync::CancellationToken;
 
 pub fn get_file_extracts(
     contents: &FileContents,
-    spans: &[searchium::Span],
+    spans: &[Span],
     max_extract_len: u32,
-) -> Vec<searchium::FileExtract> {
+) -> Vec<FileExtract> {
     let (line_offsets, contents_len) = calculate_line_offsets(contents); // TODO: is this worth caching?
     spans
         .iter()
@@ -34,7 +35,7 @@ pub fn get_file_extracts(
             let length = extract_end;
             let line_number = line_span.line_number;
             let column_number = extract_start - line_span.offset + 1;
-            searchium::FileExtract {
+            FileExtract {
                 text,
                 offset: offset as u32,
                 length: length as u32,
@@ -48,16 +49,16 @@ pub fn get_file_extracts(
 pub fn search_files_contents(
     root_path: &Path,
     files: &HashMap<PathBuf, FileContents>,
-    query: &searchium::FileContentsSearchRequest,
+    query: &FileContentsSearchRequest,
     cancel: CancellationToken,
-) -> searchium::FileContentsSearchRootResult {
+) -> FileContentsSearchRootResult {
     let finder = memmem::Finder::new(&query.query_string);
     let hits: Vec<_> = files
         .par_iter()
         .map_with(
             finder,
-            |finder, (path, contents)| -> Option<searchium::FileContentsSearchHit> {
-                let spans: Vec<searchium::Span> = search_file_contents(contents, finder);
+            |finder, (path, contents)| -> Option<FileContentsSearchHit> {
+                let spans: Vec<Span> = search_file_contents(contents, finder);
                 if spans.is_empty() {
                     None
                 } else {
@@ -66,7 +67,7 @@ pub fn search_files_contents(
                         .expect("file path not relative to root")
                         .to_string_lossy()
                         .to_string();
-                    let response = searchium::FileContentsSearchHit {
+                    let response = FileContentsSearchHit {
                         file_relative_path,
                         spans,
                     };
@@ -79,18 +80,18 @@ pub fn search_files_contents(
         // TODO: Cap number of results not number of files - maybe change format and flat_map over spans? 
         .take_any(query.max_results as usize)
         .collect();
-    searchium::FileContentsSearchRootResult {
+    FileContentsSearchRootResult {
         root_path: root_path.to_string_lossy().to_string(),
         hits,
     }
 }
 
-fn search_file_contents(contents: &FileContents, finder: &memmem::Finder) -> Vec<searchium::Span> {
+fn search_file_contents(contents: &FileContents, finder: &memmem::Finder) -> Vec<Span> {
     let length = finder.needle().len();
     match contents {
         FileContents::Ascii(bytes) | FileContents::Utf8(bytes) => finder
             .find_iter(&bytes[..])
-            .map(|start| searchium::Span {
+            .map(|start| Span {
                 offset_bytes: start as u32,
                 length_bytes: length as u32,
             })

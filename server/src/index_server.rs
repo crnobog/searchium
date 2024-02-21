@@ -4,7 +4,7 @@ use crate::file_contents::FileLoadEvent;
 use crate::fs_filter::*;
 use crate::fs_state::*;
 use crate::search_engine::{get_file_extracts, search_files_contents};
-use crate::searchium;
+use crate::gen::*;
 
 use memory_stats::memory_stats;
 use rayon::prelude::*;
@@ -23,31 +23,31 @@ type TonicResult<T> = Result<T, tonic::Status>;
 // Commands for index state to update
 #[derive(Debug)]
 pub enum Command {
-    SetConfiguration(searchium::ConfigurationRequest),
+    SetConfiguration(ConfigurationRequest),
     RegisterFolder(
-        searchium::FolderRegisterRequest,
-        broadcast::Sender<TonicResult<searchium::IndexUpdate>>,
+        FolderRegisterRequest,
+        broadcast::Sender<TonicResult<IndexUpdate>>,
     ),
-    UnregisterFolder(searchium::FolderUnregisterRequest),
+    UnregisterFolder(FolderUnregisterRequest),
     FilePathSearch(
-        searchium::FilePathSearchRequest,
-        oneshot::Sender<searchium::FilePathSearchResponse>,
+        FilePathSearchRequest,
+        oneshot::Sender<FilePathSearchResponse>,
     ),
     FileContentsSearch(
-        searchium::FileContentsSearchRequest,
-        oneshot::Sender<TonicResult<searchium::FileContentsSearchResponse>>,
+        FileContentsSearchRequest,
+        oneshot::Sender<TonicResult<FileContentsSearchResponse>>,
     ),
     GetFileExtracts(
-        searchium::FileExtractsRequest,
-        oneshot::Sender<TonicResult<searchium::FileExtractsResponse>>,
+        FileExtractsRequest,
+        oneshot::Sender<TonicResult<FileExtractsResponse>>,
     ),
-    GetDatabaseDetails(oneshot::Sender<TonicResult<searchium::DatabaseDetailsResponse>>),
-    GetStatusStream(oneshot::Sender<broadcast::Receiver<searchium::StatusResponse>>),
+    GetDatabaseDetails(oneshot::Sender<TonicResult<DatabaseDetailsResponse>>),
+    GetStatusStream(oneshot::Sender<broadcast::Receiver<StatusResponse>>),
 }
 
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
-    status_tx: broadcast::Sender<searchium::StatusResponse>,
+    status_tx: broadcast::Sender<StatusResponse>,
     configuration: Configuration,
     // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
@@ -95,13 +95,13 @@ impl Default for Configuration {
     }
 }
 
-impl searchium::IndexUpdate {
+impl IndexUpdate {
     fn scan_start() -> Self {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
         Self {
             timestamp,
-            r#type: Some(searchium::index_update::Type::FilesystemScanStart(
-                searchium::index_update::FilesystemScanStart::default(),
+            r#type: Some(index_update::Type::FilesystemScanStart(
+                index_update::FilesystemScanStart::default(),
             )),
         }
     }
@@ -109,8 +109,8 @@ impl searchium::IndexUpdate {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
         Self {
             timestamp,
-            r#type: Some(searchium::index_update::Type::FilesystemScanEnd(
-                searchium::index_update::FilesystemScanEnd::default(),
+            r#type: Some(index_update::Type::FilesystemScanEnd(
+                index_update::FilesystemScanEnd::default(),
             )),
         }
     }
@@ -118,8 +118,8 @@ impl searchium::IndexUpdate {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
         Self {
             timestamp,
-            r#type: Some(searchium::index_update::Type::FileContentsLoaded(
-                searchium::index_update::FileContentsLoaded::default(),
+            r#type: Some(index_update::Type::FileContentsLoaded(
+                index_update::FileContentsLoaded::default(),
             )),
         }
     }
@@ -127,8 +127,8 @@ impl searchium::IndexUpdate {
         let timestamp = Some(prost_types::Timestamp::from(SystemTime::now()));
         Self {
             timestamp,
-            r#type: Some(searchium::index_update::Type::FileContentsLoaded(
-                searchium::index_update::FileContentsLoaded {
+            r#type: Some(index_update::Type::FileContentsLoaded(
+                index_update::FileContentsLoaded {
                     count: count as u32,
                     total: total as u32,
                     path: path.to_string_lossy().to_string(),
@@ -175,12 +175,12 @@ impl IndexServer {
         }
     }
 
-    fn send_status(&self, state: searchium::IndexState) -> Result<(), tonic::Status> {
+    fn send_status(&self, state: IndexState) -> Result<(), tonic::Status> {
         let stats = memory_stats().ok_or_else(|| Status::internal(""))?;
         let mem_usage = stats.physical_mem as u64;
         let num_searchable_files = self.get_num_searchable_files();
         self.status_tx
-            .send(searchium::StatusResponse {
+            .send(StatusResponse {
                 state: state.into(),
                 mem_usage,
                 num_searchable_files,
@@ -196,7 +196,7 @@ impl IndexServer {
             .sum::<usize>() as u64
     }
 
-    fn set_configuration(&mut self, params: searchium::ConfigurationRequest) -> Result<(), tonic::Status> {
+    fn set_configuration(&mut self, params: ConfigurationRequest) -> Result<(), tonic::Status> {
         if params.concurrent_file_reads != 0 {
             self.configuration.concurrent_file_reads = params.concurrent_file_reads;
         }
@@ -208,7 +208,7 @@ impl IndexServer {
 
     fn get_status_stream(
         &self,
-        tx: oneshot::Sender<broadcast::Receiver<searchium::StatusResponse>>,
+        tx: oneshot::Sender<broadcast::Receiver<StatusResponse>>,
     ) -> Result<(), tonic::Status> {
         tx.send(self.status_tx.subscribe()).ok();
         Ok(())
@@ -216,10 +216,10 @@ impl IndexServer {
 
     fn search_file_contents(
         &self,
-        params: searchium::FileContentsSearchRequest,
+        params: FileContentsSearchRequest,
         token: CancellationToken,
-    ) -> Result<searchium::FileContentsSearchResponse, tonic::Status> {
-        Ok(searchium::FileContentsSearchResponse {
+    ) -> Result<FileContentsSearchResponse, tonic::Status> {
+        Ok(FileContentsSearchResponse {
             roots: self
                 .roots
                 .iter()
@@ -233,8 +233,8 @@ impl IndexServer {
 
     fn get_file_extracts(
         &self,
-        request: searchium::FileExtractsRequest,
-    ) -> Result<searchium::FileExtractsResponse, tonic::Status> {
+        request: FileExtractsRequest,
+    ) -> Result<FileExtractsResponse, tonic::Status> {
         let path = PathBuf::from(request.file_path);
         if !path.is_absolute() {
             Err(Status::invalid_argument(
@@ -243,7 +243,7 @@ impl IndexServer {
         } else if let Some(contents) = self.contents.iter().find_map(|map| map.get(&path)) {
             let file_extracts =
                 get_file_extracts(contents, &request.spans, request.max_extract_length);
-            Ok(searchium::FileExtractsResponse {
+            Ok(FileExtractsResponse {
                 file_path: path.to_string_lossy().to_string(),
                 file_extracts,
             })
@@ -252,8 +252,8 @@ impl IndexServer {
         }
     }
 
-    fn get_database_details(&self) -> Result<searchium::DatabaseDetailsResponse, tonic::Status> {
-        Ok(searchium::DatabaseDetailsResponse {
+    fn get_database_details(&self) -> Result<DatabaseDetailsResponse, tonic::Status> {
+        Ok(DatabaseDetailsResponse {
             roots: self
                 .roots
                 .iter()
@@ -310,7 +310,7 @@ impl IndexServer {
                         .searchable_files
                         .by_extension
                         .iter()
-                        .map(|(k, v)| searchium::FilesByExtensionDetails {
+                        .map(|(k, v)| FilesByExtensionDetails {
                             extension: k
                                 .map(|s| s.to_string_lossy().to_string())
                                 .unwrap_or_default(),
@@ -323,7 +323,7 @@ impl IndexServer {
                         .binary_files
                         .by_extension
                         .iter()
-                        .map(|(k, v)| searchium::FilesByExtensionDetails {
+                        .map(|(k, v)| FilesByExtensionDetails {
                             extension: k
                                 .map(|s| s.to_string_lossy().to_string())
                                 .unwrap_or_default(),
@@ -346,7 +346,7 @@ impl IndexServer {
                             if size >= self.configuration.large_file_threshold {
                                 Some((
                                     binary,
-                                    searchium::LargeFileDetails {
+                                    LargeFileDetails {
                                         path: p.to_string_lossy().to_string(),
                                         bytes: size,
                                     },
@@ -362,7 +362,7 @@ impl IndexServer {
                         });
                     large_binary_files.sort_by(|a, b| b.bytes.cmp(&a.bytes));
                     large_searchable_files.sort_by(|a, b| b.bytes.cmp(&a.bytes));
-                    searchium::DatabaseDetailsRoot {
+                    DatabaseDetailsRoot {
                         root_path: root.directory().path().to_string_lossy().to_string(),
                         num_files_scanned: root.all_files().len() as u64,
                         num_directories_scanned: root.directory().total_child_directories() as u64,
@@ -386,8 +386,8 @@ impl IndexServer {
 
     fn search_file_paths(
         &mut self,
-        params: searchium::FilePathSearchRequest,
-        tx: oneshot::Sender<searchium::FilePathSearchResponse>,
+        params: FilePathSearchRequest,
+        tx: oneshot::Sender<FilePathSearchResponse>,
     ) -> Result<(), tonic::Status> {
         let span = info_span!("FilePathSearch");
         let _ = span.enter();
@@ -416,22 +416,22 @@ impl IndexServer {
         results.truncate(params.max_results as usize);
         event!(Level::DEBUG, "total results {}", results.len());
         let duration = prost_types::Duration::try_from(std::time::Instant::now() - start).ok();
-        tx.send(searchium::FilePathSearchResponse { results, duration })
+        tx.send(FilePathSearchResponse { results, duration })
             .map_err(|_| Status::internal(""))
     }
 
     async fn register_folder(
         &mut self,
-        tx: broadcast::Sender<Result<searchium::IndexUpdate, Status>>,
-        params: searchium::FolderRegisterRequest,
+        tx: broadcast::Sender<Result<IndexUpdate, Status>>,
+        params: FolderRegisterRequest,
     ) -> Result<(), tonic::Status> {
         let span = info_span!("RegisterFolder");
         let _ = span.enter();
 
-        self.send_status(searchium::IndexState::Indexing).ok();
+        self.send_status(IndexState::Indexing).ok();
 
         let handle = tokio::runtime::Handle::current();
-        tx.send(Ok(searchium::IndexUpdate::scan_start())).ok();
+        tx.send(Ok(IndexUpdate::scan_start())).ok();
         // TODO: Handle error
         event!(Level::DEBUG, ?params.ignore_file_globs, ?params.path, "Constructing path filter");
         let scan_filter =
@@ -441,7 +441,7 @@ impl IndexServer {
             PathGlobFilter::new(PathBuf::from(&params.path), params.ignore_search_globs);
         // TODO: Dupe detection, check for different ignore globs
         let new_root = scan_filesystem(Path::new(&params.path), &scan_filter, &search_filter);
-        tx.send(Ok(searchium::IndexUpdate::scan_end())).ok();
+        tx.send(Ok(IndexUpdate::scan_end())).ok();
 
         // Load the contents of all discovered files in the new root into memory
         let contents: Vec<_> = {
@@ -456,7 +456,7 @@ impl IndexServer {
                     loaded += e.count;
                     if loaded % 100 == 0 {
                         event!(Level::DEBUG, ?loaded, ?total, "Sending files loaded update");
-                        tx.send(Ok(searchium::IndexUpdate::files_loaded(
+                        tx.send(Ok(IndexUpdate::files_loaded(
                             loaded,
                             total,
                             e.path.as_path(),
@@ -484,12 +484,12 @@ impl IndexServer {
             .zip(contents)
             .filter_map(|(p, r)| r.ok().map(|c| (p, c)))
             .collect();
-        tx.send(Ok(searchium::IndexUpdate::loaded())).ok();
+        tx.send(Ok(IndexUpdate::loaded())).ok();
         event!(Level::INFO, "Finished loading file contents");
         // Add the root to make it available for searches
         self.roots.push(new_root);
         self.contents.push(contents);
-        self.send_status(searchium::IndexState::Ready).ok();
+        self.send_status(IndexState::Ready).ok();
         Ok(())
     }
 }
