@@ -3,8 +3,8 @@ use crate::file_contents::FileContents;
 use crate::file_contents::FileLoadEvent;
 use crate::fs_filter::*;
 use crate::fs_state::*;
-use crate::search_engine::{get_file_extracts, search_files_contents};
 use crate::gen::*;
+use crate::search_engine::{get_file_extracts, search_files_contents};
 
 use memory_stats::memory_stats;
 use rayon::prelude::*;
@@ -12,21 +12,46 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::{fmt::Debug, time::SystemTime};
+use thiserror::Error;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 use tonic::Status;
 use tracing::instrument;
 use tracing::{event, info_span, Level};
 
-type TonicResult<T> = Result<T, tonic::Status>;
+#[derive(Error, Debug, Clone)]
+pub enum CommandError {
+    #[error("Invalid argument {0}")]
+    InvalidArgument(String),
+    #[error("Not found: {0}")]
+    NotFound(String),
 
-// Commands for index state to update
+    #[error("Internal error: {0}")]
+    InternalError(String),
+}
+
+impl<T> From<mpsc::error::SendError<T>> for CommandError {
+    fn from(value: mpsc::error::SendError<T>) -> Self {
+        CommandError::InternalError(value.to_string())
+    }
+}
+
+impl From<oneshot::error::RecvError> for CommandError {
+    fn from(value: oneshot::error::RecvError) -> Self {
+        CommandError::InternalError(value.to_string())
+    }
+}
+
+type CommandResult<T> = Result<T, CommandError>;
+
+// Commands for index state to update, used by the implementer of a tonic service to send commands asynchronously to the index state and receive results
+// TODO: Consider making this a private/implementation detail and having the service just call async functions?
 #[derive(Debug)]
 pub enum Command {
     SetConfiguration(ConfigurationRequest),
     RegisterFolder(
         FolderRegisterRequest,
-        broadcast::Sender<TonicResult<IndexUpdate>>,
+        broadcast::Sender<CommandResult<IndexUpdate>>, // Document why this is broadcast
     ),
     UnregisterFolder(FolderUnregisterRequest),
     FilePathSearch(
@@ -35,17 +60,20 @@ pub enum Command {
     ),
     FileContentsSearch(
         FileContentsSearchRequest,
-        oneshot::Sender<TonicResult<FileContentsSearchResponse>>,
+        oneshot::Sender<CommandResult<FileContentsSearchResponse>>,
     ),
     GetFileExtracts(
         FileExtractsRequest,
-        oneshot::Sender<TonicResult<FileExtractsResponse>>,
+        oneshot::Sender<CommandResult<FileExtractsResponse>>,
     ),
-    GetDatabaseDetails(oneshot::Sender<TonicResult<DatabaseDetailsResponse>>),
     GetStatusStream(oneshot::Sender<broadcast::Receiver<StatusResponse>>),
 }
+// TODO: If refactoring to this generic style, work out how to do it with borrow - does this need Pin?
+// TODO: Consider Result return type?
+type DynCommand = Box<dyn FnOnce(&mut IndexServer) -> CommandResult<()> + Send>;
 
 pub struct IndexServer {
+    dyncommand_rx: mpsc::Receiver<DynCommand>,
     command_rx: mpsc::Receiver<Command>,
     status_tx: broadcast::Sender<StatusResponse>,
     configuration: Configuration,
@@ -56,16 +84,27 @@ pub struct IndexServer {
     contents: Vec<HashMap<PathBuf, FileContents>>,
 }
 
+pub struct IndexInterface {
+    dyncommand_tx: mpsc::Sender<DynCommand>,
+}
+
 impl IndexServer {
-    pub fn new(command_rx: mpsc::Receiver<Command>) -> Self {
+    // TODO: Probably don't return IndexServer, just run immediately
+    // Maybe rename to IndexState and IndexInterface or something - but IndexState exists within gen::
+    pub fn new(command_rx: mpsc::Receiver<Command>) -> (Self, IndexInterface) {
         let (status_tx, _) = broadcast::channel(8);
-        IndexServer {
-            command_rx,
-            status_tx,
-            configuration: Configuration::default(),
-            roots: Vec::new(),
-            contents: Vec::new(),
-        }
+        let (dyncommand_tx, dyncommand_rx) = mpsc::channel(8);
+        (
+            IndexServer {
+                dyncommand_rx,
+                command_rx,
+                status_tx,
+                configuration: Configuration::default(),
+                roots: Vec::new(),
+                contents: Vec::new(),
+            },
+            IndexInterface { dyncommand_tx },
+        )
     }
 
     pub fn run(self) {
@@ -76,6 +115,23 @@ impl IndexServer {
 impl std::fmt::Debug for IndexServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("")
+    }
+}
+
+impl IndexInterface {
+    pub async fn get_database_details(&self) -> CommandResult<DatabaseDetailsResponse> {
+        let (tx, rx) = oneshot::channel();
+        let body = |s: &mut IndexServer| {
+            let details = s.get_database_details_internal();
+            tx.send(details).map_err(|_| {
+                CommandError::InternalError(
+                    "Failed to return result on oneshot channel".to_string(),
+                )
+            })?;
+            Ok(())
+        };
+        self.dyncommand_tx.send(Box::new(body)).await?;
+        rx.await?
     }
 }
 
@@ -142,9 +198,14 @@ impl IndexUpdate {
 impl IndexServer {
     async fn run_internal(mut self) {
         event!(Level::INFO, "Starting index state command loop");
-        while let Some(c) = self.command_rx.recv().await {
-            // TODO: Consider how to handle parallelism here i.e. getting more commands while working on an indexing operation
-            self.execute_command(c).await.ok();
+        loop {
+            tokio::select! {
+                Some(command) = self.command_rx.recv() => { self.execute_command(command).await.ok(); }
+                Some(dyn_command) = self.dyncommand_rx.recv() => { self.execute_dyn_command(dyn_command).await.ok(); }
+                else => {
+                    break;
+                }
+            }
         }
         event!(Level::INFO, "Leaving index state command loop");
     }
@@ -164,15 +225,18 @@ impl IndexServer {
             Command::FilePathSearch(params, tx) => self.search_file_paths(params, tx), // TODO: remove tx from args?
             Command::FileContentsSearch(params, tx) => {
                 let token = CancellationToken::new();
-                tx.send(self.search_file_contents(params, token)).map_err(|_| Status::internal(""))
+                tx.send(self.search_file_contents(params, token))
+                    .map_err(|_| Status::internal(""))
             }
-            Command::GetFileExtracts(request, tx) => {
-                tx.send(self.get_file_extracts(request)).map_err(|_| Status::internal(""))
-            }
-            Command::GetDatabaseDetails(tx) => {
-                tx.send(self.get_database_details()).map_err(|_| Status::internal(""))
-            }
+            Command::GetFileExtracts(request, tx) => tx
+                .send(self.get_file_extracts(request))
+                .map_err(|_| Status::internal("")),
         }
+    }
+
+    #[instrument(err, skip_all)]
+    async fn execute_dyn_command(&mut self, c: DynCommand) -> Result<(), tonic::Status> {
+        Ok(c(self)?)
     }
 
     fn send_status(&self, state: IndexState) -> Result<(), tonic::Status> {
@@ -218,7 +282,7 @@ impl IndexServer {
         &self,
         params: FileContentsSearchRequest,
         token: CancellationToken,
-    ) -> Result<FileContentsSearchResponse, tonic::Status> {
+    ) -> CommandResult<FileContentsSearchResponse> {
         Ok(FileContentsSearchResponse {
             roots: self
                 .roots
@@ -234,11 +298,11 @@ impl IndexServer {
     fn get_file_extracts(
         &self,
         request: FileExtractsRequest,
-    ) -> Result<FileExtractsResponse, tonic::Status> {
+    ) -> CommandResult<FileExtractsResponse> {
         let path = PathBuf::from(request.file_path);
         if !path.is_absolute() {
-            Err(Status::invalid_argument(
-                "File argument must be an absolute path",
+            Err(CommandError::InvalidArgument(
+                path.to_string_lossy().to_string(),
             ))
         } else if let Some(contents) = self.contents.iter().find_map(|map| map.get(&path)) {
             let file_extracts =
@@ -248,11 +312,11 @@ impl IndexServer {
                 file_extracts,
             })
         } else {
-            Err(Status::invalid_argument("File not found"))
+            Err(CommandError::NotFound(path.to_string_lossy().to_string()))
         }
     }
 
-    fn get_database_details(&self) -> Result<DatabaseDetailsResponse, tonic::Status> {
+    fn get_database_details_internal(&self) -> CommandResult<DatabaseDetailsResponse> {
         Ok(DatabaseDetailsResponse {
             roots: self
                 .roots
@@ -422,7 +486,7 @@ impl IndexServer {
 
     async fn register_folder(
         &mut self,
-        tx: broadcast::Sender<Result<IndexUpdate, Status>>,
+        tx: broadcast::Sender<CommandResult<IndexUpdate>>,
         params: FolderRegisterRequest,
     ) -> Result<(), tonic::Status> {
         let span = info_span!("RegisterFolder");

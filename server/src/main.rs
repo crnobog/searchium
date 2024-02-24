@@ -24,16 +24,27 @@ use tracing_subscriber::{prelude::*, EnvFilter};
 
 type TonicResult<T> = Result<T, tonic::Status>;
 
+impl From<CommandError> for tonic::Status{
+    fn from(command_error: CommandError) -> Self {
+        match command_error {
+            CommandError::InvalidArgument(s) => tonic::Status::invalid_argument(s),
+            CommandError::NotFound(s) => tonic::Status::not_found(s),
+            CommandError::InternalError(s) => tonic::Status::internal(s)
+         }
+    }
+}
+
 struct Service {
     command_tx: mpsc::Sender<Command>,
+    interface: IndexInterface
 }
 
 impl Service {
     fn new() -> Self {
         let (command_tx, command_rx) = mpsc::channel(32);
-        let state = IndexServer::new(command_rx);
+        let (state, interface) = IndexServer::new(command_rx);
         state.run(); // moves state
-        Service { command_tx }
+        Service { command_tx, interface }
     }
 }
 
@@ -87,7 +98,8 @@ impl searchium_service_server::SearchiumService for Service {
                 tokio_stream::wrappers::BroadcastStream::from(rx).filter_map(|r| async move {
                     match r {
                         Err(BroadcastStreamRecvError::Lagged(_)) => None,
-                        Ok(e) => Some(e),
+                        Ok(Ok(result)) => Some(Ok(result)),
+                        Ok(Err(e)) => Some(Err(e.into()))
                     }
                 }),
             ))),
@@ -186,13 +198,8 @@ impl searchium_service_server::SearchiumService for Service {
         &self,
         _request: tonic::Request<DatabaseDetailsRequest>,
     ) -> TonicResult<tonic::Response<DatabaseDetailsResponse>> {
-        let (tx, rx) = oneshot::channel();
-        self.command_tx
-            .send(Command::GetDatabaseDetails(tx))
-            .await
-            .map_err(|_| Status::internal(""))?;
-
-        Ok(Response::new(rx.await.map_err(|_| Status::internal(""))??))
+        let details = self.interface.get_database_details().await?;
+        Ok(Response::new(details))
     }
 
     type GetStatusStream = BoxStream<'static, TonicResult<StatusResponse>> ;
