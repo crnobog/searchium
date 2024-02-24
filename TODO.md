@@ -38,6 +38,7 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] file stats
 - [x] index info/state 
 - [ ] case-insensitive search
+- [ ] Search/details/etc during indexing 
 - [ ] cancel/resume indexing
     make indexing progress marker cancellable and connect that to pausing
 - [ ] Fix off by one error in navigating to search results - something to do with range/column? 
