@@ -8,7 +8,8 @@ use tonic::{Response, Status};
 use tracing::instrument;
 
 use crate::gen::*;
-use crate::index_server::*;
+use crate::index;
+use crate::index::*;
 
 type TonicResult<T> = Result<T, tonic::Status>;
 
@@ -18,7 +19,7 @@ pub fn new() -> Service {
 
 pub struct Service {
     command_tx: mpsc::Sender<Command>,
-    interface: IndexInterface,
+    interface: index::interface::IndexInterface,
 }
 
 impl Service {

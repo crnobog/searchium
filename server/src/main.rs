@@ -3,7 +3,7 @@ mod file_contents;
 mod fs_filter;
 mod fs_state;
 mod gen;
-mod index_server;
+mod index;
 mod search_engine;
 mod service;
 

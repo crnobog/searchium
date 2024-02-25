@@ -19,6 +19,8 @@ use tonic::Status;
 use tracing::instrument;
 use tracing::{event, info_span, Level};
 
+pub(crate) mod interface;
+
 #[derive(Error, Debug, Clone)]
 pub enum CommandError {
     #[error("Invalid argument {0}")]
@@ -84,14 +86,10 @@ pub struct IndexServer {
     contents: Vec<HashMap<PathBuf, FileContents>>,
 }
 
-pub struct IndexInterface {
-    dyncommand_tx: mpsc::Sender<DynCommand>,
-}
-
 impl IndexServer {
     // TODO: Probably don't return IndexServer, just run immediately
     // Maybe rename to IndexState and IndexInterface or something - but IndexState exists within gen::
-    pub fn new(command_rx: mpsc::Receiver<Command>) -> (Self, IndexInterface) {
+    pub fn new(command_rx: mpsc::Receiver<Command>) -> (Self, interface::IndexInterface) {
         let (status_tx, _) = broadcast::channel(8);
         let (dyncommand_tx, dyncommand_rx) = mpsc::channel(8);
         (
@@ -103,7 +101,7 @@ impl IndexServer {
                 roots: Vec::new(),
                 contents: Vec::new(),
             },
-            IndexInterface { dyncommand_tx },
+            interface::new(dyncommand_tx),
         )
     }
 
@@ -115,23 +113,6 @@ impl IndexServer {
 impl std::fmt::Debug for IndexServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("")
-    }
-}
-
-impl IndexInterface {
-    pub async fn get_database_details(&self) -> CommandResult<DatabaseDetailsResponse> {
-        let (tx, rx) = oneshot::channel();
-        let body = |s: &mut IndexServer| {
-            let details = s.get_database_details_internal();
-            tx.send(details).map_err(|_| {
-                CommandError::InternalError(
-                    "Failed to return result on oneshot channel".to_string(),
-                )
-            })?;
-            Ok(())
-        };
-        self.dyncommand_tx.send(Box::new(body)).await?;
-        rx.await?
     }
 }
 
