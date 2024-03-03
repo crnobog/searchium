@@ -1,6 +1,5 @@
 use futures::{FutureExt, Stream};
 use tokio::sync::{mpsc, oneshot, watch};
-use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 use super::{state::State, AsyncCommand, Command, CommandResult};
@@ -18,7 +17,7 @@ pub fn new(
     }
 }
 
-// TODO: channel may not be necessary, could be a ref to the IndexState itself (if IndexState becomes Sync?)
+#[derive(Clone)]
 pub struct IndexInterface {
     command_tx: mpsc::Sender<Command>,
     async_command_tx: mpsc::Sender<AsyncCommand>,
@@ -27,10 +26,10 @@ pub struct IndexInterface {
 
 impl IndexInterface {
     pub async fn get_database_details(&self) -> CommandResult<DatabaseDetailsResponse> {
-        do_oneshot(&self.command_tx, |s| s.get_database_details()).await
+        self.do_oneshot(|s| s.get_database_details()).await
     }
     pub async fn set_configuration(&self, request: ConfigurationRequest) -> CommandResult<()> {
-        do_oneshot(&self.command_tx, |s| s.set_configuration(request)).await
+        self.do_oneshot(|s| s.set_configuration(request)).await
     }
     pub async fn register_folder(
         &self,
@@ -48,55 +47,46 @@ impl IndexInterface {
         Ok(tokio_stream::wrappers::ReceiverStream::new(rx))
     }
     pub async fn unregister_folder(&self, request: FolderUnregisterRequest) -> CommandResult<()> {
-        do_oneshot(&self.command_tx, |s| s.unregister_folder(request)).await
+        self.do_oneshot(|s| s.unregister_folder(request)).await
     }
-    pub async fn search_file_paths<RequestStream: Stream<Item = FilePathSearchRequest>>(
+    pub async fn search_file_paths(
         &self,
-        request: RequestStream,
-    ) -> CommandResult<impl Stream<Item = CommandResult<FilePathSearchResponse>>> {
-        // TODO: Consider refactoring so tx doesn't have to be cloned as much - e.g. explicitly create output stream from channel that's captured by command?
-        // Benefit of current path is it ought to allow search requests to interleave with other commands
-        let tx = self.command_tx.clone();
-        Ok(request.then(move |request| {
-            let tx = tx.clone();
-            async move { do_oneshot(&tx, |s| s.search_file_paths(request)).await }
-        }))
+        request: FilePathSearchRequest,
+    ) -> CommandResult<FilePathSearchResponse> {
+        self.do_oneshot(|s| s.search_file_paths(request)).await
     }
     pub async fn search_file_contents(
         &self,
         request: FileContentsSearchRequest,
     ) -> CommandResult<FileContentsSearchResponse> {
         let token = CancellationToken::new();
-        do_oneshot(&self.command_tx, |s| s.search_file_contents(request, token)).await
+        self.do_oneshot(|s| s.search_file_contents(request, token)).await
     }
     pub async fn get_file_extracts(
         &self,
         request: FileExtractsRequest,
     ) -> CommandResult<FileExtractsResponse> {
-        do_oneshot(&self.command_tx, |s| s.get_file_extracts(request)).await
+        self.do_oneshot(|s| s.get_file_extracts(request)).await
     }
 
     pub fn get_status_stream(&self) -> impl Stream<Item = StatusResponse> {
         tokio_stream::wrappers::WatchStream::new(self.status_rx.clone())
     }
-}
 
-// Helpers
-
-// Execute an operation on the index server and return a single result
-// TODO: Work out best way to allow f to be an async function - needs boxing and pinning of returned future?
-// Or can command be put in a trait object instead to wrap up both types?
-async fn do_oneshot<R, F>(channel: &mpsc::Sender<Command>, f: F) -> CommandResult<R>
-where
-    F: FnOnce(&mut State) -> CommandResult<R> + Send + 'static,
-    R: Send + 'static,
-{
-    let (tx, rx) = oneshot::channel();
-    let wrapper = |s: &mut State| {
-        let value = f(s);
-        // TODO: error handling here? how would it be handled anyway
-        tx.send(value).ok();
-    };
-    channel.send(Box::new(wrapper)).await?;
-    rx.await?
+    // Execute an operation on the index server and return a single result
+    async fn do_oneshot<R, F>(&self, f: F) -> CommandResult<R>
+    where
+        F: FnOnce(&mut State) -> CommandResult<R> + Send + 'static,
+        R: Send + 'static,
+    {
+        let (tx, rx) = oneshot::channel();
+        let wrapper = |s: &mut State| {
+            let value = f(s);
+            if tx.send(value).is_err() { 
+                panic!("Oneshot receiver unexpectedly dropped in do_oneshot");
+            }
+        };
+        self.command_tx.send(Box::new(wrapper)).await?;
+        rx.await?
+    }
 }

@@ -1,6 +1,9 @@
+use std::sync::Arc;
+use std::sync::Weak;
+
+use futures::StreamExt;
 use futures_core::stream::BoxStream;
 use memory_stats::memory_stats;
-use tokio_stream::StreamExt;
 use tonic::{Response, Status};
 use tracing::info;
 use tracing::instrument;
@@ -12,12 +15,12 @@ use crate::index::*;
 type TonicResult<T> = Result<T, tonic::Status>;
 
 pub fn new() -> Service {
-    let interface = index::new();
+    let interface = Arc::new(index::new());
     Service { interface }
 }
 
 pub struct Service {
-    interface: index::Interface,
+    interface: Arc<index::Interface>,
 }
 
 // Required for instrumentation macros
@@ -83,15 +86,26 @@ impl searchium_service_server::SearchiumService for Service {
         &self,
         request: tonic::Request<tonic::Streaming<FilePathSearchRequest>>,
     ) -> TonicResult<tonic::Response<Self::SearchFilePathsStream>> {
-        let request_stream = request.into_inner().map_while(|s| s.ok());
-        let mapped = self
-            .interface
-            .search_file_paths(request_stream)
-            .await?
-            .map(|r| r.map_err(|e| e.into()));
-        return Ok(Response::new(
-            Box::pin(mapped) as Self::SearchFilePathsStream
-        ));
+        let stream = request.into_inner();
+        let interface = Arc::downgrade(&self.interface);
+        let mapped = stream.then(move |req| {
+            let interface = interface.clone();
+            async move {
+                let interface = interface.clone();
+                let strong_interface =
+                    Weak::upgrade(&interface).ok_or(Status::aborted("Index server shut down"))?;
+                match req {
+                    Err(_) => Err(tonic::Status::invalid_argument(
+                        "Search request stream contained an error",
+                    )),
+                    Ok(req) => strong_interface
+                        .search_file_paths(req)
+                        .await
+                        .map_err(Status::from),
+                }
+            }
+        });
+        Ok(Response::new(mapped.boxed()))
     }
 
     async fn search_file_contents(
@@ -138,7 +152,6 @@ impl searchium_service_server::SearchiumService for Service {
 
     type GetStatusStream = BoxStream<'static, TonicResult<StatusResponse>>;
 
-    #[instrument(err)]
     async fn get_status(
         &self,
         _request: tonic::Request<StatusRequest>,
