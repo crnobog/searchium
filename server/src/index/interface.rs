@@ -4,7 +4,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
-use super::{AsyncCommand, Command, CommandResult, IndexServer};
+use super::{state::State, AsyncCommand, Command, CommandResult};
 use crate::gen::searchium::*;
 
 pub fn new(
@@ -19,7 +19,7 @@ pub fn new(
     }
 }
 
-// TODO: channel may not be necessary, could be a ref to the IndexServer itself (if IndexServer becomes Sync?)
+// TODO: channel may not be necessary, could be a ref to the IndexState itself (if IndexState becomes Sync?)
 pub struct IndexInterface {
     command_tx: mpsc::Sender<Command>,
     async_command_tx: mpsc::Sender<AsyncCommand>,
@@ -28,10 +28,10 @@ pub struct IndexInterface {
 
 impl IndexInterface {
     pub async fn get_database_details(&self) -> CommandResult<DatabaseDetailsResponse> {
-        do_oneshot(&self.command_tx, |s| s.state.get_database_details()).await
+        do_oneshot(&self.command_tx, |s| s.get_database_details()).await
     }
     pub async fn set_configuration(&self, request: ConfigurationRequest) -> CommandResult<()> {
-        do_oneshot(&self.command_tx, |s| s.state.set_configuration(request)).await
+        do_oneshot(&self.command_tx, |s| s.set_configuration(request)).await
     }
     pub async fn register_folder(
         &self,
@@ -39,9 +39,9 @@ impl IndexInterface {
     ) -> CommandResult<impl Stream<Item = IndexUpdate>> {
         let (tx, mut rx) = mpsc::channel(16);
         self.async_command_tx
-            .send(Box::new(|s: &mut IndexServer| {
+            .send(Box::new(|s: &mut State| {
                 async move {
-                    s.state.register_folder(tx, request).await.ok();
+                    s.register_folder(tx, request).await.ok();
                 }
                 .boxed()
             }))
@@ -53,7 +53,7 @@ impl IndexInterface {
         })
     }
     pub async fn unregister_folder(&self, request: FolderUnregisterRequest) -> CommandResult<()> {
-        do_oneshot(&self.command_tx, |s| s.state.unregister_folder(request)).await
+        do_oneshot(&self.command_tx, |s| s.unregister_folder(request)).await
     }
     pub async fn search_file_paths<RequestStream: Stream<Item = FilePathSearchRequest>>(
         &self,
@@ -64,12 +64,7 @@ impl IndexInterface {
         let tx = self.command_tx.clone();
         Ok(request.then(move |request| {
             let tx = tx.clone();
-            async move {
-                do_oneshot(&tx, |s: &mut IndexServer| {
-                    s.state.search_file_paths(request)
-                })
-                .await
-            }
+            async move { do_oneshot(&tx, |s| s.search_file_paths(request)).await }
         }))
     }
     pub async fn search_file_contents(
@@ -77,19 +72,13 @@ impl IndexInterface {
         request: FileContentsSearchRequest,
     ) -> CommandResult<FileContentsSearchResponse> {
         let token = CancellationToken::new();
-        do_oneshot(&self.command_tx, |s: &mut IndexServer| {
-            s.state.search_file_contents(request, token)
-        })
-        .await
+        do_oneshot(&self.command_tx, |s| s.search_file_contents(request, token)).await
     }
     pub async fn get_file_extracts(
         &self,
         request: FileExtractsRequest,
     ) -> CommandResult<FileExtractsResponse> {
-        do_oneshot(&self.command_tx, |s: &mut IndexServer| {
-            s.state.get_file_extracts(request)
-        })
-        .await
+        do_oneshot(&self.command_tx, |s| s.get_file_extracts(request)).await
     }
 
     pub fn get_status_stream(&self) -> impl Stream<Item = StatusResponse> {
@@ -104,11 +93,11 @@ impl IndexInterface {
 // Or can command be put in a trait object instead to wrap up both types?
 async fn do_oneshot<R, F>(channel: &mpsc::Sender<Command>, f: F) -> CommandResult<R>
 where
-    F: FnOnce(&mut IndexServer) -> CommandResult<R> + Send + 'static,
+    F: FnOnce(&mut State) -> CommandResult<R> + Send + 'static,
     R: Send + 'static,
 {
     let (tx, rx) = oneshot::channel();
-    let wrapper = |s: &mut IndexServer| {
+    let wrapper = |s: &mut State| {
         let value = f(s);
         // TODO: error handling here? how would it be handled anyway
         tx.send(value).ok();

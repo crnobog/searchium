@@ -9,6 +9,8 @@ use tokio::sync::watch;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{event, Level};
 
+use self::state::State;
+
 mod interface;
 mod state;
 
@@ -44,15 +46,14 @@ pub enum CommandError {
 
 type CommandResult<T> = Result<T, CommandError>;
 
-// TODO: If refactoring to this generic style, work out how to do it with borrow - does this need Pin?
-// TODO: Consider Result return type?
-type Command = Box<dyn FnOnce(&mut IndexServer) + Send>;
-type AsyncCommand = Box<dyn Send + for<'a> FnOnce(&'a mut IndexServer) -> BoxFuture<'a, ()>>;
+// Generic commands that can be executed on the index - nothing is returned, closures must capture channels to return data to caller
+type Command = Box<dyn FnOnce(&mut State) + Send>;
+type AsyncCommand = Box<dyn Send + for<'a> FnOnce(&'a mut State) -> BoxFuture<'a, ()>>;
 
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
     async_command_rx: mpsc::Receiver<AsyncCommand>,
-    state: state::State,
+    state: State,
 }
 
 #[allow(dead_code)]
@@ -124,8 +125,8 @@ impl IndexServer {
         event!(Level::INFO, "Starting index state command loop");
         loop {
             tokio::select! {
-                Some(command) = self.command_rx.recv() => { command(&mut self); }
-                Some(async_command) = self.async_command_rx.recv() => {Box::pin(async_command(&mut self)).await; }
+                Some(command) = self.command_rx.recv() => { command(&mut self.state); }
+                Some(async_command) = self.async_command_rx.recv() => {Box::pin(async_command(&mut self.state)).await; }
                 else => {
                     break;
                 }
