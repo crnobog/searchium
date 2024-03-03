@@ -238,7 +238,7 @@ fn is_ascii(c: u8) -> bool {
 fn utf8_rune_length(cs: &[u8]) -> usize {
     let len = cs[0].leading_ones() as usize;
     match len {
-        4 | 3 | 2 if (cs.len() >= len && cs[0..len].iter().all(|u| u.leading_ones() == 1)) => len,
+        2..=4 if (cs.len() >= len && cs[0..len].iter().all(|u| u.leading_ones() == 1)) => len,
         _ => 0,
     }
 }

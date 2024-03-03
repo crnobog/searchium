@@ -173,7 +173,8 @@ fn build_filesystem(
             children
                 .files
                 .iter()
-                .filter_map(|f| f.searchable.then(|| f.path.clone())),
+                .filter(|f| f.searchable)
+                .map(|f| f.path.clone()),
         );
         directory_map.insert(
             parent,
