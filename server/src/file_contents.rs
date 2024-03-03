@@ -109,7 +109,7 @@ fn read_file_contents(path: &Path, max_size: u64) -> Result<FileContents, FileLo
     // let mut contents = Vec::new();
     let file = File::open(path)?;
     let file_size = file.metadata()?.len();
-    if file_size > max_size as u64 {
+    if file_size > max_size {
         Err(FileLoadError::TooLarge(file_size, max_size))
     } else {
         classify_file(file, file_size)
@@ -189,7 +189,7 @@ fn classify_file(
 }
 
 fn slice_starts_with_bom(bytes: &[u8]) -> bool {
-    return bytes.len() >= 3 && bytes[..3] == [0xEF, 0xBB, 0xBF];
+    bytes.len() >= 3 && bytes[..3] == [0xEF, 0xBB, 0xBF]
 }
 
 #[derive(Default)]
