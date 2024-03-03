@@ -14,12 +14,12 @@ use crate::{gen::*, index::match_file_path};
 
 use super::{CommandError, CommandResult, Configuration, Root};
 
-pub fn new(status_tx : watch::Sender<StatusResponse>) -> State {
+pub fn new(status_tx: watch::Sender<StatusResponse>) -> State {
     State {
         configuration: Configuration::default(),
         roots: Vec::new(),
         contents: Vec::new(),
-        status_tx, 
+        status_tx,
     }
 }
 
@@ -31,7 +31,7 @@ pub struct State {
     // TODO: document which files should be present in contents
     contents: Vec<HashMap<PathBuf, FileContents>>,
     // TODO: Ideally don't want any message passing stuff to be directly in IndexState
-    status_tx : watch::Sender<StatusResponse>,
+    status_tx: watch::Sender<StatusResponse>,
 }
 
 impl State {
@@ -51,7 +51,8 @@ impl State {
                 state: state.into(),
                 mem_usage,
                 num_searchable_files,
-            }).ok()
+            })
+            .ok()
     }
 
     pub fn set_configuration(&mut self, params: ConfigurationRequest) -> CommandResult<()> {
@@ -276,7 +277,7 @@ impl State {
         })
     }
 
-    // TODO: Don't block service thread while doing this 
+    // TODO: Don't block service thread while doing this
     pub async fn register_folder(
         &mut self,
         tx: mpsc::Sender<IndexUpdate>, // TODO: replace with broadcast or watch so no blocking?
@@ -315,7 +316,8 @@ impl State {
                     if loaded % 100 == 0 {
                         event!(Level::DEBUG, ?loaded, ?total, "Sending files loaded update");
                         tx.send(IndexUpdate::files_loaded(loaded, total, e.path.as_path()))
-                            .await.ok();
+                            .await
+                            .ok();
                     }
                 }
             });
