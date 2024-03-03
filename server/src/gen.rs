@@ -1,2 +1,2 @@
-// TODO: Change to use mod statements
-include!("gen/searchium.v2.rs");
+#[path = "gen/searchium.v2.rs"]
+pub mod searchium;

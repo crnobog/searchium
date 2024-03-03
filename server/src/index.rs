@@ -1,5 +1,5 @@
 use crate::fs_state::*;
-use crate::gen::*;
+use crate::gen::searchium::*;
 
 use futures::future::BoxFuture;
 use std::path::Path;

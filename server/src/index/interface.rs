@@ -5,7 +5,7 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 use super::{AsyncCommand, Command, CommandResult, IndexServer};
-use crate::gen::*;
+use crate::gen::searchium::*;
 
 pub fn new(
     command_tx: mpsc::Sender<Command>,

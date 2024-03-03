@@ -7,7 +7,7 @@ mod index;
 mod search_engine;
 mod service;
 
-use gen::*;
+use gen::searchium::*;
 
 use std::fs::File;
 use std::sync::Arc;

@@ -10,7 +10,7 @@ use tracing::{event, info_span, Level};
 
 use crate::file_contents::{load_files, FileContents, FileLoadEvent};
 use crate::fs_filter::PathGlobFilter;
-use crate::{gen::*, index::match_file_path};
+use crate::{gen::searchium::*, index::match_file_path};
 
 use super::{CommandError, CommandResult, Configuration, Root};
 
@@ -42,7 +42,7 @@ impl State {
             .sum::<usize>() as u64
     }
 
-    pub fn send_status(&self, state: crate::gen::IndexState) -> Option<()> {
+    pub fn send_status(&self, state: IndexState) -> Option<()> {
         let stats = memory_stats()?;
         let mem_usage = stats.physical_mem as u64;
         let num_searchable_files = self.get_num_searchable_files();
@@ -286,7 +286,7 @@ impl State {
         let span = info_span!("RegisterFolder");
         let _ = span.enter();
 
-        self.send_status(crate::gen::IndexState::Indexing);
+        self.send_status(IndexState::Indexing);
 
         let handle = tokio::runtime::Handle::current();
         tx.send(IndexUpdate::scan_start()).await.ok();
@@ -346,7 +346,7 @@ impl State {
         self.roots.push(new_root);
         self.contents.push(contents);
         // TODO
-        self.send_status(crate::gen::IndexState::Ready);
+        self.send_status(IndexState::Ready);
         Ok(())
     }
 

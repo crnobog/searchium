@@ -1,5 +1,5 @@
 use crate::file_contents::FileContents;
-use crate::gen::{Span, FileExtract};
+use crate::gen::searchium::{Span, FileExtract};
 use crate::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types? 
 
 use memchr::memmem;

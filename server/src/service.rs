@@ -5,7 +5,7 @@ use tonic::{Response, Status};
 use tracing::info;
 use tracing::instrument;
 
-use crate::gen::*;
+use crate::gen::searchium::*;
 use crate::index;
 use crate::index::*;
 
