@@ -9,7 +9,7 @@ use tokio::sync::watch;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{event, Level};
 
-pub(crate) mod interface;
+mod interface;
 mod state;
 
 // Re-exports
@@ -52,7 +52,7 @@ type AsyncCommand = Box<dyn Send + for<'a> FnOnce(&'a mut IndexServer) -> BoxFut
 pub struct IndexServer {
     command_rx: mpsc::Receiver<Command>,
     async_command_rx: mpsc::Receiver<AsyncCommand>,
-    state: state::IndexState,
+    state: state::State,
 }
 
 #[allow(dead_code)]

@@ -14,8 +14,8 @@ use crate::{gen::*, index::match_file_path};
 
 use super::{CommandError, CommandResult, Configuration, Root};
 
-pub fn new(status_tx : watch::Sender<StatusResponse>) -> IndexState {
-    IndexState {
+pub fn new(status_tx : watch::Sender<StatusResponse>) -> State {
+    State {
         configuration: Configuration::default(),
         roots: Vec::new(),
         contents: Vec::new(),
@@ -23,7 +23,7 @@ pub fn new(status_tx : watch::Sender<StatusResponse>) -> IndexState {
     }
 }
 
-pub struct IndexState {
+pub struct State {
     configuration: Configuration,
     // TODO: move roots into search_engine.rs
     roots: Vec<Root>,
@@ -34,7 +34,7 @@ pub struct IndexState {
     status_tx : watch::Sender<StatusResponse>,
 }
 
-impl IndexState {
+impl State {
     pub fn get_num_searchable_files(&self) -> u64 {
         self.roots
             .iter()
