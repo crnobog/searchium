@@ -1,4 +1,3 @@
-use async_stream::stream;
 use futures::{FutureExt, Stream};
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio_stream::StreamExt;
@@ -37,7 +36,7 @@ impl IndexInterface {
         &self,
         request: FolderRegisterRequest,
     ) -> CommandResult<impl Stream<Item = IndexUpdate>> {
-        let (tx, mut rx) = mpsc::channel(16);
+        let (tx, rx) = mpsc::channel(16);
         self.async_command_tx
             .send(Box::new(|s: &mut State| {
                 async move {
@@ -46,11 +45,7 @@ impl IndexInterface {
                 .boxed()
             }))
             .await?;
-        Ok(stream! {
-            while let Some(update) = rx.recv().await {
-                yield update;
-            }
-        })
+        Ok(tokio_stream::wrappers::ReceiverStream::new(rx))
     }
     pub async fn unregister_folder(&self, request: FolderUnregisterRequest) -> CommandResult<()> {
         do_oneshot(&self.command_tx, |s| s.unregister_folder(request)).await
