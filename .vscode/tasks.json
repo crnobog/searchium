@@ -79,6 +79,7 @@
 			},
 			"detail": "Build server & extension & lint",
 			"dependsOn": [
+				"Build Debug Server",
 				"npm: build",
 				"npm: lint"
 			]
