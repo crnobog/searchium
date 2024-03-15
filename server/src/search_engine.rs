@@ -1,8 +1,9 @@
 use crate::file_contents::FileContents;
-use crate::gen::searchium::{Span, FileExtract};
-use crate::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types? 
+use crate::gen::searchium::{FileExtract, Span};
+use crate::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types?
 
-use memchr::memmem;
+use grep::regex::{RegexMatcher, RegexMatcherBuilder};
+use grep::searcher::{Searcher, SearcherBuilder, Sink};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -52,13 +53,24 @@ pub fn search_files_contents(
     query: &FileContentsSearchRequest,
     cancel: CancellationToken,
 ) -> FileContentsSearchRootResult {
-    let finder = memmem::Finder::new(&query.query_string);
+    let mut matcher = RegexMatcherBuilder::new();
+    matcher
+        .case_insensitive(!query.match_case) // TODO: Consider 'smart' case option
+        .word(query.match_whole_word);
+    let matcher = if query.regex {
+        matcher.build(&query.query_string)
+    } else {
+        let escaped = regex::escape(&query.query_string);
+        matcher.build(&escaped)
+    }
+    .expect("TODO");
+    let searcher = SearcherBuilder::new().build();
     let hits: Vec<_> = files
         .par_iter()
         .map_with(
-            finder,
-            |finder, (path, contents)| -> Option<FileContentsSearchHit> {
-                let spans: Vec<Span> = search_file_contents(contents, finder);
+            (searcher, matcher),
+            |(searcher, matcher), (path, contents)| -> Option<FileContentsSearchHit> {
+                let spans: Vec<Span> = search_file_contents(contents, searcher, matcher);
                 if spans.is_empty() {
                     None
                 } else {
@@ -77,7 +89,7 @@ pub fn search_files_contents(
         )
         .filter_map(|r| r)
         .take_any_while(|_| !cancel.is_cancelled())
-        // TODO: Cap number of results not number of files - maybe change format and flat_map over spans? 
+        // TODO: Cap number of results not number of files - maybe change format and flat_map over spans?
         .take_any(query.max_results as usize)
         .collect();
     FileContentsSearchRootResult {
@@ -86,17 +98,54 @@ pub fn search_files_contents(
     }
 }
 
-fn search_file_contents(contents: &FileContents, finder: &memmem::Finder) -> Vec<Span> {
-    let length = finder.needle().len();
+struct SearchSink<'a> {
+    buffer: &'a [u8],
+    spans: Vec<Span>,
+}
+
+impl<'a> Sink for SearchSink<'a> {
+    type Error = std::io::Error;
+
+    fn matched(
+        &mut self,
+        _searcher: &Searcher,
+        mat: &grep::searcher::SinkMatch<'_>,
+    ) -> Result<bool, Self::Error> {
+        let bytes = mat.bytes();
+        // bytes is a sub-slice of self.buffer, return offset within file by pointer arithmetic
+        // TODO: take line info from mat and store it so we don't need to recalculate it later
+        let offset = unsafe {
+            let start = bytes.as_ptr();
+            let buffer_start = self.buffer.as_ptr();
+            start.offset_from(buffer_start)
+        };
+        self.spans.push(Span {
+            offset_bytes: offset as u32,
+            length_bytes: bytes.len() as u32,
+        });
+        Ok(true)
+    }
+}
+
+fn search_file_contents(
+    contents: &FileContents,
+    searcher: &mut Searcher,
+    matcher: &RegexMatcher,
+) -> Vec<Span> {
     match contents {
-        FileContents::Ascii(bytes) | FileContents::Utf8(bytes) => finder
-            .find_iter(&bytes[..])
-            .map(|start| Span {
-                offset_bytes: start as u32,
-                length_bytes: length as u32,
-            })
-            .collect(),
-        _ => Vec::new(),
+        FileContents::Ascii(bytes) | FileContents::Utf8(bytes) => {
+            let bytes = &bytes[..];
+            let mut sink = SearchSink {
+                buffer: bytes,
+                spans: Vec::new(),
+            };
+            if let Err(e) = searcher.search_slice(matcher, bytes, &mut sink) {
+                panic!("Error searching slice: {:?}", e);
+            }
+            sink.spans
+        }
+        FileContents::Utf16(_) => unimplemented!(),
+        FileContents::Binary(_) => Vec::new(),
     }
 }
 

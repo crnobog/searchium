@@ -37,13 +37,15 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] search.exclude filtering
 - [x] file stats
 - [x] index info/state 
-- [ ] case-insensitive search
+- [x] case-insensitive search
+- [x] regex search
+- [ ] wildcard search 
+- [ ] file path filtering
+- [ ] test grpc request cancellation
 - [ ] Search/details/etc during indexing 
 - [ ] cancel/resume indexing
     make indexing progress marker cancellable and connect that to pausing
 - [ ] Fix off by one error in navigating to search results - something to do with range/column? 
 - [ ] configure max extract len
-- [ ] regex search
-- [ ] wildcard search 
 - [ ] filesystem watching / re-indexing 
 - [ ] token suggestion

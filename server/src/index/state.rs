@@ -8,6 +8,7 @@ use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
 use tracing::{event, info_span, Level};
 
+use crate::search_engine;
 use crate::file_contents::{load_files, FileContents, FileLoadEvent};
 use crate::fs_filter::PathGlobFilter;
 use crate::{gen::searchium::*, index::match_file_path};
@@ -70,13 +71,16 @@ impl State {
         params: FileContentsSearchRequest,
         token: CancellationToken,
     ) -> CommandResult<FileContentsSearchResponse> {
+        // TODO: Allow searching roots in parallel
+        // TODO: Allow streaming results back? 
+        // TODO: Do not block other operations while searching?
         Ok(FileContentsSearchResponse {
             roots: self
                 .roots
                 .iter()
                 .zip(self.contents.iter())
                 .map(|(root, contents)| {
-                    crate::search_engine::search_files_contents(
+                    search_engine::search_files_contents(
                         root.directory().path(),
                         contents,
                         &params,
@@ -131,7 +135,7 @@ impl State {
                 path.to_string_lossy().to_string(),
             ))
         } else if let Some(contents) = self.contents.iter().find_map(|map| map.get(&path)) {
-            let file_extracts = crate::search_engine::get_file_extracts(
+            let file_extracts = search_engine::get_file_extracts(
                 contents,
                 &request.spans,
                 request.max_extract_length,
