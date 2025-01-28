@@ -10,7 +10,7 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"C:/Program Files/Epic Games/UE_5.1",
+				"C:/code/ladybird",
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
 			"outFiles": [
