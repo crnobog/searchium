@@ -39,6 +39,7 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] index info/state 
 - [x] case-insensitive search
 - [x] regex search
+- [ ] search results ordering
 - [ ] wildcard search 
 - [ ] file path filtering
 - [ ] test grpc request cancellation
@@ -49,3 +50,5 @@ https://en.wikipedia.org/wiki/FM-index
 - [ ] configure max extract len
 - [ ] filesystem watching / re-indexing 
 - [ ] token suggestion
+- [ ] Closing/re-opening workspaces
+- [ ] Default search settings are case insensitive/not whole word?
