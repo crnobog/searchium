@@ -2,12 +2,58 @@ use crate::file_contents::FileContents;
 use crate::gen::searchium::{FileExtract, Span};
 use crate::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types?
 
+use core::fmt;
+use grep::matcher::Matcher;
 use grep::regex::{RegexMatcher, RegexMatcherBuilder};
 use grep::searcher::{Searcher, SearcherBuilder, Sink};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 use tokio_util::sync::CancellationToken;
+
+#[derive(Error, Debug)]
+pub enum SearchEngineError {
+    #[error("Error building query")]
+    BuildError(#[from] grep::regex::Error),
+}
+
+// TODO: Move these enums to protobuf definitions
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum MatchCase {
+    No,
+    Yes,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum MatchWholeWord {
+    No,
+    Yes,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum QueryStyle {
+    Literal,  // No interpretation of special characters
+    Wildcard, // Simple wildcards like * and ?
+    Regex,    // Full regex
+}
+
+#[derive(Clone, Copy)]
+struct MatcherParams {
+    match_case: MatchCase,
+    whole_word: MatchWholeWord,
+    style: QueryStyle,
+}
+
+impl Default for MatcherParams {
+    fn default() -> Self {
+        MatcherParams {
+            match_case: MatchCase::No,
+            whole_word: MatchWholeWord::No,
+            style: QueryStyle::Literal,
+        }
+    }
+}
 
 pub fn get_file_extracts(
     contents: &FileContents,
@@ -52,18 +98,19 @@ pub fn search_files_contents(
     files: &HashMap<PathBuf, FileContents>,
     query: &FileContentsSearchRequest,
     cancel: CancellationToken,
-) -> FileContentsSearchRootResult {
-    let mut matcher = RegexMatcherBuilder::new();
-    matcher
-        .case_insensitive(!query.match_case) // TODO: Consider 'smart' case option
-        .word(query.match_whole_word);
-    let matcher = if query.regex {
-        matcher.build(&query.query_string)
-    } else {
-        let escaped = regex::escape(&query.query_string);
-        matcher.build(&escaped)
-    }
-    .expect("TODO");
+) -> Result<FileContentsSearchRootResult, SearchEngineError> {
+    let matcher = create_matcher_from_query(
+        &query.query_string,
+        MatcherParams {
+            match_case: MatchCase::from(query.match_case),
+            whole_word: MatchWholeWord::from(query.match_whole_word),
+            style: if query.regex {
+                QueryStyle::Regex
+            } else {
+                QueryStyle::Wildcard
+            }, // TODO: Need a way for user to disable wildcards
+        },
+    )?;
     let searcher = SearcherBuilder::new().build();
     let hits: Vec<_> = files
         .par_iter()
@@ -90,12 +137,13 @@ pub fn search_files_contents(
         .filter_map(|r| r)
         .take_any_while(|_| !cancel.is_cancelled())
         // TODO: Cap number of results not number of files - maybe change format and flat_map over spans?
+        // TODO: sort results
         .take_any(query.max_results as usize)
         .collect();
-    FileContentsSearchRootResult {
+    Ok(FileContentsSearchRootResult {
         root_path: root_path.to_string_lossy().to_string(),
         hits,
-    }
+    })
 }
 
 struct SearchSink<'a> {
@@ -127,10 +175,10 @@ impl<'a> Sink for SearchSink<'a> {
     }
 }
 
-fn search_file_contents(
+fn search_file_contents<M: Matcher>(
     contents: &FileContents,
     searcher: &mut Searcher,
-    matcher: &RegexMatcher,
+    matcher: &M,
 ) -> Vec<Span> {
     match contents {
         FileContents::Ascii(bytes) | FileContents::Utf8(bytes) => {
@@ -193,9 +241,116 @@ fn find_line_span(line_offsets: &[usize], contents_len: usize, offset: usize) ->
     }
 }
 
+fn translate_wildcard_query(s: &str) -> String {
+    let mut translated = String::new();
+    let mut last = 0 as usize;
+    for (i, m) in s.match_indices(|c| c == '*' || c == '?') {
+        if last != i {
+            translated.push_str(&regex::escape(&s[last..i]));
+        }
+        last = i + m.len();
+        match m {
+            "*" => translated.push_str(".*"),
+            "?" => translated.push('.'),
+            _ => {
+                panic!("unexpected match")
+            }
+        }
+    }
+    if last != s.len() {
+        translated.push_str(&regex::escape(&s[last..]));
+    }
+    translated
+}
+
+fn build_literal_matcher(
+    mut builder: RegexMatcherBuilder,
+    query_string: &str,
+    whole_word: MatchWholeWord,
+) -> Result<RegexMatcher, grep::regex::Error> {
+    match whole_word {
+        MatchWholeWord::No => {
+            // Can use builder's fixed_strings mode because we don't need to surround with regex to match the word boundaries
+            builder.fixed_strings(true).build(query_string)
+        }
+        MatchWholeWord::Yes => {
+            // Rather than using the grep crate's word feature, explicitly allow the matched query character to be adjacent to:
+            // * a non-word charater, if the matched character is a word character (\b)
+            // * a word character, if the matched character is a non-word character (\b)
+            // * whitespace, even if the matched character is a non-word character and thus would not match with \b (\s)
+            // * beginning or end of haystack (usually line) regardless of whether matche character is work or not (^ and $)
+            // Explicitly add a capturing group around the original query so it can be extracted
+            let transformed_query =
+                format!(r"(?:\b|\s|^)({})(?:\b|\s\$)", regex::escape(query_string));
+            builder.build(&transformed_query)
+        }
+    }
+}
+
+// TODO: Make wildcards such as * and ? a user setting
+// TODO: Refactor input to omit unnecessary fields
+fn create_matcher_from_query(
+    query_string: &str,
+    params: MatcherParams,
+) -> Result<impl Matcher + Clone + fmt::Debug, SearchEngineError> {
+    let mut builder = RegexMatcherBuilder::new();
+    builder
+        .case_insensitive(params.match_case == MatchCase::No) // TODO: Consider 'smart' case option
+        ;
+    let matcher = match params.style {
+        QueryStyle::Regex => builder
+            .word(params.whole_word == MatchWholeWord::Yes)
+            .build(&query_string), // TODO: Desired whole-word handling
+        QueryStyle::Wildcard => builder.build(&translate_wildcard_query(query_string)),
+        QueryStyle::Literal => build_literal_matcher(builder, query_string, params.whole_word),
+    }?;
+    Ok(matcher)
+}
+
+impl From<bool> for MatchCase {
+    fn from(value: bool) -> Self {
+        if value {
+            MatchCase::Yes
+        } else {
+            MatchCase::No
+        }
+    }
+}
+
+impl From<bool> for MatchWholeWord {
+    fn from(value: bool) -> Self {
+        if value {
+            MatchWholeWord::Yes
+        } else {
+            MatchWholeWord::No
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use grep::matcher::Captures;
+    use lazy_static::lazy_static;
+    use tracing::{span, Level};
+    use tracing_subscriber::{prelude::*, EnvFilter};
+
     use super::*;
+
+    lazy_static! {
+        static ref init_tracing: () = do_init_tracing();
+    }
+
+    fn do_init_tracing() {
+        let fmt = tracing_subscriber::fmt::layer()
+            .compact()
+            .with_file(false)
+            .with_line_number(false);
+        tracing_subscriber::registry()
+            .with(fmt)
+            .with(EnvFilter::from_env("SEARCHIUM_LOG_TEST"))
+            .try_init()
+            .ok();
+    }
 
     #[test]
     fn test_ascii_line_offsets() {
@@ -257,5 +412,171 @@ mod tests {
             },
             "Last line span incorrect"
         );
+    }
+
+    #[test]
+    fn test_escaping_and_wildcards() {
+        assert_eq!(translate_wildcard_query("*"), ".*");
+        assert_eq!(translate_wildcard_query("?"), ".");
+        assert_eq!(translate_wildcard_query(".txt"), r"\.txt");
+        assert_eq!(translate_wildcard_query("txt"), "txt");
+    }
+
+    // TODO: tests for wildcard search, regex search, word boundary and case settings
+
+    // Test the given query string, built with the given matcher params, against the haystack
+    // The haystack may mark the expected match start and end if any with backticks (`)
+    // Return Ok(Option<(usize, usize)>) if the expected match was found
+    // Return Err if the expected match was not found, or an unexpected match was found
+    fn test_query(
+        params: MatcherParams,
+        query: &str,
+        haystack: &str,
+    ) -> Result<Option<(usize, usize)>, String> {
+        let matcher = create_matcher_from_query(query, params)
+            .map_err(|e| format!("Failed to create matcher: {}", e))?;
+        let indices: Vec<usize> = haystack.match_indices("`").map(|t| t.0).collect();
+        let (h, e) = if indices.len() == 0 {
+            (haystack.to_owned(), None)
+        } else if indices.len() == 2 {
+            (
+                haystack.replace("`", ""),
+                Some((indices[0], indices[1] - 1)),
+            )
+        } else {
+            panic!("Unexpected number of backticks in haystack {}", haystack);
+        };
+
+        // One capture implies the default whole-match capture
+        let maybe_match = if matcher.capture_count() > 1 {
+            // We have modified the original query so we need to look for a capture that represents the actual result the user wants
+            let mut c = matcher.new_captures().map_err(|e| {
+                format!(
+                    "Unexpected error {} getting new capture set for matcher from query {}",
+                    e, query
+                )
+            })?;
+            if matcher.captures(h.as_bytes(), &mut c).map_err(|e| {
+                format!(
+                    "Unexpected error {} capturing {} against {}",
+                    e, query, haystack
+                )
+            })? {
+                c.get(1) // Return the first explicit capture
+            } else {
+                None
+            }
+        } else {
+            matcher.find(h.as_bytes()).map_err(|e| {
+                format!(
+                    "Unexpected error {} matching {} against {}",
+                    e, query, haystack
+                )
+            })?
+        };
+        let actual = maybe_match.map(|m| (m.start(), m.end()));
+        if actual == e {
+            Ok(e)
+        } else {
+            match e {
+                Some(_) => Err(format!(
+                    "Query `{}` against haystack `{}`. Expected {:?} but got {:?}",
+                    query, h, e, actual
+                )),
+                None => Err(format!(
+                    "Unexpected match for query `{}` against haystack `{}`: {:?}",
+                    query, haystack, actual
+                )),
+            }
+        }
+    }
+
+    // Test case-insensitive, non-whole-world, literal matches
+    #[test]
+    fn test_plain_match() -> Result<(), String> {
+        let _ = *init_tracing;
+        let _span = span!(Level::INFO, "test_plain_match").entered();
+        let params = MatcherParams::default();
+
+        // No special characters
+        test_query(params, "foo", "bar")?;
+        test_query(params, "foo", "fo")?;
+        test_query(params, "foo", "fo o")?;
+        test_query(params, "foo", "`foo`")?;
+        test_query(params, "foo", "`foo` bar")?;
+        test_query(params, "foo", "`foo`bar")?;
+
+        // Special regex character matched literally
+        test_query(params, ".txt", "blah")?;
+        test_query(params, ".txt", "log:txt")?;
+        test_query(params, ".txt", "log`.txt`")?;
+        test_query(params, ".txt", "`.txt`")?;
+        test_query(params, ".txt", "`.txt`db")?;
+        test_query(params, ".txt", "foo`.txt`db")?;
+
+        // Special wildcard/regex character matched literally
+        test_query(params, "void*", "voi")?;
+        test_query(params, "void*", "voii")?;
+        test_query(params, "void*", "void")?;
+        test_query(params, "void*", "`void*`")?;
+        test_query(params, "void*", "`void*` data")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_whole_word_match() -> Result<(), String> {
+        let _ = *init_tracing;
+        let _span = span!(Level::INFO, "test_whole_word_match").entered();
+        let params = MatcherParams {
+            whole_word: MatchWholeWord::Yes,
+            ..MatcherParams::default()
+        };
+
+        // Queries containing basic word characters
+        test_query(params, "txt", "blah")?;
+        test_query(params, "txt", "ftxt")?;
+        test_query(params, "txt", "txte")?;
+        test_query(params, "txt", "otxte")?;
+        test_query(params, "txt", " `txt` ")?; // space is treated as a word boundary on both sides
+        test_query(params, "txt", "`txt`")?;
+        test_query(params, "txt", ".`txt`")?; // . is treated as a word boundary
+        test_query(params, "txt", "`txt`.")?; // . is treated as a word boundary
+        test_query(params, "txt", ".`txt`.")?; // . is treated as a word boundary on both sides
+
+        // Queries which themselves contain word boundaries
+        test_query(params, ".txt", "blah")?;
+        test_query(params, ".txt", "`.txt`")?;
+        test_query(params, ".txt", "foo`.txt`")?; // o and . are different class so treated as a boundary
+        test_query(params, ".txt", "..txt")?; // Adjacent .. are the same class so not treated as a boundary
+        test_query(params, "two words", "`two words`")?;
+        test_query(params, "two words", "there are more than `two words`")?;
+        test_query(params, "two words", "there are more than `two words`.")?;
+        test_query(params, "two words", "there are more than `two words` in this sentence")?;
+
+        // e.g. searching for implementation of a function, but not another function which starts with the same prefix
+        test_query(params, "::MemberName", "ClassName`::MemberName`")?; 
+        test_query(params, "::MemberName", "ClassName::MemberNameBlah")?; 
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_wildcard_match() -> Result<(), String> {
+        let _ = *init_tracing;
+        let _span = span!(Level::INFO, "test_wildcard_match").entered();
+        let params = MatcherParams {
+            style: QueryStyle::Wildcard,
+            ..MatcherParams::default()
+        };
+
+        test_query(params, "foo*bar", "`foobar`")?;
+        test_query(params, "foo*bar", "`foobazbar`")?;
+        test_query(params, "foo*bar", "fobar")?;
+        test_query(params, "foo*bar", "foobr")?;
+        test_query(params, "foo*bar", "fofbar")?;
+        test_query(params, "foo*bar", "f`foobar`")?;
+
+        Ok(())
     }
 }

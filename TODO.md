@@ -41,6 +41,7 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] regex search
 - [ ] search results ordering
 - [ ] wildcard search 
+- [ ] Use regex-syntax crate to pre-compile regexes for best implementation of whole-word test? 
 - [ ] file path filtering
 - [ ] test grpc request cancellation
 - [ ] Search/details/etc during indexing 

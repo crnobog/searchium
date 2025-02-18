@@ -8,9 +8,9 @@ use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
 use tracing::{event, info_span, Level};
 
-use crate::search_engine;
 use crate::file_contents::{load_files, FileContents, FileLoadEvent};
 use crate::fs_filter::PathGlobFilter;
+use crate::search_engine;
 use crate::{gen::searchium::*, index::match_file_path};
 
 use super::{CommandError, CommandResult, Configuration, Root};
@@ -87,7 +87,9 @@ impl State {
                         token.clone(),
                     )
                 })
-                .collect(),
+                .collect::<Result<Vec<_>, _>>()
+                // TODO: Better error translation here: e.g. user syntax error in regex/wildcard format
+                .map_err(|e| CommandError::InternalError(e.to_string()))?,
         })
     }
 
