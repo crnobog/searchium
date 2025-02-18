@@ -241,12 +241,34 @@ fn find_line_span(line_offsets: &[usize], contents_len: usize, offset: usize) ->
     }
 }
 
-fn translate_wildcard_query(s: &str) -> String {
+const WHOLE_WORD_REGEX_PREFIX: &'static str = r"(?:\b|\s|^)(";
+const WHOLE_WORD_REGEX_SUFFIX: &'static str = r")(?:\b|\s\$)";
+
+fn build_wildcard_matcher(
+    builder: RegexMatcherBuilder,
+    query_string: &str,
+    whole_word: MatchWholeWord,
+) -> Result<RegexMatcher, grep::regex::Error> {
     let mut translated = String::new();
+    let len = query_string
+        .matches(|c| c == '*' || c == '?')
+        .map(|m| match m {
+            "*" => 1,
+            "?" => 0, // doesn't increase size
+            _ => 0,
+        })
+        .sum::<usize>()
+        + WHOLE_WORD_REGEX_PREFIX.len()
+        + WHOLE_WORD_REGEX_SUFFIX.len()
+        + query_string.len();
+    translated.reserve(len);
+    if whole_word == MatchWholeWord::Yes {
+        translated.push_str(&WHOLE_WORD_REGEX_PREFIX);
+    }
     let mut last = 0 as usize;
-    for (i, m) in s.match_indices(|c| c == '*' || c == '?') {
+    for (i, m) in query_string.match_indices(|c| c == '*' || c == '?') {
         if last != i {
-            translated.push_str(&regex::escape(&s[last..i]));
+            translated.push_str(&regex::escape(&query_string[last..i]));
         }
         last = i + m.len();
         match m {
@@ -257,10 +279,13 @@ fn translate_wildcard_query(s: &str) -> String {
             }
         }
     }
-    if last != s.len() {
-        translated.push_str(&regex::escape(&s[last..]));
+    if last != query_string.len() {
+        translated.push_str(&regex::escape(&query_string[last..]));
     }
-    translated
+    if whole_word == MatchWholeWord::Yes {
+        translated.push_str(&WHOLE_WORD_REGEX_SUFFIX);
+    }
+    builder.build(&translated)
 }
 
 fn build_literal_matcher(
@@ -280,8 +305,12 @@ fn build_literal_matcher(
             // * whitespace, even if the matched character is a non-word character and thus would not match with \b (\s)
             // * beginning or end of haystack (usually line) regardless of whether matche character is work or not (^ and $)
             // Explicitly add a capturing group around the original query so it can be extracted
-            let transformed_query =
-                format!(r"(?:\b|\s|^)({})(?:\b|\s\$)", regex::escape(query_string));
+            let transformed_query = format!(
+                r"{}({}){}",
+                WHOLE_WORD_REGEX_PREFIX,
+                regex::escape(query_string),
+                WHOLE_WORD_REGEX_SUFFIX
+            );
             builder.build(&transformed_query)
         }
     }
@@ -301,7 +330,7 @@ fn create_matcher_from_query(
         QueryStyle::Regex => builder
             .word(params.whole_word == MatchWholeWord::Yes)
             .build(&query_string), // TODO: Desired whole-word handling
-        QueryStyle::Wildcard => builder.build(&translate_wildcard_query(query_string)),
+        QueryStyle::Wildcard => build_wildcard_matcher(builder, query_string, params.whole_word),
         QueryStyle::Literal => build_literal_matcher(builder, query_string, params.whole_word),
     }?;
     Ok(matcher)
@@ -412,14 +441,6 @@ mod tests {
             },
             "Last line span incorrect"
         );
-    }
-
-    #[test]
-    fn test_escaping_and_wildcards() {
-        assert_eq!(translate_wildcard_query("*"), ".*");
-        assert_eq!(translate_wildcard_query("?"), ".");
-        assert_eq!(translate_wildcard_query(".txt"), r"\.txt");
-        assert_eq!(translate_wildcard_query("txt"), "txt");
     }
 
     // TODO: tests for wildcard search, regex search, word boundary and case settings
@@ -552,11 +573,15 @@ mod tests {
         test_query(params, "two words", "`two words`")?;
         test_query(params, "two words", "there are more than `two words`")?;
         test_query(params, "two words", "there are more than `two words`.")?;
-        test_query(params, "two words", "there are more than `two words` in this sentence")?;
+        test_query(
+            params,
+            "two words",
+            "there are more than `two words` in this sentence",
+        )?;
 
         // e.g. searching for implementation of a function, but not another function which starts with the same prefix
-        test_query(params, "::MemberName", "ClassName`::MemberName`")?; 
-        test_query(params, "::MemberName", "ClassName::MemberNameBlah")?; 
+        test_query(params, "::MemberName", "ClassName`::MemberName`")?;
+        test_query(params, "::MemberName", "ClassName::MemberNameBlah")?;
 
         Ok(())
     }
@@ -570,12 +595,45 @@ mod tests {
             ..MatcherParams::default()
         };
 
+        // One character wildcard
+        test_query(params, "foo?bar", "foobar")?;
+        test_query(params, "foo?bar", "`fooobar`")?;
+        test_query(params, "foo?bar", "`fooxbar`")?;
+        test_query(params, "foo?bar", "foxobar")?;
+
+        // Any number of characters wildcard
         test_query(params, "foo*bar", "`foobar`")?;
         test_query(params, "foo*bar", "`foobazbar`")?;
         test_query(params, "foo*bar", "fobar")?;
         test_query(params, "foo*bar", "foobr")?;
         test_query(params, "foo*bar", "fofbar")?;
         test_query(params, "foo*bar", "f`foobar`")?;
+        test_query(params, "foo*bar", "`foobar`baz")?;
+        test_query(params, "foo*bar", "bing`foobar`baz")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_wildcard_whole_word_match() -> Result<(), String> {
+        let _ = *init_tracing;
+        let _span = span!(Level::INFO, "test_wildcard_whole_word_match").entered();
+        let params = MatcherParams {
+            style: QueryStyle::Wildcard,
+            whole_word: MatchWholeWord::Yes,
+            ..MatcherParams::default()
+        };
+
+        // beginning/end of haystack
+        test_query(params, "foo*bar", "`foobar`")?;
+        test_query(params, "foo*bar", "`foobazbar`")?;
+
+        // bounded by other word characters
+        test_query(params, "foo*bar", "bingfoobarbaz")?;
+
+        // spaces
+        test_query(params, "foo*bar", "pre `foobar` post")?;
+        test_query(params, "foo*bar", "pre `fooxbar` post")?;
 
         Ok(())
     }
