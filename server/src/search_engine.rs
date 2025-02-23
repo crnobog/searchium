@@ -93,6 +93,7 @@ pub fn get_file_extracts(
         .collect()
 }
 
+// TODO: Change result to not come from protobuf defs
 pub fn search_files_contents(
     root_path: &Path,
     files: &HashMap<PathBuf, FileContents>,
@@ -112,7 +113,7 @@ pub fn search_files_contents(
         },
     )?;
     let searcher = SearcherBuilder::new().build();
-    let hits: Vec<_> = files
+    let mut hits: Vec<_> = files
         .par_iter()
         .map_with(
             (searcher, matcher),
@@ -140,6 +141,8 @@ pub fn search_files_contents(
         // TODO: sort results
         .take_any(query.max_results as usize)
         .collect();
+    // TODO: Do we need a better sort than lexical for paths?
+    hits.par_sort_unstable_by(|h1, h2| h1.file_relative_path.cmp(&h2.file_relative_path));
     Ok(FileContentsSearchRootResult {
         root_path: root_path.to_string_lossy().to_string(),
         hits,

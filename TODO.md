@@ -39,17 +39,23 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] index info/state 
 - [x] case-insensitive search
 - [x] regex search
-- [ ] search results ordering
-- [ ] wildcard search 
-- [ ] Use regex-syntax crate to pre-compile regexes for best implementation of whole-word test? 
+- [x] search results ordering
+- [x] wildcard search 
+- [ ] Fix off by one error in navigating to search results - something to do with range/column? 
 - [ ] file path filtering
 - [ ] test grpc request cancellation
 - [ ] Search/details/etc during indexing 
 - [ ] cancel/resume indexing
     make indexing progress marker cancellable and connect that to pausing
-- [ ] Fix off by one error in navigating to search results - something to do with range/column? 
 - [ ] configure max extract len
 - [ ] filesystem watching / re-indexing 
 - [ ] token suggestion
 - [ ] Closing/re-opening workspaces
 - [ ] Default search settings are case insensitive/not whole word?
+- [ ] highlighting search results in tree view seems broken
+- [ ] add options to group search results by folder hierarchy? (configurable depth)
+- [ ] add option to group search results by file type
+- [ ] test configuring search parameters in workspace settings
+- [ ] changing search parameters with workspace open
+- [ ] profile initial indexing
+- [ ] Use regex-syntax crate to pre-compile regexes for best implementation of whole-word test? 

@@ -71,8 +71,8 @@ impl State {
         params: FileContentsSearchRequest,
         token: CancellationToken,
     ) -> CommandResult<FileContentsSearchResponse> {
-        // TODO: Allow searching roots in parallel
-        // TODO: Allow streaming results back? 
+        // TODO: Allow searching roots in parallel, though this could interfere with searching files in parallel - remove concept of roots?
+        // TODO: Allow streaming results back? Implies doing search in correct order 
         // TODO: Do not block other operations while searching?
         Ok(FileContentsSearchResponse {
             roots: self
