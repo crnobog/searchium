@@ -21,6 +21,7 @@
 - [ ] Search file paths - with quick pick?
 - [ ] Search file paths - side view?
 - [ ] implement go to definition by heuristics 
+- [ ] open search results in editor window
 
 # Path filtering
 
@@ -42,16 +43,17 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] search results ordering
 - [x] wildcard search 
 - [ ] Fix off by one error in navigating to search results - something to do with range/column? 
+- [ ] Default search settings are case insensitive/not whole word?
+- [ ] Closing/re-opening workspaces
+- [ ] Command to re-run indexing
+- [ ] filesystem watching / re-indexing 
 - [ ] file path filtering
 - [ ] test grpc request cancellation
 - [ ] Search/details/etc during indexing 
 - [ ] cancel/resume indexing
     make indexing progress marker cancellable and connect that to pausing
 - [ ] configure max extract len
-- [ ] filesystem watching / re-indexing 
 - [ ] token suggestion
-- [ ] Closing/re-opening workspaces
-- [ ] Default search settings are case insensitive/not whole word?
 - [ ] highlighting search results in tree view seems broken
 - [ ] add options to group search results by folder hierarchy? (configurable depth)
 - [ ] add option to group search results by file type
@@ -59,3 +61,4 @@ https://en.wikipedia.org/wiki/FM-index
 - [ ] changing search parameters with workspace open
 - [ ] profile initial indexing
 - [ ] Use regex-syntax crate to pre-compile regexes for best implementation of whole-word test? 
+- [ ] string version of search settings for vim-command like searching
