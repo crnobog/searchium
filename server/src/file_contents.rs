@@ -49,6 +49,7 @@ pub enum FileLoadError {
     Io(#[from] std::io::Error),
 }
 
+// TODO: Consider scheduling this so that we delay loading large files until later, to allow maximum searching during startup?
 pub async fn load_files<Paths, PathIter>(
     paths: Paths,
     events_tx: tokio::sync::mpsc::Sender<FileLoadEvent>,
@@ -106,7 +107,6 @@ where
 }
 
 fn read_file_contents(path: &Path, max_size: u64) -> Result<FileContents, FileLoadError> {
-    // let mut contents = Vec::new();
     let file = File::open(path)?;
     let file_size = file.metadata()?.len();
     if file_size > max_size {
@@ -122,34 +122,39 @@ const CLASSIFY_TOTAL_SAMPLE_BYTES: u64 = CLASSIFY_SLICE_COUNT * CLASSIFY_SLICE_S
 
 // TODO: Move constants out so they can be shared with tests
 // TODO: Try and classify files as utf-16
+// TODO: Consider passing in buffer so that it can be reused when discarding a binary file / copied for output to avoid initializing read-buffers
 fn classify_file(
     mut file: impl Read + Seek,
     total_len: u64,
 ) -> Result<FileContents, FileLoadError> {
-    let (classification, has_bom, bytes) = if CLASSIFY_TOTAL_SAMPLE_BYTES >= total_len {
-        // File is big, but smaller than the max we would read as spaced samples so classify as one slice
-        let mut bytes = Vec::new();
+    // TODO: Configure this threshold
+    let (classification, has_bom, bytes) = if total_len <= (1024 * 1024) {
+        // File is small enough we're happy to read all of it
+        let mut bytes = Vec::with_capacity(total_len as usize);
         file.read_to_end(&mut bytes)?;
-        if slice_starts_with_bom(&bytes) {
-            (classify_slice(&bytes[3..]), true, Some(Vec::from(&bytes[3..])))
-        } else {
-            (classify_slice(&bytes), false, Some(bytes))
-        }
-    } else if total_len <= (1024 * 1024) {
-        // File is small
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)?;  
         let has_bom = slice_starts_with_bom(&bytes);
-        let chunk_size = (bytes.len() as u64) / CLASSIFY_SLICE_COUNT;
-        let classification = bytes.chunks_exact(chunk_size as usize).enumerate().map(|(index, chunk)| {
-            let start : usize = if index == 0 && has_bom  { 3 } else { 0 };
-            let end : usize = (CLASSIFY_SLICE_SIZE - start) as usize;
-            classify_slice(&chunk[start..end])
-        }).fold(Classification::default(), Classification::combine);
-        let bytes = if has_bom { Vec::from(&bytes[3..])} else { bytes };
+        let classification = if total_len <= CLASSIFY_TOTAL_SAMPLE_BYTES {
+            classify_slice(if has_bom { &bytes[3..] } else { &bytes })
+        } else {
+            let chunk_size = (bytes.len() as u64) / CLASSIFY_SLICE_COUNT;
+            bytes
+                .chunks_exact(chunk_size as usize)
+                .enumerate()
+                .map(|(index, chunk)| {
+                    let start: usize = if index == 0 && has_bom { 3 } else { 0 };
+                    let end: usize = (CLASSIFY_SLICE_SIZE - start) as usize;
+                    classify_slice(&chunk[start..end])
+                })
+                .fold(Classification::default(), Classification::combine)
+        };
+        let bytes = if has_bom {
+            Vec::from(&bytes[3..])
+        } else {
+            bytes
+        };
         (classification, has_bom, Some(bytes))
     } else {
-        // File is big enough that we want to seek around to take samples rather than read it all
+        // File is big enough that we want to seek around to take samples rather than read it all into a buffer
         let jump_size = total_len / CLASSIFY_SLICE_COUNT;
         assert!(jump_size > CLASSIFY_SLICE_SIZE as u64);
         assert!(jump_size * CLASSIFY_SLICE_COUNT < total_len);
@@ -175,6 +180,7 @@ fn classify_file(
         classification.other_count + classification.utf8_count + classification.ascii_count;
     let other_ratio = classification.other_count as f64 / total_classified as f64;
 
+    // TODO: Configure this
     if other_ratio > 0.1 {
         return Ok(FileContents::Binary(total_len as u64));
     }
