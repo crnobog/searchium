@@ -233,7 +233,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                     highlights: element.highlights,
                 };
                 const item = new vscode.TreeItem(label);
-                item.description = `line ${element.lineNumber}`;
+                item.description = `line ${element.lineNumber + 1}`; // convert to 1-indexed for human label
                 const showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection: element.range };
                 item.command = {
                     command: "vscode.open",

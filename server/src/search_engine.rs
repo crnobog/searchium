@@ -231,7 +231,8 @@ fn find_line_span(line_offsets: &[usize], contents_len: usize, offset: usize) ->
         Err(insert_index) => insert_index - 1,
     };
 
-    let line_number = line_start_index + 1;
+    // Returned line number is 0-indexed
+    let line_number = line_start_index;
     let offset = line_offsets[line_start_index];
     let length = *line_offsets
         .get(line_start_index + 1)
@@ -420,9 +421,9 @@ mod tests {
             LineSpan {
                 offset: 12,
                 length: 8,
-                line_number: 2
+                line_number: 1
             },
-            "Line 2 span incorrect"
+            "Line 1 span incorrect"
         );
         // First line
         assert_eq!(
@@ -430,9 +431,9 @@ mod tests {
             LineSpan {
                 offset: 0,
                 length: 12,
-                line_number: 1
+                line_number: 0
             },
-            "Line 1 span incorrect"
+            "Line 0 span incorrect"
         );
         // Last line
         assert_eq!(
@@ -440,7 +441,7 @@ mod tests {
             LineSpan {
                 offset: 28,
                 length: 12,
-                line_number: 4
+                line_number: 3
             },
             "Last line span incorrect"
         );

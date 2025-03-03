@@ -42,7 +42,7 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] regex search
 - [x] search results ordering
 - [x] wildcard search 
-- [ ] Fix off by one error in navigating to search results - something to do with range/column? 
+- [x] Fix off by one error in navigating to search results - something to do with range/column? 
 - [ ] Default search settings are case insensitive/not whole word?
 - [ ] Closing/re-opening workspaces
 - [ ] Command to re-run indexing
