@@ -1,6 +1,6 @@
 use crate::file_contents::FileContents;
 use crate::gen::searchium::{FileExtract, Span};
-use crate::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types?
+use crate::gen::searchium::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types?
 
 use core::fmt;
 use grep::matcher::Matcher;

@@ -7,8 +7,6 @@ mod index;
 mod search_engine;
 mod service;
 
-use gen::searchium::*;
-
 use std::fs::File;
 use std::sync::Arc;
 use tonic::transport::server::TcpIncoming;
@@ -52,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let service = service::new();
     let server = tonic::transport::Server::builder()
-        .add_service(searchium_service_server::SearchiumServiceServer::new(
+        .add_service(gen::searchium::searchium_service_server::SearchiumServiceServer::new(
             service,
         ))
         .serve_with_incoming(tinc);
