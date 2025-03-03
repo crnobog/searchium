@@ -60,7 +60,8 @@ impl IndexInterface {
         request: FileContentsSearchRequest,
     ) -> CommandResult<FileContentsSearchResponse> {
         let token = CancellationToken::new();
-        self.do_oneshot(|s| s.search_file_contents(request, token)).await
+        self.do_oneshot(|s| s.search_file_contents(request, token))
+            .await
     }
     pub async fn get_file_extracts(
         &self,
@@ -82,7 +83,7 @@ impl IndexInterface {
         let (tx, rx) = oneshot::channel();
         let wrapper = |s: &mut State| {
             let value = f(s);
-            if tx.send(value).is_err() { 
+            if tx.send(value).is_err() {
                 panic!("Oneshot receiver unexpectedly dropped in do_oneshot");
             }
         };

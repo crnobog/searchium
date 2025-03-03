@@ -15,7 +15,6 @@ use tonic::transport::server::TcpIncoming;
 use tracing::{event, Level};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
-
 fn setup_trace() {
     let fmt = tracing_subscriber::fmt::layer()
         .compact()
