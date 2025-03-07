@@ -172,10 +172,18 @@ function convertDirectoryResult(
     }
 }
 
-function convertFileExtracts(parent: FileResult, extract: searchium_pb.FileExtract, info: searchium_pb.FilePositionSpan): ExtractResult {
+function convertFileExtracts(
+    parent: FileResult,
+    // Full extract text (e.g. entire line) returned from search engine
+    extract: searchium_pb.FileExtract,
+    // Info about the match wtihin the file which we should highlight
+    info: searchium_pb.FilePositionSpan): ExtractResult {
     const text = extract.text.trimStart();
+    // How much whitespace was trimmed from the start of the extract so we can adjust the highlight
     const trimmed = extract.text.length - text.length;
+    // Start index within the extract text of the highlight
     const start = info.position - extract.offset;
+    // End index within the extract text of the highlight
     const end = start + info.length;
     const range =
         new vscode.Range(extract.lineNumber, extract.columnNumber, extract.lineNumber, extract.columnNumber + end - start);

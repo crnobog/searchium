@@ -43,8 +43,11 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] search results ordering
 - [x] wildcard search 
 - [x] Fix off by one error in navigating to search results - something to do with range/column? 
-- [ ] Default search settings are case insensitive/not whole word?
+- [x] Default search settings are case insensitive/not whole word?
 - [ ] Closing/re-opening workspaces
+- [ ] highlighting search results in tree view seems broken
+    - [ ] Add tests for getting file extracts to search_engine.rs
+    - [ ] Rename result/extract proto message names for clarity 
 - [ ] Command to re-run indexing
 - [ ] filesystem watching / re-indexing 
 - [ ] file path filtering
@@ -54,7 +57,6 @@ https://en.wikipedia.org/wiki/FM-index
     make indexing progress marker cancellable and connect that to pausing
 - [ ] configure max extract len
 - [ ] token suggestion
-- [ ] highlighting search results in tree view seems broken
 - [ ] add options to group search results by folder hierarchy? (configurable depth)
 - [ ] add option to group search results by file type
 - [ ] test configuring search parameters in workspace settings
