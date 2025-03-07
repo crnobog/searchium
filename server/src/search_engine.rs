@@ -1,6 +1,8 @@
 use crate::file_contents::FileContents;
-use crate::gen::searchium::{FileExtract, Span};
-use crate::gen::searchium::{FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult}; // TODO: remove and use internal types?
+use crate::gen::searchium::{
+    FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult,
+};
+use crate::gen::searchium::{FileExtract, Span}; // TODO: remove and use internal types?
 
 use core::fmt;
 use grep::matcher::Matcher;
@@ -69,7 +71,15 @@ pub fn get_file_extracts(
             let span_start = span.offset_bytes as usize;
             let span_end = (span.offset_bytes + span.length_bytes) as usize;
             let line_span = find_line_span(&line_offsets, contents_len, span_start);
-            let line_end = line_span.offset + line_span.length;
+            let line_slice = contents
+                .get_slice(line_span.offset, line_span.offset + line_span.length)
+                .unwrap();
+            // TODO: Handle utf16
+            let line_end = if line_slice.ends_with(&[b'\r', b'\n']) {
+                line_span.offset + line_span.length - 2
+            } else {
+                line_span.offset + line_span.length - 1
+            };
 
             let extract_start = span_start
                 .min((span_end + 5).saturating_sub(max_extract_len))
@@ -79,9 +89,9 @@ pub fn get_file_extracts(
             // TODO: respect character boundaries in utf8/16
             let text = contents.get_text(extract_start, extract_end);
             let offset = extract_start;
-            let length = extract_end;
+            let length = extract_end - extract_start;
             let line_number = line_span.line_number;
-            let column_number = extract_start - line_span.offset + 1;
+            let column_number = extract_start - line_span.offset;
             FileExtract {
                 text,
                 offset: offset as u32,
@@ -368,6 +378,16 @@ mod tests {
     use tracing_subscriber::{prelude::*, EnvFilter};
 
     use super::*;
+    use crate::gen::searchium::Span;
+
+    impl Span {
+        fn new(offset_bytes: u32, length_bytes: u32) -> Self {
+            Span {
+                offset_bytes,
+                length_bytes,
+            }
+        }
+    }
 
     lazy_static! {
         static ref init_tracing: () = do_init_tracing();
@@ -444,6 +464,60 @@ mod tests {
                 line_number: 3
             },
             "Last line span incorrect"
+        );
+    }
+
+    #[test]
+    fn test_get_extracts() {
+        let lines = [
+            "Lorem ipsum dolor sit amet, consectetur",
+            "adipiscing elit, sed do eiusmod tempor",
+            "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,",
+            "quis nostrud exercitation",
+            "ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia",
+            "deserunt mollit anim id est laborum.",
+        ];
+        let string = lines.join("\n");
+        let vec = string.as_bytes().to_vec();
+        let file_contents = FileContents::Ascii(vec.clone());
+        let spans = vec![
+            Span::new(12, 5),                                                     // dolor
+            Span::new(lines[0].len() as u32 + 1 + 11, 4),                         // elit
+            Span::new(lines[0].len() as u32 + lines[1].len() as u32 + 2 + 56, 5), // minim
+        ];
+        let extracts = get_file_extracts(&file_contents, &spans, 40);
+        assert_eq!(extracts.len(), spans.len());
+        assert_eq!(
+            extracts[0],
+            FileExtract {
+                text: lines[0].to_owned(),
+                offset: 0,
+                length: lines[0].len() as u32,
+                line_number: 0,
+                column_number: 0
+            }
+        );
+        assert_eq!(
+            extracts[1],
+            FileExtract {
+                text: lines[1].to_owned(),
+                offset: lines[0].len() as u32 + 1,
+                length: lines[1].len() as u32,
+                line_number: 1,
+                column_number: 0
+            }
+        );
+        // Line too long for max extract length
+        assert!(extracts[2].length <= 40);
+        let extract_pos = lines[2].find(&extracts[2].text);
+        assert!(extract_pos.is_some());
+        assert_eq!(extracts[2].line_number, 2);
+        assert_eq!(extracts[2].column_number, extract_pos.unwrap_or(0) as u32);
+        assert_eq!(
+            extracts[2].offset,
+            (lines[0].len() + lines[1].len() + 2 + extract_pos.unwrap_or(0)) as u32
         );
     }
 

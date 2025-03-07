@@ -16,6 +16,12 @@ pub enum FileContents {
     Binary(u64), // TODO: remove?
 }
 
+#[derive(Error, Debug)]
+pub enum FileContentsError {
+    #[error("Invalid operation on binary file")]
+    Binary,
+}
+
 impl FileContents {
     pub fn file_size(&self) -> u64 {
         match self {
@@ -29,9 +35,16 @@ impl FileContents {
             FileContents::Ascii(vec) | FileContents::Utf8(vec) => {
                 String::from_utf8_lossy(&vec[start..end]).to_string()
             }
-            _ => {
-                unimplemented!("TODO")
+            FileContents::Utf16(_) => unimplemented!("TODO: parse utf16"),
+            FileContents::Binary(_) => unimplemented!("TODO: Throw error"),
+        }
+    }
+    pub fn get_slice(&self, start: usize, end: usize) -> Result<&[u8], FileContentsError> {
+        match self {
+            FileContents::Ascii(vec) | FileContents::Utf8(vec) | FileContents::Utf16(vec) => {
+                Ok(&vec[start..end])
             }
+            _ => Err(FileContentsError::Binary),
         }
     }
 }
