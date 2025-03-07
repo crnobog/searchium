@@ -1,5 +1,5 @@
 import { ErrorResponse } from "./ipc";
-import * as searchium_pb from './gen/searchium';
+import * as searchium_legacy from './gen/searchium';
 
 export interface Event {
     requestId: bigint;
@@ -42,7 +42,7 @@ export interface ProgressReportEvent extends Event {
 
 export interface IndexingServerStateChangedEvent extends Event {
     eventType: 'indexingServerStateChanged';
-    serverStatus: searchium_pb.IndexingServerStatus;
+    serverStatus: searchium_legacy.IndexingServerStatus;
     lastIndexUpdatedUtc: Date;
 }
 

@@ -4,7 +4,7 @@ import * as ipc from './ipc';
 import * as ipcEvents from './ipcEvents';
 import * as ipcResponses from './ipcResponses';
 import * as ipcRequests from './ipcRequests';
-import * as searchium_pb from './gen/searchium';
+import * as searchium_legacy from './gen/searchium';
 import * as vscode from "vscode";
 import { getLogger } from "./logger";
 import { Readable } from "stream";
@@ -15,7 +15,7 @@ export function isChannel(obj: object): obj is IpcChannel {
 }
 
 interface IpcChannelEvents {
-    'raw': (raw: searchium_pb.IpcMessage) => void;
+    'raw': (raw: searchium_legacy.IpcMessage) => void;
     'response': (r: ipcResponses.Response) => void;
     'event': (e: ipcEvents.TypedEvent) => void;
     // 'fatalError' : (e : Error) => void;
@@ -123,7 +123,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         for (; ;) {
             const messageBytes = await this.data.readLengthPrefixedMessage();
             try {
-                const rawMessage = searchium_pb.IpcMessage.fromBinary(messageBytes);
+                const rawMessage = searchium_legacy.IpcMessage.fromBinary(messageBytes);
                 this.emit('raw', rawMessage);
                 this.dispatchMessage(rawMessage);
             }
@@ -144,14 +144,14 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
     public async sendRequest(payload: ipcRequests.Request, sequential?: boolean): Promise<ipcResponses.Response | string>;
     public async sendRequest(payload: ipcRequests.Request, sequential?: boolean): Promise<ipcResponses.Response | string> {
         return new Promise((resolve: RequestSuccess, reject: RequestFailure) => {
-            const typedMessage: searchium_pb.TypedMessage = {
+            const typedMessage: searchium_legacy.TypedMessage = {
                 className: "Unknown",
                 subtype: {
                     oneofKind: "typedRequest",
                     typedRequest: payload.toProto(),
                 }
             };
-            const raw: searchium_pb.IpcMessage = {
+            const raw: searchium_legacy.IpcMessage = {
                 protocol: "typed-message",
                 requestId: this.nextRequestId(),
                 data: {
@@ -165,7 +165,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     }
                 }
             };
-            const messageBytes = searchium_pb.IpcMessage.toBinary(raw);
+            const messageBytes = searchium_legacy.IpcMessage.toBinary(raw);
             let numBytes = messageBytes.length;
             const messagePrefix = [];
             do {
@@ -193,7 +193,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         return this.sequenceNum;
     }
 
-    private dispatchMessage(msg: searchium_pb.IpcMessage): void {
+    private dispatchMessage(msg: searchium_legacy.IpcMessage): void {
         switch (msg.requestResponse.oneofKind) {
             case undefined: throw new Error("Received unknown ipc message type");
             case "request": throw new Error("Received unexpected ipc request");
@@ -207,7 +207,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         }
     }
 
-    private dispatchEvent(msg: searchium_pb.IpcMessage): void {
+    private dispatchEvent(msg: searchium_legacy.IpcMessage): void {
         // TODO: Full translation for events 
         switch (msg.data?.subtype.oneofKind) {
             case undefined: throw new Error("Missing payload in event");
@@ -230,7 +230,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         }
     }
 
-    private dispatchResponse(msg: searchium_pb.IpcMessage): void {
+    private dispatchResponse(msg: searchium_legacy.IpcMessage): void {
         if (!msg.data) {
             throw new Error("Missing payload for response");
         }
@@ -283,7 +283,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         }
     }
 
-    private translateTypedEvent(requestId: bigint, data: searchium_pb.TypedEvent): ipcEvents.TypedEvent {
+    private translateTypedEvent(requestId: bigint, data: searchium_legacy.TypedEvent): ipcEvents.TypedEvent {
         switch (data.subtype.oneofKind) {
             case undefined: throw new Error("Undefined event type");
             case 'indexingServerStateChangedEvent':
@@ -301,7 +301,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                 };
             case 'pairedTypedEvent':
                 {
-                    const paired: searchium_pb.PairedTypedEvent = data.subtype.pairedTypedEvent;
+                    const paired: searchium_legacy.PairedTypedEvent = data.subtype.pairedTypedEvent;
                     switch (paired.subtype.oneofKind) {
                         case 'fileSystemScanStarted': return {
                             eventType: "fileSystemScanStarted",
@@ -342,7 +342,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         }
         throw new Error("Undefined event type");
     }
-    private translateTypedResponse(requestId: bigint, data: searchium_pb.TypedResponse): ipcResponses.Response {
+    private translateTypedResponse(requestId: bigint, data: searchium_legacy.TypedResponse): ipcResponses.Response {
         switch (data.subtype.oneofKind) {
             case undefined: throw new Error("Missing response type in payload");
             case "doneResponse": {
@@ -356,7 +356,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                 return {
                     responseType: "searchCode",
                     requestId,
-                    searchResults: data.subtype.searchCodeResponse.searchResults as searchium_pb.FileSystemEntry, // todo: handle empty
+                    searchResults: data.subtype.searchCodeResponse.searchResults as searchium_legacy.FileSystemEntry, // todo: handle empty
                     hitCount: data.subtype.searchCodeResponse.hitCount,
                     searchedFileCount: data.subtype.searchCodeResponse.searchedFileCount,
                     totalFileCount: data.subtype.searchCodeResponse.totalFileCount,
@@ -389,7 +389,7 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
                     responseType: "searchFilePaths",
                     hitCount: data.subtype.searchFilePathsResponse.hitCount,
                     totalCount: data.subtype.searchFilePathsResponse.totalCount,
-                    searchResult: data.subtype.searchFilePathsResponse.searchResult as searchium_pb.FileSystemEntry, // todo: handle empty
+                    searchResult: data.subtype.searchFilePathsResponse.searchResult as searchium_legacy.FileSystemEntry, // todo: handle empty
                 };
             }
             case 'getDatabaseDetailsResponse': {
@@ -403,9 +403,9 @@ export class IpcChannel extends TypedEmitter<IpcChannelEvents> implements vscode
         throw new Error("TODO");
     }
 
-    private translateErrorResponse(e: searchium_pb.ErrorResponse): ipc.ErrorResponse;
+    private translateErrorResponse(e: searchium_legacy.ErrorResponse): ipc.ErrorResponse;
     private translateErrorResponse(e: undefined): undefined;
-    private translateErrorResponse(e: searchium_pb.ErrorResponse | undefined): ipc.ErrorResponse | undefined {
+    private translateErrorResponse(e: searchium_legacy.ErrorResponse | undefined): ipc.ErrorResponse | undefined {
         if (!e) { return undefined; }
         return {
             dataType: 'errorResponse',

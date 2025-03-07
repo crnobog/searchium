@@ -5,7 +5,7 @@ import * as ipcRequests from './ipcRequests';
 import * as ipcResponses from './ipcResponses';
 import * as FromWebview from './shared/fromDetailsWebview';
 import * as ToWebview from './shared/toDetailsWebview';
-import * as searchium_pb from "./gen/searchium";
+import * as searchium_legacy from "./gen/searchium";
 import { IndexClient } from 'index/indexInterface';
 import { toMb } from './utils';
 
@@ -48,14 +48,14 @@ export class DetailsPanelProvider {
             return {
                 type: "details",
                 roots: response.projects.map((p): ToWebview.DatabaseDetailsRoot => {
-                    const mapByExtension = (details: searchium_pb.FileByExtensionDetails): ToWebview.FilesByExtensionDetails => {
+                    const mapByExtension = (details: searchium_legacy.FileByExtensionDetails): ToWebview.FilesByExtensionDetails => {
                         return {
                             extension: details.fileExtension,
                             count: details.fileCount.toLocaleString(),
                             mb: toMb(details.fileByteLength)
                         };
                     };
-                    const mapLarge = (details: searchium_pb.LargeFileDetails): ToWebview.LargeFileDetails => {
+                    const mapLarge = (details: searchium_legacy.LargeFileDetails): ToWebview.LargeFileDetails => {
                         return {
                             path: details.relativePath,
                             sizeMb: toMb(details.byteLength)

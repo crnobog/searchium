@@ -1,4 +1,4 @@
-import * as searchium_pb from './gen/searchium';
+import * as searchium_legacy from './gen/searchium';
 
 export interface ResponseBase {
     requestId: bigint;
@@ -11,7 +11,7 @@ export interface DoneResponse extends ResponseBase {
 
 export interface SearchCodeResponse extends ResponseBase {
     responseType: "searchCode";
-    searchResults: searchium_pb.FileSystemEntry; // should always be a DirectoryEntry
+    searchResults: searchium_legacy.FileSystemEntry; // should always be a DirectoryEntry
     hitCount: bigint;
     searchedFileCount: bigint;
     totalFileCount: bigint;
@@ -20,7 +20,7 @@ export interface SearchCodeResponse extends ResponseBase {
 export interface GetFileExtractsResponse extends ResponseBase {
     responseType: "getFileExtracts";
     fileName: string;
-    fileExtracts: searchium_pb.FileExtract[];
+    fileExtracts: searchium_legacy.FileExtract[];
 }
 
 export interface GetDatabaseStatisticsResponse extends ResponseBase {
@@ -31,19 +31,19 @@ export interface GetDatabaseStatisticsResponse extends ResponseBase {
     serverNativeMemoryUsage: bigint;
     serverGcMemoryUsage: bigint;
     lastIndexUpdatedUtc: Date;
-    serverStatus: searchium_pb.IndexingServerStatus;
+    serverStatus: searchium_legacy.IndexingServerStatus;
 }
 
 export interface SearchFilePathsResponse extends ResponseBase {
     responseType: "searchFilePaths";
-    searchResult: searchium_pb.FileSystemEntry;
+    searchResult: searchium_legacy.FileSystemEntry;
     hitCount: bigint;
     totalCount: bigint;
 }
 
 export interface GetDatabaseDetailsResponse extends ResponseBase {
     responseType: "getDatabaseDetails";
-    projects: searchium_pb.ProjectDetails[]
+    projects: searchium_legacy.ProjectDetails[]
 }
 
 export type Response = DoneResponse

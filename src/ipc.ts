@@ -1,4 +1,4 @@
-import * as searchium_pb from './gen/searchium';
+import * as searchium_legacy from './gen/searchium';
 
 interface MessageBase {
     requestId: bigint;
@@ -36,5 +36,5 @@ export abstract class TypedRequest implements TypedMessage {
         this.dataType = "typedMessage";
         this.className = "Unknown";
     }
-    public abstract toProto(): searchium_pb.TypedRequest;
+    public abstract toProto(): searchium_legacy.TypedRequest;
 }

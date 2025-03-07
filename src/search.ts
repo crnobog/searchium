@@ -3,7 +3,7 @@ import { IpcChannel, isChannel } from "./ipcChannel";
 import * as ipcRequests from "./ipcRequests";
 import * as ipcResponses from "./ipcResponses";
 import { getLogger } from "./logger";
-import * as searchium_pb from "./gen/searchium";
+import * as searchium_legacy from "./gen/searchium";
 import * as path from "path";
 import './extensionsMethods';
 import { SearchHistory } from "./history";
@@ -56,9 +56,9 @@ type ExtractResult = {
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
 
 async function getFileExtractsFromChannel(channel: IpcChannel, file: FileResult): Promise<ExtractResult[]> {
-    const positions: searchium_pb.FilePositionSpan[] = file.positions.map(p => { return { position: p.offset, length: p.length }; });
+    const positions: searchium_legacy.FilePositionSpan[] = file.positions.map(p => { return { position: p.offset, length: p.length }; });
     const extracts = (await channel.sendRequest(new ipcRequests.GetFileExtractsRequest(file.path, positions, 100))
-        .then((r: ipcResponses.GetFileExtractsResponse): searchium_pb.FileExtract[] =>
+        .then((r: ipcResponses.GetFileExtractsResponse): searchium_legacy.FileExtract[] =>
             r.fileExtracts))
         .map((e, i) =>
             convertFileExtracts(file, e, positions[i]));
@@ -109,7 +109,7 @@ async function getFileExtractsFromClient(client: IndexClient, file: FileResult):
 function convertFileResult(
     getFileExtracts: (file: FileResult) => Promise<ExtractResult[]>,
     parent: DirectoryResult,
-    entry: searchium_pb.FileSystemEntry,
+    entry: searchium_legacy.FileSystemEntry,
     parentPath?: string): FileResult {
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
     switch (entry.subtype.oneofKind) {
@@ -139,7 +139,7 @@ function convertFileResult(
 
 function convertDirectoryResult(
     getFileExtracts: (file: FileResult) => Promise<ExtractResult[]>,
-    entry: searchium_pb.FileSystemEntry,
+    entry: searchium_legacy.FileSystemEntry,
     parentPath?: string
 ): DirectoryResult {
     const thisPath = parentPath ? path.join(parentPath, entry.name) : entry.name;
@@ -175,9 +175,9 @@ function convertDirectoryResult(
 function convertFileExtracts(
     parent: FileResult,
     // Full extract text (e.g. entire line) returned from search engine
-    extract: searchium_pb.FileExtract,
+    extract: searchium_legacy.FileExtract,
     // Info about the match wtihin the file which we should highlight
-    info: searchium_pb.FilePositionSpan): ExtractResult {
+    info: searchium_legacy.FilePositionSpan): ExtractResult {
     const text = extract.text.trimStart();
     // How much whitespace was trimmed from the start of the extract so we can adjust the highlight
     const trimmed = extract.text.length - text.length;

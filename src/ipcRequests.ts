@@ -1,8 +1,8 @@
-import * as searchium_pb from './gen/searchium';
+import * as searchium_legacy from './gen/searchium';
 
 export class RegisterFileRequest {
     constructor(public fileName: string) { }
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: "registerFileRequest",
@@ -15,7 +15,7 @@ export class RegisterFileRequest {
 export class UnregisterFileRequest {
     constructor(public fileName: string) { }
 
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: "unregisterFileRequest",
@@ -27,10 +27,10 @@ export class UnregisterFileRequest {
 
 export class SearchCodeRequest {
     constructor(
-        public searchParams: searchium_pb.SearchParams) {
+        public searchParams: searchium_legacy.SearchParams) {
     }
 
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: "searchCodeRequest",
@@ -43,11 +43,11 @@ export class SearchCodeRequest {
 export class GetFileExtractsRequest {
     constructor(
         public fileName: string,
-        public positions: searchium_pb.FilePositionSpan[],
+        public positions: searchium_legacy.FilePositionSpan[],
         public maxExtractLength: number) {
     }
 
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: "getFileExtractsRequest",
@@ -62,7 +62,7 @@ export class GetFileExtractsRequest {
 }
 
 export class GetDatabaseStatisticsRequest {
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: 'getDatabaseStatisticsRequest',
@@ -76,10 +76,10 @@ export class GetDatabaseStatisticsRequest {
 
 export class SearchFilePathsRequest {
     constructor(
-        private searchParams: searchium_pb.SearchParams
+        private searchParams: searchium_legacy.SearchParams
     ) { }
 
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: 'searchFilePathsRequest',
@@ -98,7 +98,7 @@ export class GetDatabaseDetailsRequest {
     ) {
     }
 
-    public toProto(): searchium_pb.TypedRequest {
+    public toProto(): searchium_legacy.TypedRequest {
         return {
             subtype: {
                 oneofKind: 'getDatabaseDetailsRequest',

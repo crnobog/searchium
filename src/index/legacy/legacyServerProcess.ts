@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as child_process from 'child_process';
 import * as path from 'path';
 import { AddressInfo, createServer, Server, Socket } from 'net';
-import * as searchium_pb from "gen/searchium";
+import * as searchium_legacy from "gen/searchium";
 import { IpcChannel } from "ipcChannel";
 import { getLogger } from "logger";
 
@@ -57,7 +57,7 @@ class ServerProxy implements vscode.Disposable {
         const channel = new IpcChannel(c);
         context.subscriptions.push(channel);
         const handshake = new Promise<void>((resolve, reject) => {
-            channel.once('raw', (r: searchium_pb.IpcMessage) => {
+            channel.once('raw', (r: searchium_legacy.IpcMessage) => {
                 if (!r.data) { return reject("Empty initial response"); }
                 if (r.data.subtype.oneofKind !== 'ipcStringData') {
                     return reject(new Error("Expected initial response to contain string data"));
