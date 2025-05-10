@@ -20,6 +20,15 @@ const extensionConfig: esbuild.BuildOptions = {
     platform: 'node',
 };
 
+const testConfig: esbuild.BuildOptions = { 
+    bundle : false,
+    minify : false,
+    sourcemap : true,
+    format: "cjs",
+    entryPoints : ["./src/test/**/*.test.ts"],
+    outdir : "out",
+    outbase : "src",
+};
 
 const webviewConfig: esbuild.BuildOptions = {
     ...baseConfig,
@@ -52,21 +61,27 @@ const webviewConfig: esbuild.BuildOptions = {
         if (args.includes("--watch")) {
             // Build and watch extension and webview code
             console.log("[watch] build started");
-            let ctx1 = await esbuild.context({
+            let ctx1 = esbuild.context({
                 ...extensionConfig,
             });
-            let ctx2 = await esbuild.context({
+            let ctx2 = esbuild.context({
                 ...webviewConfig,
             });
-            await Promise.all(
-                [ctx1.watch(),
-                ctx2.watch()]
-            );
+            let ctx3 = esbuild.context({
+                ...testConfig,
+            });
+            let watchers = await Promise.all([ctx1, ctx2, ctx3]);
+            await Promise.all(watchers.map(x => x.watch()));
             console.log("[watch] build finished");
         } else {
             // Build extension and webview code
-            await esbuild.build(extensionConfig);
-            await esbuild.build(webviewConfig);
+            let promises = new Array();
+            promises.push(esbuild.build(extensionConfig));
+            if (!prod) {
+                promises.push(esbuild.build(testConfig));
+            }
+            promises.push(esbuild.build(webviewConfig));
+            await Promise.all(promises);
             console.log("build complete");
         }
         if (prod) { 
