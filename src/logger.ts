@@ -8,90 +8,74 @@ export function getLogger(): Logger {
     return _logger;
 }
 
-type LoggingLevel = "Debug" | "Information" | "Warning" | "Error" | "None";
-
 export class Logger {
-    outputChannel: vscode.OutputChannel;
-    debug = false;
-    information = false;
-    warning = false;
-    error = false;
+    outputChannel: vscode.LogOutputChannel;
 
     constructor() {
-        const config = vscode.workspace.getConfiguration("searchium");
-        const level = config.get<LoggingLevel>("loggingLevel", "Warning");
-        this.outputChannel = vscode.window.createOutputChannel('searchium');
-        this.setLogLevel(level);
-
-        vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
-            if (event.affectsConfiguration('seachium')) {
-                const level = config.get<LoggingLevel>("loggingLevel", "Warning");
-                this.setLogLevel(level);
-            }
-        });
+        this.outputChannel = vscode.window.createOutputChannel('searchium', { log: true });
     }
 
     public logDebug(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.debug, strings, ...insertions);
+        try {
+            const s = this.logInternal(strings, ...insertions);
+            this.outputChannel.debug(s);
+            console.log(s);
+        }
+        catch { /* empty */ }
+    }
+    public logTrace(strings: TemplateStringsArray, ...insertions: any[]): void {
+        try {
+            const s = this.logInternal(strings, ...insertions);
+            this.outputChannel.trace(s);
+            console.log(s);
+        }
+        catch { /* empty */ }
     }
     public logInformation(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.information, strings, ...insertions);
+        try {
+            const s = this.logInternal(strings, ...insertions);
+            this.outputChannel.info(s);
+            console.log(s);
+        }
+        catch { /* empty */ }
     }
     public logWarning(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.warning, strings, ...insertions);
+        try {
+            const s = this.logInternal(strings, ...insertions);
+            this.outputChannel.warn(s);
+            console.log(s);
+        }
+        catch { /* empty */ }
     }
     public logError(strings: TemplateStringsArray, ...insertions: any[]): void {
-        this.logInternal(this.error, strings, ...insertions);
-    }
-
-    private logInternal(level: boolean, strings: TemplateStringsArray, ...insertions: any[]): void {
-        if (!level) { return; }
         try {
-            let s = "";
-            for (let i = 0; i < insertions.length; ++i) {
-                s += strings[i];
-                try {
-                    const insertion = insertions[i];
-                    if (insertion instanceof Object && insertion.toString === Object.prototype.toString) {
-                        s += JSON.stringify(insertion, (_key, value) => {
-                            if (typeof value === 'bigint') { return value.toString(); }
-                            else { return value; }
-                        });
-                    }
-                    else {
-                        s += `${insertion}`;
-                    }
-                } catch {
-                    s += "LOG_ERROR";
-                }
-            }
-            s += strings[strings.length - 1];
-            this.outputChannel.appendLine(s);
+            const s = this.logInternal(strings, ...insertions);
+            this.outputChannel.error(s);
             console.log(s);
-        } catch (error) {
-            return;
         }
+        catch { /* empty */ }
     }
 
-    private setLogLevel(level: LoggingLevel): void {
-        this.debug = this.information = this.warning = this.error = false;
-        switch (level) {
-            case 'Debug':
-                this.debug = true;
-            // fallthrough
-            case 'Information':
-                this.information = true;
-            // fallthrough
-            case 'Warning':
-                this.warning = true;
-            // fallthrough
-            case 'Error':
-                this.error = true;
-            // fallthrough
-            case 'None':
-                break;
+    private logInternal(strings: TemplateStringsArray, ...insertions: any[]): string {
+        let s = "";
+        for (let i = 0; i < insertions.length; ++i) {
+            s += strings[i];
+            try {
+                const insertion = insertions[i];
+                if (insertion instanceof Object && insertion.toString === Object.prototype.toString) {
+                    s += JSON.stringify(insertion, (_key, value) => {
+                        if (typeof value === 'bigint') { return value.toString(); }
+                        else { return value; }
+                    });
+                }
+                else {
+                    s += `${insertion}`;
+                }
+            } catch {
+                s += "LOG_ERROR";
+            }
         }
-        console.log(`logging level change to ${level}`);
-        this.outputChannel.appendLine(`logging level change to ${level}`);
+        s += strings[strings.length - 1];
+        return s;
     }
 }
