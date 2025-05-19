@@ -19,6 +19,22 @@
 			"preLaunchTask": "Build Extension",
 		},
 		{
+			"name": "Run Extension With Existing Server",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"C:/code/ladybird",
+				"--extensionDevelopmentPath=${workspaceFolder}/extension"
+			],
+			"outFiles": [
+				"${workspaceFolder}/extension/out/**/*.js"
+			],
+			"env": {
+				"SEARCHIUM_DEBUG_HOST" : "[::1]:50050"
+			},
+			"preLaunchTask": "Build Extension",
+		},
+		{
 			"name": "Extension Tests",
 			"type": "extensionHost",
 			"request": "launch",
@@ -65,7 +81,7 @@
 			"name": "Run Extension & Debug Server",
 			"preLaunchTask": "Build Debug Server",
 			"configurations": [
-				"Run Extension",
+				"Run Extension With Existing Server",
 				"Run Debug Server"
 			],
 			"stopAll": true
@@ -74,7 +90,7 @@
 			"name": "Run Extension & Server",
 			"preLaunchTask": "Build Release Server",
 			"configurations": [
-				"Run Extension",
+				"Run Extension With Existing Server",
 				"Run Server"
 			],
 			"stopAll": true

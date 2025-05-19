@@ -93,13 +93,14 @@ class IndexServerClient implements IndexClient {
 }
 
 export async function startServer(context: vscode.ExtensionContext): Promise<[IndexServerProcess, IndexClient]> {
-    let host = vscode.workspace.getConfiguration("searchium").get<string>("debugIndexHost");
+    let host = process.env["SEARCHIUM_DEBUG_HOST"];
     let childProc: child_process.ChildProcessWithoutNullStreams | undefined;
     if (host) {
         getLogger().logInformation`Connecting to existing debug server on ${host}`;
     }
     else {
-        const serverExePath = path.join(context.extensionPath, "bin", "searchium-server.exe");
+        const debugExe = Boolean(process.env["SEARCHIUM_DEBUG"] ?? false);
+        const serverExePath = path.join(context.extensionPath, debugExe ? "bin-debug" : "bin", "searchium-server.exe");
         const proc = child_process.spawn(serverExePath, [], { detached: true });
         if (!proc) {
             throw new Error("Failed to create server process");
@@ -130,7 +131,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
             proc.stderr.on('data', errListener);
             // TODO: More error conditions?
         });
-        getLogger().logInformation`server at ${host}`;
+        getLogger().logInformation`Started server ${serverExePath} and it is listening at ${host}`;
     }
     const transport = new GrpcTransport({
         host,
