@@ -44,10 +44,13 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] wildcard search 
 - [x] Fix off by one error in navigating to search results - something to do with range/column? 
 - [x] Default search settings are case insensitive/not whole word?
-- [ ] Closing/re-opening workspaces
 - [ ] highlighting search results in tree view seems broken
     - [ ] Add tests for getting file extracts to search_engine.rs
     - [ ] Rename result/extract proto message names for clarity 
+- [ ] Option for selecting match or not when navigating
+- [ ] Reorganize protobuf definitions
+- [ ] Closing/re-opening workspaces
+- [ ] Intercept edit events from editor and re-run search? Or use file watcher to update most recent search on open stream?
 - [ ] Command to re-run indexing
 - [ ] filesystem watching / re-indexing 
 - [ ] file path filtering
