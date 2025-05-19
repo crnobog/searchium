@@ -1,9 +1,6 @@
 .vscode/**
 .vscode-test/**
 src/**
-.gitignore
-.yarnrc
-vsc-extension-quickstart.md
 **/tsconfig.json
 **/.eslintrc.json
 **/*.map
@@ -12,7 +9,4 @@ bin-debug/**
 node_modules/**
 *.zip
 *.vsix
-proto/**
 tsconfig.*
-buf.gen.yaml
-TODO.md

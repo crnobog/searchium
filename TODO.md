@@ -44,9 +44,10 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] wildcard search 
 - [x] Fix off by one error in navigating to search results - something to do with range/column? 
 - [x] Default search settings are case insensitive/not whole word?
-- [ ] highlighting search results in tree view seems broken
+- [x] highlighting search results in tree view seems broken
     - [ ] Add tests for getting file extracts to search_engine.rs
     - [ ] Rename result/extract proto message names for clarity 
+- [ ] Server process living past test lifetime - also for extension?
 - [ ] Option for selecting match or not when navigating
 - [ ] Reorganize protobuf definitions
 - [ ] Closing/re-opening workspaces

@@ -84,9 +84,11 @@ const webviewConfig: esbuild.BuildOptions = {
             await Promise.all(promises);
             console.log("build complete");
         }
-        if (prod) { 
-            await fs.copyFile("./target/release/searchium-server.exe", "./bin/searchium-server.exe");
-        }
+        // TODO: make tests/launch use correct server e.g. with environment variable
+        await fs.mkdir("./bin", { recursive : true });
+        await fs.copyFile("../server/target/release/searchium-server.exe", "./bin/searchium-server.exe");
+        await fs.mkdir("./bin-debug", { recursive : true });
+        await fs.copyFile("../server/target/debug/searchium-server.exe", "./bin-debug/searchium-server.exe");
     } catch (err: any) {
         console.error(err.toString());
         console.error(err.stack);

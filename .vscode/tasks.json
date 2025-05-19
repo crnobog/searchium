@@ -4,27 +4,16 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "Build Extension",
 			"type": "npm",
-			"script": "watch",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": "build",
-			"label": "npm: watch",
-			"detail": "tsc -watch -p ./"
-		},
-		{
-			"type": "npm",
+			"path": "extension/",
 			"script": "build",
 			"group": "build",
 			"problemMatcher": [
 				"$tsc",
 				"$eslint-compact"
 			],
-			"label": "npm: build",
-			"detail": "build extension",
+			"detail": "Build extension only",
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
@@ -35,44 +24,47 @@
 			}
 		},
 		{
+			"label": "Lint Extension",
 			"type": "npm",
 			"script": "lint",
+			"path": "${workspaceFolder}/extension/package.json",
 			"problemMatcher": [
 				"$tsc",
 				"$eslint-compact"
-			],
-			"label": "npm: lint"
+			]
 		},
 		{
+			"label": "Generate Protobuf Bindings",
 			"type": "npm",
 			"script": "gen",
-			"problemMatcher": [],
-			"label": "npm: gen",
-			"detail": "buf generate proto"
+			"path": "${workspaceFolder}/extension/package.json",
+			"problemMatcher": []
 		},
 		{
+			"label": "Build Debug Server",
 			"type": "cargo",
 			"command": "build",
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": "build",
-			"label": "Build Debug Server"
+			"args": [ "--manifest-path=${workspaceFolder}/server/Cargo.toml" ]
 		},
 		{
+			"label": "Build Release Server",
 			"type": "cargo",
 			"command": "build",
 			"problemMatcher": [
 				"$rustc"
 			],
 			"args": [
-				"-r"
+				"-r",
+				"--manifest-path=${workspaceFolder}/server/Cargo.toml"
 			],
-			"group": "build",
-			"label": "Build Release Server"
+			"group": "build"
 		},
 		{
-			"label": "Build",
+			"label": "Build Debug",
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -80,8 +72,8 @@
 			"detail": "Build server & extension & lint",
 			"dependsOn": [
 				"Build Debug Server",
-				"npm: build",
-				"npm: lint"
+				"Build Extension",
+				"Lint Extension"
 			]
 		},
 	]

@@ -1,11 +1,10 @@
-out
-dist
-node_modules
+extension/out
+extension/dist
+extension/node_modules
 .vscode-test/
 *.vsix
 *.zip
-bin/
-bin-debug/
+extension/bin
+extension/bin-debug
 server/target
-target
 searchium.log

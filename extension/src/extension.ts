@@ -103,7 +103,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
         getLogger().logInformation`Initializing searchium`;
         const config = vscode.workspace.getConfiguration("searchium");
-        const useLegacyServer = config.get<boolean>("useLegacyServer", true);
+        const useLegacyServer = config.get<boolean>("useLegacyServer", false);
         let searchManager, searchResultsProvider, controlsProvider, detailsPanelProvider;
 
         const history = new SearchHistory(context);
