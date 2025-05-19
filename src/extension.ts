@@ -181,7 +181,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }, 10 * 1000);
         }
         context.subscriptions.push(
-            vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider),
+            vscode.window.registerWebviewViewProvider("searchium-controls", controlsProvider, { webviewOptions: { retainContextWhenHidden: true } }),
 
             vscode.commands.registerCommand("searchium.query", searchManager.onQuery, searchManager),
             vscode.commands.registerCommand('searchium.nextResult', searchManager.navigateToNextResult, searchManager),

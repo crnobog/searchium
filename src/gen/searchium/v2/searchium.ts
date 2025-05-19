@@ -199,14 +199,14 @@ export interface FileContentsSearchRequest {
      */
     matchWholeWord: boolean;
     /**
-     * @generated from protobuf field: bool regex = 6;
+     * @generated from protobuf field: searchium.v2.FileContentsQueryType query_type = 6;
      */
-    regex: boolean;
+    queryType: FileContentsQueryType;
 }
 /**
- * @generated from protobuf message searchium.v2.Span
+ * @generated from protobuf message searchium.v2.FileContentsSpan
  */
-export interface Span {
+export interface FileContentsSpan {
     /**
      * @generated from protobuf field: uint32 offset_bytes = 1;
      */
@@ -217,19 +217,27 @@ export interface Span {
     lengthBytes: number;
 }
 /**
+ * A file path and the location of one or more matches from a search request
+ *
  * @generated from protobuf message searchium.v2.FileContentsSearchHit
  */
 export interface FileContentsSearchHit {
     /**
+     * Path relative to the registered root
+     *
      * @generated from protobuf field: string file_relative_path = 1;
      */
     fileRelativePath: string;
     /**
-     * @generated from protobuf field: repeated searchium.v2.Span spans = 2;
+     * Spans of text that matched the query
+     *
+     * @generated from protobuf field: repeated searchium.v2.FileContentsSpan match_spans = 2;
      */
-    spans: Span[];
+    matchSpans: FileContentsSpan[];
 }
 /**
+ * A set of matches from a certain registered root directory
+ *
  * @generated from protobuf message searchium.v2.FileContentsSearchRootResult
  */
 export interface FileContentsSearchRootResult {
@@ -260,9 +268,9 @@ export interface FileExtractsRequest {
      */
     filePath: string;
     /**
-     * @generated from protobuf field: repeated searchium.v2.Span spans = 2;
+     * @generated from protobuf field: repeated searchium.v2.FileContentsSpan match_spans = 2;
      */
-    spans: Span[];
+    matchSpans: FileContentsSpan[];
     /**
      * @generated from protobuf field: uint32 max_extract_length = 3;
      */
@@ -273,25 +281,30 @@ export interface FileExtractsRequest {
  */
 export interface FileExtract {
     /**
-     * @generated from protobuf field: string text = 1;
+     * Text extracted as context for the match
+     *
+     * @generated from protobuf field: string full_text = 1;
      */
-    text: string;
+    fullText: string;
     /**
-     * @generated from protobuf field: uint32 offset = 2;
+     * Offset in bytes within the file of full_text
+     *
+     * @generated from protobuf field: uint32 extract_offset_bytes = 2;
      */
-    offset: number;
+    extractOffsetBytes: number;
     /**
-     * @generated from protobuf field: uint32 length = 3;
+     * Length in bytes within the file of full_text.
+     * May be different to length of full_text in bytes if file encoding is different.
+     *
+     * @generated from protobuf field: uint32 extract_length_bytes = 3;
      */
-    length: number;
+    extractLengthBytes: number;
     /**
+     * 0-based number of line containing the match
+     *
      * @generated from protobuf field: uint32 line_number = 4;
      */
     lineNumber: number;
-    /**
-     * @generated from protobuf field: uint32 column_number = 5;
-     */
-    columnNumber: number;
 }
 /**
  * @generated from protobuf message searchium.v2.FileExtractsResponse
@@ -447,6 +460,23 @@ export enum GenericError {
      * @generated from protobuf enum value: GENERIC_ERROR_NONE = 0;
      */
     NONE = 0
+}
+/**
+ * @generated from protobuf enum searchium.v2.FileContentsQueryType
+ */
+export enum FileContentsQueryType {
+    /**
+     * @generated from protobuf enum value: PLAIN = 0;
+     */
+    PLAIN = 0,
+    /**
+     * @generated from protobuf enum value: WILDCARD = 1;
+     */
+    WILDCARD = 1,
+    /**
+     * @generated from protobuf enum value: REGEX = 2;
+     */
+    REGEX = 2
 }
 /**
  * @generated from protobuf enum searchium.v2.IndexState
@@ -1112,11 +1142,11 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
             { no: 3, name: "max_results", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 4, name: "match_case", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
             { no: 5, name: "match_whole_word", kind: "scalar", T: 8 /*ScalarType.BOOL*/ },
-            { no: 6, name: "regex", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 6, name: "query_type", kind: "enum", T: () => ["searchium.v2.FileContentsQueryType", FileContentsQueryType] }
         ]);
     }
     create(value?: PartialMessage<FileContentsSearchRequest>): FileContentsSearchRequest {
-        const message = { queryString: "", filePathPattern: "", maxResults: 0, matchCase: false, matchWholeWord: false, regex: false };
+        const message = { queryString: "", filePathPattern: "", maxResults: 0, matchCase: false, matchWholeWord: false, queryType: 0 };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
             reflectionMergePartial<FileContentsSearchRequest>(this, message, value);
@@ -1142,8 +1172,8 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
                 case /* bool match_whole_word */ 5:
                     message.matchWholeWord = reader.bool();
                     break;
-                case /* bool regex */ 6:
-                    message.regex = reader.bool();
+                case /* searchium.v2.FileContentsQueryType query_type */ 6:
+                    message.queryType = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1172,9 +1202,9 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
         /* bool match_whole_word = 5; */
         if (message.matchWholeWord !== false)
             writer.tag(5, WireType.Varint).bool(message.matchWholeWord);
-        /* bool regex = 6; */
-        if (message.regex !== false)
-            writer.tag(6, WireType.Varint).bool(message.regex);
+        /* searchium.v2.FileContentsQueryType query_type = 6; */
+        if (message.queryType !== 0)
+            writer.tag(6, WireType.Varint).int32(message.queryType);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1186,21 +1216,21 @@ class FileContentsSearchRequest$Type extends MessageType<FileContentsSearchReque
  */
 export const FileContentsSearchRequest = new FileContentsSearchRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class Span$Type extends MessageType<Span> {
+class FileContentsSpan$Type extends MessageType<FileContentsSpan> {
     constructor() {
-        super("searchium.v2.Span", [
+        super("searchium.v2.FileContentsSpan", [
             { no: 1, name: "offset_bytes", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 2, name: "length_bytes", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
-    create(value?: PartialMessage<Span>): Span {
+    create(value?: PartialMessage<FileContentsSpan>): FileContentsSpan {
         const message = { offsetBytes: 0, lengthBytes: 0 };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
-            reflectionMergePartial<Span>(this, message, value);
+            reflectionMergePartial<FileContentsSpan>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: Span): Span {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: FileContentsSpan): FileContentsSpan {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -1222,7 +1252,7 @@ class Span$Type extends MessageType<Span> {
         }
         return message;
     }
-    internalBinaryWrite(message: Span, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: FileContentsSpan, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* uint32 offset_bytes = 1; */
         if (message.offsetBytes !== 0)
             writer.tag(1, WireType.Varint).uint32(message.offsetBytes);
@@ -1236,19 +1266,19 @@ class Span$Type extends MessageType<Span> {
     }
 }
 /**
- * @generated MessageType for protobuf message searchium.v2.Span
+ * @generated MessageType for protobuf message searchium.v2.FileContentsSpan
  */
-export const Span = new Span$Type();
+export const FileContentsSpan = new FileContentsSpan$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class FileContentsSearchHit$Type extends MessageType<FileContentsSearchHit> {
     constructor() {
         super("searchium.v2.FileContentsSearchHit", [
             { no: 1, name: "file_relative_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Span }
+            { no: 2, name: "match_spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FileContentsSpan }
         ]);
     }
     create(value?: PartialMessage<FileContentsSearchHit>): FileContentsSearchHit {
-        const message = { fileRelativePath: "", spans: [] };
+        const message = { fileRelativePath: "", matchSpans: [] };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
             reflectionMergePartial<FileContentsSearchHit>(this, message, value);
@@ -1262,8 +1292,8 @@ class FileContentsSearchHit$Type extends MessageType<FileContentsSearchHit> {
                 case /* string file_relative_path */ 1:
                     message.fileRelativePath = reader.string();
                     break;
-                case /* repeated searchium.v2.Span spans */ 2:
-                    message.spans.push(Span.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated searchium.v2.FileContentsSpan match_spans */ 2:
+                    message.matchSpans.push(FileContentsSpan.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1280,9 +1310,9 @@ class FileContentsSearchHit$Type extends MessageType<FileContentsSearchHit> {
         /* string file_relative_path = 1; */
         if (message.fileRelativePath !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.fileRelativePath);
-        /* repeated searchium.v2.Span spans = 2; */
-        for (let i = 0; i < message.spans.length; i++)
-            Span.internalBinaryWrite(message.spans[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated searchium.v2.FileContentsSpan match_spans = 2; */
+        for (let i = 0; i < message.matchSpans.length; i++)
+            FileContentsSpan.internalBinaryWrite(message.matchSpans[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1399,12 +1429,12 @@ class FileExtractsRequest$Type extends MessageType<FileExtractsRequest> {
     constructor() {
         super("searchium.v2.FileExtractsRequest", [
             { no: 1, name: "file_path", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => Span },
+            { no: 2, name: "match_spans", kind: "message", repeat: 1 /*RepeatType.PACKED*/, T: () => FileContentsSpan },
             { no: 3, name: "max_extract_length", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<FileExtractsRequest>): FileExtractsRequest {
-        const message = { filePath: "", spans: [], maxExtractLength: 0 };
+        const message = { filePath: "", matchSpans: [], maxExtractLength: 0 };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
             reflectionMergePartial<FileExtractsRequest>(this, message, value);
@@ -1418,8 +1448,8 @@ class FileExtractsRequest$Type extends MessageType<FileExtractsRequest> {
                 case /* string file_path */ 1:
                     message.filePath = reader.string();
                     break;
-                case /* repeated searchium.v2.Span spans */ 2:
-                    message.spans.push(Span.internalBinaryRead(reader, reader.uint32(), options));
+                case /* repeated searchium.v2.FileContentsSpan match_spans */ 2:
+                    message.matchSpans.push(FileContentsSpan.internalBinaryRead(reader, reader.uint32(), options));
                     break;
                 case /* uint32 max_extract_length */ 3:
                     message.maxExtractLength = reader.uint32();
@@ -1439,9 +1469,9 @@ class FileExtractsRequest$Type extends MessageType<FileExtractsRequest> {
         /* string file_path = 1; */
         if (message.filePath !== "")
             writer.tag(1, WireType.LengthDelimited).string(message.filePath);
-        /* repeated searchium.v2.Span spans = 2; */
-        for (let i = 0; i < message.spans.length; i++)
-            Span.internalBinaryWrite(message.spans[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* repeated searchium.v2.FileContentsSpan match_spans = 2; */
+        for (let i = 0; i < message.matchSpans.length; i++)
+            FileContentsSpan.internalBinaryWrite(message.matchSpans[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
         /* uint32 max_extract_length = 3; */
         if (message.maxExtractLength !== 0)
             writer.tag(3, WireType.Varint).uint32(message.maxExtractLength);
@@ -1459,15 +1489,14 @@ export const FileExtractsRequest = new FileExtractsRequest$Type();
 class FileExtract$Type extends MessageType<FileExtract> {
     constructor() {
         super("searchium.v2.FileExtract", [
-            { no: 1, name: "text", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 2, name: "offset", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 3, name: "length", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 4, name: "line_number", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 5, name: "column_number", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 1, name: "full_text", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 2, name: "extract_offset_bytes", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 3, name: "extract_length_bytes", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 4, name: "line_number", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<FileExtract>): FileExtract {
-        const message = { text: "", offset: 0, length: 0, lineNumber: 0, columnNumber: 0 };
+        const message = { fullText: "", extractOffsetBytes: 0, extractLengthBytes: 0, lineNumber: 0 };
         globalThis.Object.defineProperty(message, MESSAGE_TYPE, { enumerable: false, value: this });
         if (value !== undefined)
             reflectionMergePartial<FileExtract>(this, message, value);
@@ -1478,20 +1507,17 @@ class FileExtract$Type extends MessageType<FileExtract> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string text */ 1:
-                    message.text = reader.string();
+                case /* string full_text */ 1:
+                    message.fullText = reader.string();
                     break;
-                case /* uint32 offset */ 2:
-                    message.offset = reader.uint32();
+                case /* uint32 extract_offset_bytes */ 2:
+                    message.extractOffsetBytes = reader.uint32();
                     break;
-                case /* uint32 length */ 3:
-                    message.length = reader.uint32();
+                case /* uint32 extract_length_bytes */ 3:
+                    message.extractLengthBytes = reader.uint32();
                     break;
                 case /* uint32 line_number */ 4:
                     message.lineNumber = reader.uint32();
-                    break;
-                case /* uint32 column_number */ 5:
-                    message.columnNumber = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1505,21 +1531,18 @@ class FileExtract$Type extends MessageType<FileExtract> {
         return message;
     }
     internalBinaryWrite(message: FileExtract, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string text = 1; */
-        if (message.text !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.text);
-        /* uint32 offset = 2; */
-        if (message.offset !== 0)
-            writer.tag(2, WireType.Varint).uint32(message.offset);
-        /* uint32 length = 3; */
-        if (message.length !== 0)
-            writer.tag(3, WireType.Varint).uint32(message.length);
+        /* string full_text = 1; */
+        if (message.fullText !== "")
+            writer.tag(1, WireType.LengthDelimited).string(message.fullText);
+        /* uint32 extract_offset_bytes = 2; */
+        if (message.extractOffsetBytes !== 0)
+            writer.tag(2, WireType.Varint).uint32(message.extractOffsetBytes);
+        /* uint32 extract_length_bytes = 3; */
+        if (message.extractLengthBytes !== 0)
+            writer.tag(3, WireType.Varint).uint32(message.extractLengthBytes);
         /* uint32 line_number = 4; */
         if (message.lineNumber !== 0)
             writer.tag(4, WireType.Varint).uint32(message.lineNumber);
-        /* uint32 column_number = 5; */
-        if (message.columnNumber !== 0)
-            writer.tag(5, WireType.Varint).uint32(message.columnNumber);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

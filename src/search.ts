@@ -4,6 +4,7 @@ import * as ipcRequests from "./ipcRequests";
 import * as ipcResponses from "./ipcResponses";
 import { getLogger } from "./logger";
 import * as searchium_legacy from "./gen/searchium";
+import * as pb from "gen/searchium/v2/searchium";
 import * as path from "path";
 import './extensionsMethods';
 import { SearchHistory } from "./history";
@@ -44,13 +45,12 @@ interface FileResult {
 type ExtractResult = {
     type: 'extract';
     highlights: [number, number][];
-    range: vscode.Range;
     parent: FileResult;
     next?: ExtractResult;
     prev?: ExtractResult;
     text: string;
     lineNumber: number;
-    columnNumber: number;
+    range: () => Promise<vscode.Range>;
 };
 
 type SearchResult = DirectoryResult | FileResult | ExtractResult;
@@ -61,7 +61,7 @@ async function getFileExtractsFromChannel(channel: IpcChannel, file: FileResult)
         .then((r: ipcResponses.GetFileExtractsResponse): searchium_legacy.FileExtract[] =>
             r.fileExtracts))
         .map((e, i) =>
-            convertFileExtracts(file, e, positions[i]));
+            convertFileExtractsLegacy(file, e, positions[i]));
     for (let i = 0; i < extracts.length; ++i) {
         if (i !== 0) {
             extracts[i].prev = extracts[i - 1];
@@ -77,22 +77,26 @@ async function getFileExtractsFromClient(client: IndexClient, file: FileResult):
     const r = await client.getFileExtracts(file.path, file.positions.map(p => {
         return { offsetBytes: p.offset, lengthBytes: p.length };
     }), 100);
+    const doc = vscode.workspace.openTextDocument(file.uri);
     const extracts = r.fileExtracts.map((extract, index): ExtractResult => {
-        const info = file.positions[index];
-        const text = extract.text.trimStart();
-        const trimmed = extract.text.length - text.length;
-        const start = info.offset - extract.offset;
-        const end = start + info.length;
-        const range =
-            new vscode.Range(extract.lineNumber, extract.columnNumber, extract.lineNumber, extract.columnNumber + end - start);
+        // TODO: file.positions seems to contain location of extracted text, not text to highlight
+        const highlightInfo = file.positions[index];
+        const text = extract.fullText.trimStart();
+        const charsTrimmedFromFront = extract.fullText.length - text.length;
+        const highlightStart = highlightInfo.offset - extract.extractOffsetBytes;
+        const highlightEnd = highlightStart + highlightInfo.length;
         return {
             type: "extract",
-            highlights: [[start - trimmed, end - trimmed]],
+            highlights: [[highlightStart - charsTrimmedFromFront, highlightEnd - charsTrimmedFromFront]],
             parent: file,
-            range,
             text: text.trimEnd(),
-            columnNumber: extract.columnNumber,
-            lineNumber: extract.lineNumber
+            lineNumber: extract.lineNumber,
+            range: async function () {
+                const doc2 = await doc;
+                const navStart = doc2.positionAt(highlightInfo.offset);
+                const navEnd = doc2.positionAt(highlightInfo.offset + highlightInfo.length);
+                return new vscode.Range(navStart, navEnd);
+            }
         };
     });
     for (let i = 0; i < extracts.length; ++i) {
@@ -172,7 +176,7 @@ function convertDirectoryResult(
     }
 }
 
-function convertFileExtracts(
+function convertFileExtractsLegacy(
     parent: FileResult,
     // Full extract text (e.g. entire line) returned from search engine
     extract: searchium_legacy.FileExtract,
@@ -191,9 +195,8 @@ function convertFileExtracts(
         type: "extract",
         highlights: [[start - trimmed, end - trimmed]],
         parent,
-        range,
+        range: async () => range,
         text: text.trimEnd(),
-        columnNumber: extract.columnNumber,
         lineNumber: extract.lineNumber
     };
 }
@@ -216,7 +219,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
         this.rootResults = rootResults;
         this._onDidChangeTreeData.fire(undefined);
     }
-    public getTreeItem(element: SearchResult): vscode.TreeItem | Thenable<vscode.TreeItem> {
+    public async getTreeItem(element: SearchResult): Promise<vscode.TreeItem> {
         switch (element.type) {
             case 'directory': {
                 const item = new vscode.TreeItem(element.name, vscode.TreeItemCollapsibleState.Expanded);
@@ -242,7 +245,8 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                 };
                 const item = new vscode.TreeItem(label);
                 item.description = `line ${element.lineNumber + 1}`; // convert to 1-indexed for human label
-                const showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection: element.range };
+                const selection = await element.range();
+                const showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection };
                 item.command = {
                     command: "vscode.open",
                     arguments: [element.parent.uri, showOptions],
@@ -372,7 +376,7 @@ export class SearchManager {
                         maxResults,
                         matchCase: options.matchCase ?? false,
                         matchWholeWord: options.wholeWord ?? false,
-                        regex: options.regex ?? false,
+                        queryType: options.regex ? pb.FileContentsQueryType.REGEX : pb.FileContentsQueryType.WILDCARD,
                     });
                     let resultCount = 0;
                     const resultMap: Map<string, DirectoryResult> = new Map();
@@ -392,13 +396,13 @@ export class SearchManager {
                             resultMap.set(root.rootPath, directory);
                         }
                         for (const result of root.hits) {
-                            resultCount += result.spans.length;
+                            resultCount += result.matchSpans.length;
                             const filePath = path.join(root.rootPath, result.fileRelativePath);
                             const fileResult: FileResult & { _extracts: Promise<ExtractResult[]> | undefined } = {
                                 name: result.fileRelativePath,
                                 path: filePath, // TODO: Difference betewen name and path
                                 parent: directory,
-                                positions: result.spans.map(s => { return { offset: s.offsetBytes, length: s.lengthBytes }; }),
+                                positions: result.matchSpans.map(s => { return { offset: s.offsetBytes, length: s.lengthBytes }; }),
                                 type: "file",
                                 uri: vscode.Uri.file(filePath),
                                 prev: directory.children.last(),
@@ -458,26 +462,26 @@ export class SearchManager {
                 case 'directory':
                     {
                         // select first child 
-                        this.revealAndPreviewResult((await current.children[0].extracts())[0]);
+                        await this.revealAndPreviewResult((await current.children[0].extracts())[0]);
                     }
                     break;
                 case 'file':
                     {
-                        this.revealAndPreviewResult((await current.extracts())[0]);
+                        await this.revealAndPreviewResult((await current.extracts())[0]);
                     }
                     break;
                 case 'extract':
                     {
                         // Select next sibling or sibling of parent 
                         if (current.next) {
-                            this.revealAndPreviewResult(current.next);
+                            await this.revealAndPreviewResult(current.next);
                         }
                         else if (current.parent.next) {
-                            this.revealAndPreviewResult((await current.parent.next.extracts())[0]);
+                            await this.revealAndPreviewResult((await current.parent.next.extracts())[0]);
                         }
                         else if (current.parent.parent.next) {
                             // select next directory's first result
-                            this.revealAndPreviewResult((await current.parent.parent.next.children[0].extracts())[0]);
+                            await this.revealAndPreviewResult((await current.parent.parent.next.children[0].extracts())[0]);
                         }
                         else {
                             // loop? 
@@ -555,12 +559,12 @@ export class SearchManager {
             this.currentNavOperation = this.currentNavOperation.then(operation).then(resolve).catch(reject);
         });
     }
-    private revealAndPreviewResult(result: ExtractResult | undefined): void {
+    private async revealAndPreviewResult(result: ExtractResult | undefined): Promise<void> {
         if (!result) { return; }
         const options = { select: true, focus: true, expand: false };
         this.treeView.reveal(result, options);
         vscode.commands.executeCommand('vscode.open', result.parent.uri, <vscode.TextDocumentShowOptions>{
-            preview: true, preserveFocus: true, selection: result.range
+            preview: true, preserveFocus: true, selection: await result.range()
         });
     }
 

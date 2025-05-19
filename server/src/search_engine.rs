@@ -1,8 +1,8 @@
 use crate::file_contents::FileContents;
 use crate::gen::searchium::{
-    FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult,
+    FileContentsQueryType, FileContentsSearchHit, FileContentsSearchRequest, FileContentsSearchRootResult
 };
-use crate::gen::searchium::{FileExtract, Span}; // TODO: remove and use internal types?
+use crate::gen::searchium::{FileExtract, FileContentsSpan}; // TODO: remove and use internal types?
 
 use core::fmt;
 use grep::matcher::Matcher;
@@ -59,7 +59,7 @@ impl Default for MatcherParams {
 
 pub fn get_file_extracts(
     contents: &FileContents,
-    spans: &[Span],
+    spans: &[FileContentsSpan],
     max_extract_len: u32,
 ) -> Vec<FileExtract> {
     let (line_offsets, contents_len) = calculate_line_offsets(contents); // TODO: is this worth caching?
@@ -81,6 +81,7 @@ pub fn get_file_extracts(
                 line_span.offset + line_span.length - 1
             };
 
+            // TODO: strip whitespace from start/end before clamping size
             let extract_start = span_start
                 .min((span_end + 5).saturating_sub(max_extract_len))
                 .max(line_span.offset);
@@ -91,13 +92,11 @@ pub fn get_file_extracts(
             let offset = extract_start;
             let length = extract_end - extract_start;
             let line_number = line_span.line_number;
-            let column_number = extract_start - line_span.offset;
             FileExtract {
-                text,
-                offset: offset as u32,
-                length: length as u32,
+                full_text: text,
+                extract_offset_bytes: offset as u32,
+                extract_length_bytes: length as u32,
                 line_number: line_number as u32,
-                column_number: column_number as u32,
             }
         })
         .collect()
@@ -115,12 +114,20 @@ pub fn search_files_contents(
         MatcherParams {
             match_case: MatchCase::from(query.match_case),
             whole_word: MatchWholeWord::from(query.match_whole_word),
-            style: if query.regex {
+            // TODO: Better proto def to avoid this casting
+            style: if query.query_type == (FileContentsQueryType::Plain as i32) {
+                QueryStyle::Literal
+            }
+            else if query.query_type == (FileContentsQueryType::Regex as i32) {
                 QueryStyle::Regex
-            } else {
+            }
+            else if query.query_type == (FileContentsQueryType::Wildcard as i32) {
                 QueryStyle::Wildcard
-            }, // TODO: Need a way for user to disable wildcards
-        },
+            }
+            else {
+                QueryStyle::Literal
+            }
+        }
     )?;
     let searcher = SearcherBuilder::new().build();
     let mut hits: Vec<_> = files
@@ -128,8 +135,8 @@ pub fn search_files_contents(
         .map_with(
             (searcher, matcher),
             |(searcher, matcher), (path, contents)| -> Option<FileContentsSearchHit> {
-                let spans: Vec<Span> = search_file_contents(contents, searcher, matcher);
-                if spans.is_empty() {
+                let match_spans: Vec<FileContentsSpan> = search_file_contents(contents, searcher, matcher);
+                if match_spans.is_empty() {
                     None
                 } else {
                     let file_relative_path = path
@@ -139,7 +146,7 @@ pub fn search_files_contents(
                         .to_string();
                     let response = FileContentsSearchHit {
                         file_relative_path,
-                        spans,
+                        match_spans,
                     };
                     Some(response)
                 }
@@ -159,46 +166,66 @@ pub fn search_files_contents(
     })
 }
 
-struct SearchSink<'a> {
+struct SearchSink<'a, M : Matcher> {
     buffer: &'a [u8],
-    spans: Vec<Span>,
+    spans: Vec<FileContentsSpan>,
+    matcher: &'a M,
 }
 
-impl<'a> Sink for SearchSink<'a> {
-    type Error = std::io::Error;
+#[derive(Error, Debug)]
+enum SinkError
+{
+    #[error("grep error: {0}")]
+    GrepError(String),
+}
+
+impl grep::searcher::SinkError for SinkError {
+    fn error_message<T: std::fmt::Display>(message: T) -> Self {
+        Self::GrepError(message.to_string())
+    }
+}
+
+impl<'a, M : Matcher> Sink for SearchSink<'a, M> {
+    type Error = SinkError;
 
     fn matched(
         &mut self,
         _searcher: &Searcher,
         mat: &grep::searcher::SinkMatch<'_>,
     ) -> Result<bool, Self::Error> {
-        let bytes = mat.bytes();
+        let line_bytes = mat.bytes();
         // bytes is a sub-slice of self.buffer, return offset within file by pointer arithmetic
         // TODO: take line info from mat and store it so we don't need to recalculate it later
-        let offset = unsafe {
-            let start = bytes.as_ptr();
+        let line_offset = unsafe {
+            let line_start = line_bytes.as_ptr();
             let buffer_start = self.buffer.as_ptr();
-            start.offset_from(buffer_start)
+            line_start.offset_from(buffer_start) as usize
         };
-        self.spans.push(Span {
-            offset_bytes: offset as u32,
-            length_bytes: bytes.len() as u32,
+        let matched = self.matcher.find(line_bytes)
+            .map_err(|e| SinkError::GrepError(e.to_string()))?.unwrap();
+        let match_offset = line_offset + matched.start();
+        let match_len = matched.len();
+        self.spans.push(FileContentsSpan {
+            offset_bytes: match_offset as u32,
+            length_bytes: match_len as u32,
         });
         Ok(true)
     }
 }
 
+// TODO: May not need to use searcher as we aren't reading from files
 fn search_file_contents<M: Matcher>(
     contents: &FileContents,
     searcher: &mut Searcher,
     matcher: &M,
-) -> Vec<Span> {
+) -> Vec<FileContentsSpan> {
     match contents {
         FileContents::Ascii(bytes) | FileContents::Utf8(bytes) => {
             let bytes = &bytes[..];
             let mut sink = SearchSink {
                 buffer: bytes,
                 spans: Vec::new(),
+                matcher
             };
             if let Err(e) = searcher.search_slice(matcher, bytes, &mut sink) {
                 panic!("Error searching slice: {:?}", e);
@@ -378,11 +405,11 @@ mod tests {
     use tracing_subscriber::{prelude::*, EnvFilter};
 
     use super::*;
-    use crate::gen::searchium::Span;
+    use crate::gen::searchium::FileContentsSpan;
 
-    impl Span {
+    impl FileContentsSpan {
         fn new(offset_bytes: u32, length_bytes: u32) -> Self {
-            Span {
+            Self {
                 offset_bytes,
                 length_bytes,
             }
@@ -404,6 +431,8 @@ mod tests {
             .try_init()
             .ok();
     }
+
+    // TODO: Tests for non-ascii search
 
     #[test]
     fn test_ascii_line_offsets() {
@@ -483,40 +512,38 @@ mod tests {
         let vec = string.as_bytes().to_vec();
         let file_contents = FileContents::Ascii(vec.clone());
         let spans = vec![
-            Span::new(12, 5),                                                     // dolor
-            Span::new(lines[0].len() as u32 + 1 + 11, 4),                         // elit
-            Span::new(lines[0].len() as u32 + lines[1].len() as u32 + 2 + 56, 5), // minim
+            FileContentsSpan::new(12, 5),                                                     // dolor
+            FileContentsSpan::new(lines[0].len() as u32 + 1 + 11, 4),                         // elit
+            FileContentsSpan::new(lines[0].len() as u32 + lines[1].len() as u32 + 2 + 56, 5), // minim
         ];
         let extracts = get_file_extracts(&file_contents, &spans, 40);
         assert_eq!(extracts.len(), spans.len());
         assert_eq!(
             extracts[0],
             FileExtract {
-                text: lines[0].to_owned(),
-                offset: 0,
-                length: lines[0].len() as u32,
+                full_text: lines[0].to_owned(),
+                extract_offset_bytes: 0,
+                extract_length_bytes: lines[0].len() as u32,
                 line_number: 0,
-                column_number: 0
             }
         );
         assert_eq!(
             extracts[1],
             FileExtract {
-                text: lines[1].to_owned(),
-                offset: lines[0].len() as u32 + 1,
-                length: lines[1].len() as u32,
+                full_text: lines[1].to_owned(),
+                extract_offset_bytes: lines[0].len() as u32 + 1,
+                extract_length_bytes: lines[1].len() as u32,
                 line_number: 1,
-                column_number: 0
             }
         );
         // Line too long for max extract length
-        assert!(extracts[2].length <= 40);
-        let extract_pos = lines[2].find(&extracts[2].text);
+        // TODO: Define length as bytes, code units or code points
+        assert!(extracts[2].full_text.len() <= 40);
+        let extract_pos = lines[2].find(&extracts[2].full_text);
         assert!(extract_pos.is_some());
         assert_eq!(extracts[2].line_number, 2);
-        assert_eq!(extracts[2].column_number, extract_pos.unwrap_or(0) as u32);
         assert_eq!(
-            extracts[2].offset,
+            extracts[2].extract_offset_bytes,
             (lines[0].len() + lines[1].len() + 2 + extract_pos.unwrap_or(0)) as u32
         );
     }
@@ -713,6 +740,22 @@ mod tests {
         test_query(params, "foo*bar", "pre `foobar` post")?;
         test_query(params, "foo*bar", "pre `fooxbar` post")?;
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_search_file_contents() -> Result<(), String> {
+        let mut searcher = SearcherBuilder::new().build();
+        let params = MatcherParams::default();
+        let query = "int";
+        let matcher = create_matcher_from_query(query, params)
+            .map_err(|e| format!("Failed to create matcher: {}", e))?;
+        
+        let text = "void do_something(int param);";
+        let contents = &FileContents::Utf8(text.as_bytes().to_vec());
+        let spans = search_file_contents(contents, &mut searcher, &matcher);
+        assert_eq!(1, spans.len());
+        assert_eq!(FileContentsSpan::new(18, 3), spans[0]);
         Ok(())
     }
 }

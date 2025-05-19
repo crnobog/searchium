@@ -139,7 +139,7 @@ impl State {
         } else if let Some(contents) = self.contents.iter().find_map(|map| map.get(&path)) {
             let file_extracts = search_engine::get_file_extracts(
                 contents,
-                &request.spans,
+                &request.match_spans,
                 request.max_extract_length,
             );
             Ok(FileExtractsResponse {

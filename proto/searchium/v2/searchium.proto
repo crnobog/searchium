@@ -85,25 +85,35 @@ message FilePathSearchResponse {
   google.protobuf.Duration duration = 2;
 }
 
+enum FileContentsQueryType {
+  PLAIN = 0;
+  WILDCARD = 1;
+  REGEX = 2;
+}
+
 message FileContentsSearchRequest {
   string query_string = 1;
   string file_path_pattern = 2;
   uint32 max_results = 3; 
   bool match_case = 4;
   bool match_whole_word = 5;
-  bool regex = 6;
+  FileContentsQueryType query_type = 6;
 }
 
-message Span { 
+message FileContentsSpan { 
   uint32 offset_bytes = 1;
   uint32 length_bytes = 2;
 }
 
+// A file path and the location of one or more matches from a search request
 message FileContentsSearchHit {
+  // Path relative to the registered root
   string file_relative_path = 1;
-  repeated Span spans = 2;
+  // Spans of text that matched the query
+  repeated FileContentsSpan match_spans = 2;
 }
 
+// A set of matches from a certain registered root directory
 message FileContentsSearchRootResult { 
   string root_path = 1;
   repeated FileContentsSearchHit hits = 2;
@@ -115,16 +125,20 @@ message FileContentsSearchResponse {
 
 message FileExtractsRequest { 
   string file_path = 1;
-  repeated Span spans = 2;
+  repeated FileContentsSpan match_spans = 2;
   uint32 max_extract_length = 3;
 }
 
 message FileExtract {
-  string text = 1;
-  uint32 offset = 2;
-  uint32 length = 3;
+  // Text extracted as context for the match
+  string full_text = 1;
+  // Offset in bytes within the file of full_text
+  uint32 extract_offset_bytes = 2;
+  // Length in bytes within the file of full_text.
+  // May be different to length of full_text in bytes if file encoding is different.
+  uint32 extract_length_bytes = 3;
+  // 0-based number of line containing the match
   uint32 line_number = 4;
-  uint32 column_number = 5;
 }
 message FileExtractsResponse {
   string file_path = 1;

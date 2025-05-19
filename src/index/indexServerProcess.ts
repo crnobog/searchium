@@ -44,8 +44,8 @@ class IndexServerClient implements IndexClient {
     public searchFileContents(request: pb.FileContentsSearchRequest): Promise<pb.FileContentsSearchResponse> {
         return this.client.searchFileContents(request).response;
     }
-    public getFileExtracts(filePath: string, extracts: pb.Span[], maxLen: number): Promise<pb.FileExtractsResponse> {
-        return this.client.getFileExtracts({ filePath, spans: extracts, maxExtractLength: maxLen }).response;
+    public getFileExtracts(filePath: string, extracts: pb.FileContentsSpan[], maxLen: number): Promise<pb.FileExtractsResponse> {
+        return this.client.getFileExtracts({ filePath, matchSpans: extracts, maxExtractLength: maxLen }).response;
     }
     public async getProcessInfo(): Promise<pb.ProcessInfoResponse> {
         return await this.client.getProcessInfo({}).response;
