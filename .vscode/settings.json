@@ -17,5 +17,8 @@
             "--proto_path=${workspaceRoot}/proto"
         ]
     },
-    "rust-analyzer.showUnlinkedFileNotification": false
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "rust-analyzer.linkedProjects": [
+        "server/Cargo.toml"
+    ]
 }
