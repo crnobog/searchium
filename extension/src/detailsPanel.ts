@@ -1,11 +1,7 @@
 import * as vscode from "vscode";
-import { IpcChannel, isChannel } from "./ipcChannel";
 import { getUri, getNonce } from './webviewUtils';
-import * as ipcRequests from './ipcRequests';
-import * as ipcResponses from './ipcResponses';
 import * as FromWebview from './shared/fromDetailsWebview';
 import * as ToWebview from './shared/toDetailsWebview';
-import * as searchium_legacy from "./gen/searchium";
 import { IndexClient } from 'index/indexInterface';
 import { toMb } from './utils';
 
@@ -13,7 +9,7 @@ export class DetailsPanelProvider {
     webview?: vscode.Webview;
     constructor(
         private context: vscode.ExtensionContext,
-        private channelOrClient: IpcChannel | IndexClient) {
+        private client: IndexClient) {
     }
 
     public async openDetails(): Promise<void> {
@@ -41,86 +37,48 @@ export class DetailsPanelProvider {
 
     private async getDatabaseDetails(): Promise<ToWebview.DetailsMessage> {
         // const toMbString = (value: bigint): string => toMb(value).toFixed(2);
-        if (isChannel(this.channelOrClient)) {
-            const response = await this.channelOrClient.sendRequest(new ipcRequests.GetDatabaseDetailsRequest(
-                100, 100
-            )) as ipcResponses.GetDatabaseDetailsResponse;
-            return {
-                type: "details",
-                roots: response.projects.map((p): ToWebview.DatabaseDetailsRoot => {
-                    const mapByExtension = (details: searchium_legacy.FileByExtensionDetails): ToWebview.FilesByExtensionDetails => {
+        const response = await this.client.getDatabaseDetails();
+        return {
+            type: "details",
+            roots: response.roots.map(r => {
+                const translated: ToWebview.DatabaseDetailsRoot = {
+                    rootPath: r.rootPath,
+                    numFilesScanned: r.numFilesScanned.toLocaleString(),
+                    numDirectoriesScanned: r.numDirectoriesScanned.toLocaleString(),
+                    numSearchableFiles: r.numSearchableFiles.toLocaleString(),
+                    searchableFilesMB: toMb(r.searchableFilesBytes),
+                    numBinaryFiles: r.numBinaryFiles.toLocaleString(),
+                    binaryFilesMB: toMb(r.binaryFilesBytes),
+                    searchableFilesByExtension: r.searchableFilesByExtension.map(x => {
                         return {
-                            extension: details.fileExtension,
-                            count: details.fileCount.toLocaleString(),
-                            mb: toMb(details.fileByteLength)
+                            count: x.count.toLocaleString(),
+                            extension: x.extension,
+                            mb: toMb(x.bytes)
                         };
-                    };
-                    const mapLarge = (details: searchium_legacy.LargeFileDetails): ToWebview.LargeFileDetails => {
+                    }),
+                    binaryFilesByExtension: r.binaryFilesByExtension.map(x => {
                         return {
-                            path: details.relativePath,
-                            sizeMb: toMb(details.byteLength)
+                            count: x.count.toLocaleString(),
+                            extension: x.extension,
+                            mb: toMb(x.bytes)
                         };
-                    };
-                    return {
-                        rootPath: p.rootPath,
-                        numFilesScanned: (p.directoryDetails?.fileCount ?? 0).toLocaleString(),
-                        numDirectoriesScanned: (p.directoryDetails?.directoryCount ?? 0).toLocaleString(),
-                        numSearchableFiles: (p.directoryDetails?.searchableFilesCount ?? 0).toLocaleString(),
-                        searchableFilesMB: toMb(p.directoryDetails?.searchableFilesByteLength ?? 0n),
-                        numBinaryFiles: (p.directoryDetails?.binaryFilesCount ?? 0).toLocaleString(),
-                        binaryFilesMB: toMb(p.directoryDetails?.binaryFilesByteLength ?? 0n),
-                        searchableFilesByExtension: p.directoryDetails?.searchableFilesByExtensionDetails.map(mapByExtension) ?? [],
-                        binaryFilesByExtension: p.directoryDetails?.binaryFilesByExtensionDetails.map(mapByExtension) ?? [],
-                        largeFiles: p.directoryDetails?.largeSearchableFileDetails.map(mapLarge) ?? [],
-                        largeBinaries: p.directoryDetails?.largeBinaryFilesDetails.map(mapLarge) ?? [],
-                    };
-                })
-            };
-        }
-        else {
-            const response = await this.channelOrClient.getDatabaseDetails();
-            return {
-                type: "details",
-                roots: response.roots.map(r => {
-                    const translated: ToWebview.DatabaseDetailsRoot = {
-                        rootPath: r.rootPath,
-                        numFilesScanned: r.numFilesScanned.toLocaleString(),
-                        numDirectoriesScanned: r.numDirectoriesScanned.toLocaleString(),
-                        numSearchableFiles: r.numSearchableFiles.toLocaleString(),
-                        searchableFilesMB: toMb(r.searchableFilesBytes),
-                        numBinaryFiles: r.numBinaryFiles.toLocaleString(),
-                        binaryFilesMB: toMb(r.binaryFilesBytes),
-                        searchableFilesByExtension: r.searchableFilesByExtension.map(x => {
-                            return {
-                                count: x.count.toLocaleString(),
-                                extension: x.extension,
-                                mb: toMb(x.bytes)
-                            };
-                        }),
-                        binaryFilesByExtension: r.binaryFilesByExtension.map(x => {
-                            return {
-                                count: x.count.toLocaleString(),
-                                extension: x.extension,
-                                mb: toMb(x.bytes)
-                            };
-                        }),
-                        largeFiles: r.largeSearchableFiles.map(x => {
-                            return {
-                                path: x.path,
-                                sizeMb: toMb(x.bytes),
-                            };
-                        }),
-                        largeBinaries: r.largeBinaryFiles.map(x => {
-                            return {
-                                path: x.path,
-                                sizeMb: toMb(x.bytes),
-                            };
-                        }),
-                    };
-                    return translated;
-                })
-            };
-        }
+                    }),
+                    largeFiles: r.largeSearchableFiles.map(x => {
+                        return {
+                            path: x.path,
+                            sizeMb: toMb(x.bytes),
+                        };
+                    }),
+                    largeBinaries: r.largeBinaryFiles.map(x => {
+                        return {
+                            path: x.path,
+                            sizeMb: toMb(x.bytes),
+                        };
+                    }),
+                };
+                return translated;
+            })
+        };
     }
     private getWebViewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
         const webviewUri = getUri(webview, extensionUri, ["out", "webview", "details.js"]);

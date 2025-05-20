@@ -3,8 +3,6 @@ import { getLogger } from './logger';
 import { SearchOptions } from './search';
 import { IndexState } from './indexState';
 import { IndexStatus } from './index/indexInterface';
-import { GetDatabaseStatisticsResponse } from './ipcResponses';
-import { IndexingServerStatus } from './gen/searchium';
 import * as ToWebView from './shared/toControlsWebview';
 import * as FromWebView from './shared/fromControlsWebview';
 import { getUri, getNonce } from './webviewUtils';
@@ -29,24 +27,6 @@ export class ControlsProvider implements vscode.WebviewViewProvider {
         private readonly history: SearchHistory,
         private readonly indexState: IndexState
     ) {
-        this.indexState.on('updatedLegacy', (response: GetDatabaseStatisticsResponse) => {
-            this.databaseStats = { state: "Unavailable", memUsage: response.serverNativeMemoryUsage, numSearchableFiles: response.searchableFileCount };
-            if (response.projectCount !== 0) {
-                switch (response.serverStatus) {
-                    case IndexingServerStatus.IDLE:
-                        this.databaseStats.state = "Ready";
-                        break;
-                    case IndexingServerStatus.BUSY:
-                        this.databaseStats.state = "Indexing";
-                        break;
-                    case IndexingServerStatus.PAUSED:
-                    case IndexingServerStatus.YIELD:
-                        this.databaseStats.state = "Paused";
-                        break;
-                }
-            }
-            this.sendStatsToWebview();
-        });
         this.indexState.on('updated', (response: IndexStatus) => {
             this.databaseStats = response;
             this.sendStatsToWebview();

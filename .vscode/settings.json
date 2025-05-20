@@ -20,5 +20,10 @@
     "rust-analyzer.showUnlinkedFileNotification": false,
     "rust-analyzer.linkedProjects": [
         "server/Cargo.toml"
+    ],
+    "eslint.workingDirectories": [
+        {
+            "directory": "extension/"
+        }
     ]
 }

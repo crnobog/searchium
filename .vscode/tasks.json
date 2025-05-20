@@ -11,7 +11,7 @@
 			"group": "build",
 			"problemMatcher": [
 				"$tsc",
-				"$eslint-compact"
+				"$eslint-stylish"
 			],
 			"detail": "Build extension only",
 			"presentation": {
