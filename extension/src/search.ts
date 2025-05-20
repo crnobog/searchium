@@ -18,6 +18,14 @@ export interface SearchOptions {
     regex: boolean,
 }
 
+export enum NavigationBehavior {
+    // Pass the range of the matched text to the vscode.open command to the text is selected 
+    Selection = "Selection",
+    // Pass a 0-length range at the beginning of the matched text to the vscode.open command
+    // so the cursor is positioned but no text is selected
+    NoSelection = "NoSelection",
+}
+
 interface DirectoryResult {
     type: 'directory';
     name: string;
@@ -209,8 +217,19 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     currentRequestId = 0n;
     rootResults: SearchResult[] = [];
     treeView?: vscode.TreeView<SearchResult>;
+    disposables: vscode.Disposable[] = [];
+    navigationBehavior: NavigationBehavior = NavigationBehavior.Selection;
 
     constructor(private readonly channelOrClient: IpcChannel | IndexClient) {
+        this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.Selection);
+        getLogger().logInformation`Initial navigation behavior is now ${this.navigationBehavior}`;
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration("searchium.navigationBehavior")) {
+                this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.Selection);
+                getLogger().logInformation`Navigation behavior is now ${this.navigationBehavior}`;
+                this._onDidChangeTreeData.fire(undefined);
+            }
+        }, null, this.disposables);
     }
 
     // TODO: Remove first layer of tree if there's only one project/directory ?
@@ -245,7 +264,10 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                 };
                 const item = new vscode.TreeItem(label);
                 item.description = `line ${element.lineNumber + 1}`; // convert to 1-indexed for human label
-                const selection = await element.range();
+                let selection = await element.range();
+                if (this.navigationBehavior === NavigationBehavior.NoSelection) {
+                    selection = new vscode.Range(selection.start, selection.start);
+                }
                 const showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection };
                 item.command = {
                     command: "vscode.open",

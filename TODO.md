@@ -47,9 +47,10 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] highlighting search results in tree view seems broken
     - [x] Add tests for getting file extracts to search_engine.rs
     - [x] Rename result/extract proto message names for clarity 
-- [ ] Option for selecting match or not when navigating
+- [x] Option for selecting match or not when navigating
 - [ ] Server process living past test lifetime 
 - [ ] Reorganize protobuf definitions
+- [ ] Incorrect navigation in AK\FloatingPointStringConversions.cpp searching for log2, though highlight is correct. Something to do with trimming behavior?
 - [ ] Closing/re-opening workspaces
 - [ ] Intercept edit events from editor and re-run search? Or use file watcher to update most recent search on open stream?
 - [ ] Command to re-run indexing

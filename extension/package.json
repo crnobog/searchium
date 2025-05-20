@@ -29,10 +29,18 @@
             "type": "number",
             "default": 10000,
             "description": "Maximum number of search results to return."
+          },
+          "searchium.navigationBehavior": { 
+            "type" : "string",
+            "enum": [ "Selection", "NoSelection" ],
+            "description": "Whether to select the matched text when navigating to search results."
           }
         }
       }
     ],
+    "configurationDefaults": {
+      "searchium.navigationBehavior" : "Selection"
+    },
     "viewsContainers": {
       "activitybar": [
         {

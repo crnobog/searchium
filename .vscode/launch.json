@@ -33,6 +33,9 @@
 				"SEARCHIUM_DEBUG_HOST" : "[::1]:50050"
 			},
 			"preLaunchTask": "Build Extension",
+			"presentation": {
+				"hidden": true,
+			}
 		},
 		{
 			"name": "Extension Tests",
@@ -60,6 +63,9 @@
 			},
 			"cwd": "${workspaceFolder}",
 			"terminal": "integrated",
+			"presentation": {
+				"hidden": true,
+			}
 		},
 		{
 			"type": "lldb",
@@ -74,6 +80,9 @@
 			},
 			"cwd": "${workspaceFolder}",
 			"terminal": "integrated",
+			"presentation": {
+				"hidden": true,
+			}
 		}
 	],
 	"compounds": [
