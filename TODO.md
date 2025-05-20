@@ -48,8 +48,8 @@ https://en.wikipedia.org/wiki/FM-index
     - [x] Add tests for getting file extracts to search_engine.rs
     - [x] Rename result/extract proto message names for clarity 
 - [x] Option for selecting match or not when navigating
-- [ ] Remove legacy protobuf code
-- [ ] Fix eslint config 
+- [x] Remove legacy protobuf code
+- [x] Fix eslint config 
 - [ ] Reorganize protobuf definitions
 - [ ] Incorrect navigation in AK\FloatingPointStringConversions.cpp searching for log2, though highlight is correct. Something to do with trimming behavior?
 - [ ] Closing/re-opening workspaces
