@@ -29,7 +29,7 @@ impl IndexInterface {
         self.do_oneshot(|s| s.get_database_details()).await
     }
     pub async fn set_configuration(&self, request: ConfigurationRequest) -> CommandResult<()> {
-        self.do_oneshot(|s| s.set_configuration(request)).await
+        self.do_oneshot(move |s| s.set_configuration(request)).await
     }
     pub async fn register_folder(
         &self,
