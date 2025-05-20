@@ -16,10 +16,10 @@ export interface SearchOptions {
 
 export enum NavigationBehavior {
     // Pass the range of the matched text to the vscode.open command to the text is selected 
-    Selection = "Selection",
+    selection = "Selection",
     // Pass a 0-length range at the beginning of the matched text to the vscode.open command
     // so the cursor is positioned but no text is selected
-    NoSelection = "NoSelection",
+    noSelection = "NoSelection",
 }
 
 interface DirectoryResult {
@@ -105,14 +105,14 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     rootResults: SearchResult[] = [];
     treeView?: vscode.TreeView<SearchResult>;
     disposables: vscode.Disposable[] = [];
-    navigationBehavior: NavigationBehavior = NavigationBehavior.Selection;
+    navigationBehavior: NavigationBehavior = NavigationBehavior.selection;
 
     constructor(private readonly client: IndexClient) {
-        this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.Selection);
+        this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.selection);
         getLogger().logInformation`Initial navigation behavior is now ${this.navigationBehavior}`;
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration("searchium.navigationBehavior")) {
-                this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.Selection);
+                this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.selection);
                 getLogger().logInformation`Navigation behavior is now ${this.navigationBehavior}`;
                 this._onDidChangeTreeData.fire(undefined);
             }
@@ -152,7 +152,7 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
                 const item = new vscode.TreeItem(label);
                 item.description = `line ${element.lineNumber + 1}`; // convert to 1-indexed for human label
                 let selection = await element.range();
-                if (this.navigationBehavior === NavigationBehavior.NoSelection) {
+                if (this.navigationBehavior === NavigationBehavior.noSelection) {
                     selection = new vscode.Range(selection.start, selection.start);
                 }
                 const showOptions: vscode.TextDocumentShowOptions = { preview: false, preserveFocus: false, selection };
