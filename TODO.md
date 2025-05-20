@@ -48,7 +48,6 @@ https://en.wikipedia.org/wiki/FM-index
     - [x] Add tests for getting file extracts to search_engine.rs
     - [x] Rename result/extract proto message names for clarity 
 - [x] Option for selecting match or not when navigating
-- [ ] Server process living past test lifetime 
 - [ ] Reorganize protobuf definitions
 - [ ] Incorrect navigation in AK\FloatingPointStringConversions.cpp searching for log2, though highlight is correct. Something to do with trimming behavior?
 - [ ] Closing/re-opening workspaces
@@ -69,3 +68,4 @@ https://en.wikipedia.org/wiki/FM-index
 - [ ] profile initial indexing
 - [ ] Use regex-syntax crate to pre-compile regexes for best implementation of whole-word test? 
 - [ ] string version of search settings for vim-command like searching
+- [ ] Server process living past test lifetime 

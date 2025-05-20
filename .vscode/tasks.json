@@ -27,7 +27,7 @@
 			"label": "Lint Extension",
 			"type": "npm",
 			"script": "lint",
-			"path": "${workspaceFolder}/extension/package.json",
+			"path": "extension/",
 			"problemMatcher": [
 				"$tsc",
 				"$eslint-compact"
@@ -37,7 +37,7 @@
 			"label": "Generate Protobuf Bindings",
 			"type": "npm",
 			"script": "gen",
-			"path": "${workspaceFolder}/extension/package.json",
+			"path": "extension/",
 			"problemMatcher": []
 		},
 		{
