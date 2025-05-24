@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package searchium;
+
+message FileContentsSpan { 
+  uint32 offset_bytes = 1;
+  uint32 length_bytes = 2;
+}

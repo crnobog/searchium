@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package searchium;
+
+message FilePathSearchRequest {
+  string query = 1;
+  uint32 max_results = 2;
+}
+

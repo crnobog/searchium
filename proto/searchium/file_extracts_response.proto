@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package searchium;
+
+message FileExtract {
+  // Text extracted as context for the match
+  string full_text = 1;
+  // Offset in bytes within the file of full_text
+  uint32 extract_offset_bytes = 2;
+  // Length in bytes within the file of full_text.
+  // May be different to length of full_text in bytes if file encoding is different.
+  uint32 extract_length_bytes = 3;
+  // 0-based number of line containing the match
+  uint32 line_number = 4;
+}
+message FileExtractsResponse {
+  string file_path = 1;
+  repeated FileExtract file_extracts = 2;
+}

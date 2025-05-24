@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package searchium;
+
+import "searchium/file_contents_span.proto";
+
+// A file path and the location of one or more matches from a search request
+message FileContentsSearchHit {
+  // Path relative to the registered root
+  string file_relative_path = 1;
+  // Spans of text that matched the query
+  repeated FileContentsSpan match_spans = 2;
+}
+
+// A set of matches from a certain registered root directory
+message FileContentsSearchRootResult { 
+  string root_path = 1;
+  repeated FileContentsSearchHit hits = 2;
+}
+
+message FileContentsSearchResponse {
+  repeated FileContentsSearchRootResult roots = 1;
+}

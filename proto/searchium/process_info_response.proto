@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package searchium;
+
+message ProcessInfoResponse {
+  uint64 physical_memory = 1;
+  uint64 virtual_memory = 2;
+}

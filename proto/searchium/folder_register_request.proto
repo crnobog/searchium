@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package searchium;
+
+message FolderRegisterRequest {
+  string path = 1;
+  repeated string ignore_file_globs = 2;
+  repeated string ignore_search_globs = 3;
+}

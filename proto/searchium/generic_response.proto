@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package searchium;
+
+enum GenericError {
+  GENERIC_ERROR_NONE = 0;
+}
+
+message GenericResponse { 
+  GenericError error = 1;
+  string log_message = 2;
+}

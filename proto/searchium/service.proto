@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package searchium;
+
+import "searchium/hello_request.proto";
+import "searchium/hello_response.proto";
+import "searchium/generic_response.proto";
+import "searchium/folder_register_request.proto";
+import "searchium/index_update.proto";
+import "searchium/folder_unregister_request.proto";
+import "searchium/file_path_search_request.proto";
+import "searchium/file_path_search_response.proto";
+import "searchium/file_contents_search_request.proto";
+import "searchium/file_contents_search_response.proto";
+import "searchium/file_extracts_request.proto";
+import "searchium/file_extracts_response.proto";
+import "searchium/configuration_request.proto";
+import "searchium/configuration_response.proto";
+import "searchium/process_info_request.proto";
+import "searchium/process_info_response.proto";
+import "searchium/database_details_request.proto";
+import "searchium/database_details_response.proto";
+import "searchium/status_request.proto";
+import "searchium/status_response.proto";
+
+service SearchiumService { 
+  // TODO: Replace with capabilities/version negotiation
+  rpc Hello(HelloRequest) returns (HelloResponse);
+  
+  rpc RegisterFolder(FolderRegisterRequest) returns (stream IndexUpdate);
+  rpc UnregisterFolder(FolderUnregisterRequest) returns (GenericResponse);
+  
+  rpc SearchFilePaths(stream FilePathSearchRequest) returns (stream FilePathSearchResponse);
+  rpc SearchFileContents(FileContentsSearchRequest) returns (FileContentsSearchResponse);
+  rpc GetFileExtracts(FileExtractsRequest) returns (FileExtractsResponse);
+  
+  rpc SetConfiguration(ConfigurationRequest) returns (ConfigurationResponse);
+  rpc GetProcessInfo(ProcessInfoRequest) returns (ProcessInfoResponse);
+  rpc GetDatabaseDetails(DatabaseDetailsRequest) returns (DatabaseDetailsResponse);
+  
+  rpc GetStatus(StatusRequest) returns (stream StatusResponse);
+}

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package searchium;
+
+import "searchium/file_contents_span.proto";
+
+message FileExtractsRequest { 
+  string file_path = 1;
+  repeated FileContentsSpan match_spans = 2;
+  uint32 max_extract_length = 3;
+}
+

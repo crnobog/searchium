@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package searchium;
+
+enum IndexState { 
+  UNAVAILABLE = 0;
+  READY = 1;
+  INDEXING = 2;
+  PAUSED = 3;
+}
+message StatusResponse { 
+  IndexState state = 1;
+  uint64 mem_usage = 2;  
+  uint64 num_searchable_files = 3;
+}
+

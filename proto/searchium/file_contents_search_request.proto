@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package searchium;
+
+enum FileContentsQueryType {
+  PLAIN = 0;
+  WILDCARD = 1;
+  REGEX = 2;
+}
+message FileContentsSearchRequest {
+  string query_string = 1;
+  string file_path_pattern = 2;
+  uint32 max_results = 3; 
+  bool match_case = 4;
+  bool match_whole_word = 5;
+  FileContentsQueryType query_type = 6;
+}

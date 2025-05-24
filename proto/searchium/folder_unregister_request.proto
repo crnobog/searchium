@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package searchium;
+
+message FolderUnregisterRequest { 
+  string path = 1;
+}

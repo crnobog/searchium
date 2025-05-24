@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package searchium;
+
+message DatabaseDetailsResponse {
+  message FilesByExtensionDetails {
+    string extension = 1;
+    uint64 count = 2;
+    uint64 bytes = 3;
+  }
+  message LargeFileDetails { 
+    string path = 1;
+    uint64 bytes = 2;
+  }
+  message DatabaseDetailsRoot {
+    string root_path = 1;
+    uint64 num_files_scanned = 2;
+    uint64 num_directories_scanned = 3;
+    uint64 num_searchable_files = 4;
+    uint64 searchable_files_bytes = 5;
+    uint64 num_binary_files = 6;
+    uint64 binary_files_bytes = 7;
+    repeated FilesByExtensionDetails searchable_files_by_extension = 8;
+    repeated FilesByExtensionDetails binary_files_by_extension = 9;
+    repeated LargeFileDetails large_searchable_files = 10;
+    repeated LargeFileDetails large_binary_files = 11;
+  }
+  repeated DatabaseDetailsRoot roots = 1;  
+}
+
