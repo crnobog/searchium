@@ -3,10 +3,20 @@ import * as child_process from "child_process";
 import * as path from "path";
 import { GrpcTransport } from "@protobuf-ts/grpc-transport";
 import { ChannelCredentials } from "@grpc/grpc-js";
-import * as pb from "gen/searchium/v2/searchium";
-import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/v2/searchium.client';
+import { ISearchiumServiceClient, SearchiumServiceClient } from 'gen/searchium/service.client';
 import { getLogger } from 'logger';
 import { DuplexStreamingMethod, IndexClient, DatabaseDetails, DatabaseDetailsRoot, IndexStatus } from "./indexInterface";
+import { FileContentsSearchRequest } from "gen/searchium/file_contents_search_request";
+import { FileContentsSearchResponse } from "gen/searchium/file_contents_search_response";
+import { FileContentsSpan } from "gen/searchium/file_contents_span";
+import { FileExtractsResponse } from "gen/searchium/file_extracts_response";
+import { FilePathSearchRequest } from "gen/searchium/file_path_search_request";
+import { FilePathSearchResponse } from "gen/searchium/file_path_search_response";
+import { FolderRegisterRequest } from "gen/searchium/folder_register_request";
+import { FolderUnregisterRequest } from "gen/searchium/folder_unregister_request";
+import { IndexUpdate } from "gen/searchium/index_update";
+import { IndexState } from "gen/searchium/status_response";
+import { ProcessInfoResponse } from "gen/searchium/process_info_response";
 
 class IndexServerProcess implements vscode.Disposable {
     constructor(
@@ -23,16 +33,16 @@ class IndexServerProcess implements vscode.Disposable {
 
 class IndexServerClient implements IndexClient {
     constructor(private client: ISearchiumServiceClient) { }
-    public registerWorkspaceFolder(request: pb.FolderRegisterRequest): AsyncIterable<pb.IndexUpdate> {
+    public registerWorkspaceFolder(request: FolderRegisterRequest): AsyncIterable<IndexUpdate> {
         return this.client.registerFolder(request).responses;
     }
-    public async unregisterWorkspaceFolder(request: pb.FolderUnregisterRequest): Promise<void> {
+    public async unregisterWorkspaceFolder(request: FolderUnregisterRequest): Promise<void> {
         await this.client.unregisterFolder(request).response;
     }
-    public searchFilePaths(): DuplexStreamingMethod<pb.FilePathSearchRequest, pb.FilePathSearchResponse> {
+    public searchFilePaths(): DuplexStreamingMethod<FilePathSearchRequest, FilePathSearchResponse> {
         const res = this.client.searchFilePaths();
         return {
-            send: async (message: pb.FilePathSearchRequest) => {
+            send: async (message: FilePathSearchRequest) => {
                 await res.requests.send(message);
             },
             complete: async () => {
@@ -41,19 +51,19 @@ class IndexServerClient implements IndexClient {
             results: res.responses
         };
     }
-    public searchFileContents(request: pb.FileContentsSearchRequest): Promise<pb.FileContentsSearchResponse> {
+    public searchFileContents(request: FileContentsSearchRequest): Promise<FileContentsSearchResponse> {
         return this.client.searchFileContents(request).response;
     }
-    public getFileExtracts(filePath: string, extracts: pb.FileContentsSpan[], maxLen: number): Promise<pb.FileExtractsResponse> {
+    public getFileExtracts(filePath: string, extracts: FileContentsSpan[], maxLen: number): Promise<FileExtractsResponse> {
         return this.client.getFileExtracts({ filePath, matchSpans: extracts, maxExtractLength: maxLen }).response;
     }
-    public async getProcessInfo(): Promise<pb.ProcessInfoResponse> {
+    public async getProcessInfo(): Promise<ProcessInfoResponse> {
         return await this.client.getProcessInfo({}).response;
     }
     public async getDatabaseDetails(): Promise<DatabaseDetails> {
         const response = await this.client.getDatabaseDetails({}).response;
         return {
-            roots: response.roots.map((p: pb.DatabaseDetailsRoot): DatabaseDetailsRoot => {
+            roots: response.roots.map((p: DatabaseDetailsRoot): DatabaseDetailsRoot => {
                 return {
                     rootPath: p.rootPath,
                     numFilesScanned: p.numFilesScanned,
@@ -74,16 +84,16 @@ class IndexServerClient implements IndexClient {
         for await (const r of this.client.getStatus({}).responses) {
             let state: IndexStatus["state"];
             switch (r.state) {
-                case pb.IndexState.UNAVAILABLE:
+                case IndexState.UNAVAILABLE:
                     state = "Unavailable";
                     break;
-                case pb.IndexState.READY:
+                case IndexState.READY:
                     state = "Ready";
                     break;
-                case pb.IndexState.INDEXING:
+                case IndexState.INDEXING:
                     state = "Indexing";
                     break;
-                case pb.IndexState.PAUSED:
+                case IndexState.PAUSED:
                     state = "Paused";
                     break;
             }

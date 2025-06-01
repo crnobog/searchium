@@ -10,8 +10,13 @@
 			"script": "build",
 			"group": "build",
 			"problemMatcher": [
-				"$tsc",
-				"$eslint-stylish"
+				{
+					"base": "$esbuild",
+					"fileLocation": [
+						"relative",
+						"${workspaceFolder}/extension"
+					]
+				},
 			],
 			"detail": "Build extension only",
 			"presentation": {
@@ -48,7 +53,20 @@
 				"$rustc"
 			],
 			"group": "build",
-			"args": [ "--manifest-path=${workspaceFolder}/server/Cargo.toml" ]
+			"args": [
+				"--manifest-path=${workspaceFolder}/server/Cargo.toml"
+			],
+			"env": {
+				"RUSTFLAGS": "--remap-path-prefix src=server\\src"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": true
+			}
 		},
 		{
 			"label": "Build Release Server",
@@ -61,7 +79,10 @@
 				"-r",
 				"--manifest-path=${workspaceFolder}/server/Cargo.toml"
 			],
-			"group": "build"
+			"group": "build",
+			"env": {
+				"RUSTFLAGS": "--remap-path-prefix src=server\\src"
+			}
 		},
 		{
 			"label": "Build Debug",
@@ -75,6 +96,6 @@
 				"Build Extension",
 				"Lint Extension"
 			]
-		},
+		}
 	]
 }

@@ -1,2 +1,2 @@
-#[path = "gen/searchium.v2.rs"]
+#[path = "gen/searchium.rs"]
 pub mod searchium;

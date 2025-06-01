@@ -209,7 +209,7 @@ impl State {
                         .searchable_files
                         .by_extension
                         .iter()
-                        .map(|(k, v)| FilesByExtensionDetails {
+                        .map(|(k, v)| database_details_response::FilesByExtensionDetails {
                             extension: k
                                 .map(|s| s.to_string_lossy().to_string())
                                 .unwrap_or_default(),
@@ -222,7 +222,7 @@ impl State {
                         .binary_files
                         .by_extension
                         .iter()
-                        .map(|(k, v)| FilesByExtensionDetails {
+                        .map(|(k, v)| database_details_response::FilesByExtensionDetails {
                             extension: k
                                 .map(|s| s.to_string_lossy().to_string())
                                 .unwrap_or_default(),
@@ -245,7 +245,7 @@ impl State {
                             if size >= self.configuration.large_file_threshold {
                                 Some((
                                     binary,
-                                    LargeFileDetails {
+                                    database_details_response::LargeFileDetails {
                                         path: p.to_string_lossy().to_string(),
                                         bytes: size,
                                     },
@@ -261,7 +261,7 @@ impl State {
                         });
                     large_binary_files.sort_by(|a, b| b.bytes.cmp(&a.bytes));
                     large_searchable_files.sort_by(|a, b| b.bytes.cmp(&a.bytes));
-                    DatabaseDetailsRoot {
+                    database_details_response::DatabaseDetailsRoot {
                         root_path: root.directory().path().to_string_lossy().to_string(),
                         num_files_scanned: root.all_files().len() as u64,
                         num_directories_scanned: root.directory().total_child_directories() as u64,

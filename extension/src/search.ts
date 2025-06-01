@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import { getLogger } from "./logger";
-import * as pb from "gen/searchium/v2/searchium";
 import * as path from "path";
 import './extensionsMethods';
 import { SearchHistory } from "./history";
 import { IndexClient } from "index/indexInterface";
+import { FileContentsQueryType } from "gen/searchium/file_contents_search_request";
 
 export interface SearchOptions {
     query: string,
@@ -237,7 +237,7 @@ export class SearchManager {
                     maxResults,
                     matchCase: options.matchCase ?? false,
                     matchWholeWord: options.wholeWord ?? false,
-                    queryType: options.regex ? pb.FileContentsQueryType.REGEX : pb.FileContentsQueryType.WILDCARD,
+                    queryType: options.regex ? FileContentsQueryType.REGEX : FileContentsQueryType.WILDCARD,
                 });
                 let resultCount = 0;
                 const resultMap: Map<string, DirectoryResult> = new Map();

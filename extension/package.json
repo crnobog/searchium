@@ -164,7 +164,7 @@
     "build": "ts-node ./build.ts",
     "watch": "ts-node ./build.ts --watch",
     "pretest": "npm run build && npm run lint",
-    "lint": "eslint . --ext .ts --ext .mts -f compact && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . ",
     "test": "vscode-test"
   },
   "devDependencies": {

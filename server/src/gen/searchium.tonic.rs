@@ -6,6 +6,8 @@ pub mod searchium_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with SearchiumServiceServer.
     #[async_trait]
     pub trait SearchiumService: Send + Sync + 'static {
+        /** TODO: Replace with capabilities/version negotiation
+*/
         async fn hello(
             &self,
             request: tonic::Request<super::HelloRequest>,
@@ -16,6 +18,7 @@ pub mod searchium_service_server {
             >
             + Send
             + 'static;
+        ///
         async fn register_folder(
             &self,
             request: tonic::Request<super::FolderRegisterRequest>,
@@ -23,6 +26,7 @@ pub mod searchium_service_server {
             tonic::Response<Self::RegisterFolderStream>,
             tonic::Status,
         >;
+        ///
         async fn unregister_folder(
             &self,
             request: tonic::Request<super::FolderUnregisterRequest>,
@@ -33,6 +37,7 @@ pub mod searchium_service_server {
             >
             + Send
             + 'static;
+        ///
         async fn search_file_paths(
             &self,
             request: tonic::Request<tonic::Streaming<super::FilePathSearchRequest>>,
@@ -40,6 +45,7 @@ pub mod searchium_service_server {
             tonic::Response<Self::SearchFilePathsStream>,
             tonic::Status,
         >;
+        ///
         async fn search_file_contents(
             &self,
             request: tonic::Request<super::FileContentsSearchRequest>,
@@ -47,6 +53,7 @@ pub mod searchium_service_server {
             tonic::Response<super::FileContentsSearchResponse>,
             tonic::Status,
         >;
+        ///
         async fn get_file_extracts(
             &self,
             request: tonic::Request<super::FileExtractsRequest>,
@@ -54,6 +61,7 @@ pub mod searchium_service_server {
             tonic::Response<super::FileExtractsResponse>,
             tonic::Status,
         >;
+        ///
         async fn set_configuration(
             &self,
             request: tonic::Request<super::ConfigurationRequest>,
@@ -61,6 +69,7 @@ pub mod searchium_service_server {
             tonic::Response<super::ConfigurationResponse>,
             tonic::Status,
         >;
+        ///
         async fn get_process_info(
             &self,
             request: tonic::Request<super::ProcessInfoRequest>,
@@ -68,6 +77,7 @@ pub mod searchium_service_server {
             tonic::Response<super::ProcessInfoResponse>,
             tonic::Status,
         >;
+        ///
         async fn get_database_details(
             &self,
             request: tonic::Request<super::DatabaseDetailsRequest>,
@@ -81,11 +91,13 @@ pub mod searchium_service_server {
             >
             + Send
             + 'static;
+        ///
         async fn get_status(
             &self,
             request: tonic::Request<super::StatusRequest>,
         ) -> std::result::Result<tonic::Response<Self::GetStatusStream>, tonic::Status>;
     }
+    ///
     #[derive(Debug)]
     pub struct SearchiumServiceServer<T: SearchiumService> {
         inner: Arc<T>,
@@ -162,7 +174,7 @@ pub mod searchium_service_server {
         }
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             match req.uri().path() {
-                "/searchium.v2.SearchiumService/Hello" => {
+                "/searchium.SearchiumService/Hello" => {
                     #[allow(non_camel_case_types)]
                     struct HelloSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -206,7 +218,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/RegisterFolder" => {
+                "/searchium.SearchiumService/RegisterFolder" => {
                     #[allow(non_camel_case_types)]
                     struct RegisterFolderSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -253,7 +265,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/UnregisterFolder" => {
+                "/searchium.SearchiumService/UnregisterFolder" => {
                     #[allow(non_camel_case_types)]
                     struct UnregisterFolderSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -299,7 +311,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/SearchFilePaths" => {
+                "/searchium.SearchiumService/SearchFilePaths" => {
                     #[allow(non_camel_case_types)]
                     struct SearchFilePathsSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -348,7 +360,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/SearchFileContents" => {
+                "/searchium.SearchiumService/SearchFileContents" => {
                     #[allow(non_camel_case_types)]
                     struct SearchFileContentsSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -397,7 +409,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/GetFileExtracts" => {
+                "/searchium.SearchiumService/GetFileExtracts" => {
                     #[allow(non_camel_case_types)]
                     struct GetFileExtractsSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -443,7 +455,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/SetConfiguration" => {
+                "/searchium.SearchiumService/SetConfiguration" => {
                     #[allow(non_camel_case_types)]
                     struct SetConfigurationSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -489,7 +501,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/GetProcessInfo" => {
+                "/searchium.SearchiumService/GetProcessInfo" => {
                     #[allow(non_camel_case_types)]
                     struct GetProcessInfoSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -535,7 +547,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/GetDatabaseDetails" => {
+                "/searchium.SearchiumService/GetDatabaseDetails" => {
                     #[allow(non_camel_case_types)]
                     struct GetDatabaseDetailsSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -584,7 +596,7 @@ pub mod searchium_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/searchium.v2.SearchiumService/GetStatus" => {
+                "/searchium.SearchiumService/GetStatus" => {
                     #[allow(non_camel_case_types)]
                     struct GetStatusSvc<T: SearchiumService>(pub Arc<T>);
                     impl<
@@ -661,6 +673,6 @@ pub mod searchium_service_server {
         }
     }
     impl<T: SearchiumService> tonic::server::NamedService for SearchiumServiceServer<T> {
-        const NAME: &'static str = "searchium.v2.SearchiumService";
+        const NAME: &'static str = "searchium.SearchiumService";
     }
 }

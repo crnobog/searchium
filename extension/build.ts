@@ -1,6 +1,5 @@
 import * as esbuild from "esbuild";
 import { copy } from "esbuild-plugin-copy";
-import * as child_process from "child_process";
 import * as fs from "fs/promises";
 
 let prod = process.argv.indexOf('--prod') >= 0;
