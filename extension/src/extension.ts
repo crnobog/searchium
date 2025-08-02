@@ -59,9 +59,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             // vscode.commands.registerCommand("searchium.previousQuery", controlsProvider.onPreviousQuery, controlsProvider),
             // vscode.commands.registerCommand("searchium.nextQuery", controlsProvider.onNextQuery, controlsProvider),
         );
+        getLogger().logInformation`Searchium initialized`;
     } catch (err) {
         getLogger().logError`Unexpected error initializing extension: ${err}`;
-    }
+    } 
 }
 
 export function deactivate(): void {
