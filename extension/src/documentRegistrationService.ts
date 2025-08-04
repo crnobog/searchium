@@ -9,24 +9,18 @@ export class DocumentRegistrationService implements vscode.Disposable {
         private context: vscode.ExtensionContext,
         private client: IndexClient 
     ) {
-        nextTick(() => this.run());
+        setImmediate(() => {
+            if (vscode.workspace.workspaceFolders) {
+                for (const folder of vscode.workspace.workspaceFolders) {
+                    if (folder.uri.scheme === 'file') {
+                        this.register(folder);
+                    }
+                }
+            }
+        });
     }
 
-    public dispose(): void {
-        return;
-    }
-
-    public async run(): Promise<void> {
-        if (vscode.workspace.workspaceFolders) {
-            for (const folder of vscode.workspace.workspaceFolders) {
-                if (folder.uri.scheme === 'file') {
-                    this.register(folder);
-                } }
-        }
-        vscode.workspace.onDidChangeWorkspaceFolders(this.onWorkspaceFoldersChanged, this);
-    }
-
-    private onWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
+    public onWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
         for (const added of event.added) {
             if (added.uri.scheme === 'file') {
                 this.register(added);

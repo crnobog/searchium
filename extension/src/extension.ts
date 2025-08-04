@@ -25,8 +25,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const indexState = new IndexState(client);
         const controlsProvider = new ControlsProvider(context, context.extensionUri, history, indexState);
         const detailsPanelProvider = new DetailsPanelProvider(context, client);
+
+        const documentRegistrationService = new DocumentRegistrationService(context, client);
+        context.subscriptions.push( 
+            vscode.workspace.onDidChangeWorkspaceFolders(documentRegistrationService.onWorkspaceFoldersChanged, documentRegistrationService)
+        );
+
         context.subscriptions.push(
-            new DocumentRegistrationService(context, client),
             fileSearchManager,
             vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager)
         );
