@@ -50,24 +50,27 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] Option for selecting match or not when navigating
 - [x] Remove legacy protobuf code
 - [x] Fix eslint config 
-- [ ] Reorganize protobuf definitions
-- [ ] Incorrect navigation in AK\FloatingPointStringConversions.cpp searching for log2, though highlight is correct. Something to do with trimming behavior?
+- [x] Reorganize protobuf definitions
+- [x] Server process living past test lifetime 
 - [ ] Closing/re-opening workspaces
-- [ ] Intercept edit events from editor and re-run search? Or use file watcher to update most recent search on open stream?
-- [ ] Command to re-run indexing
 - [ ] filesystem watching / re-indexing 
 - [ ] file path filtering
-- [ ] test grpc request cancellation
-- [ ] Search/details/etc during indexing 
-- [ ] cancel/resume indexing
+- [ ] Cancel/resume indexing
     make indexing progress marker cancellable and connect that to pausing
-- [ ] configure max extract len
-- [ ] token suggestion
-- [ ] add options to group search results by folder hierarchy? (configurable depth)
-- [ ] add option to group search results by file type
-- [ ] test configuring search parameters in workspace settings
-- [ ] changing search parameters with workspace open
-- [ ] profile initial indexing
+- [ ] Command to re-run indexing
+- [ ] Profile initial indexing
+- [ ] Test grpc request cancellation
+- [ ] Search/details/etc during indexing 
+- [ ] Configure max extract len
+- [ ] Token suggestion
+- [ ] Add options to group search results by folder hierarchy? (configurable depth)
+- [ ] Add option to group search results by file type
+- [ ] Test configuring search parameters in workspace settings
+- [ ] Changing search parameters with workspace open
 - [ ] Use regex-syntax crate to pre-compile regexes for best implementation of whole-word test? 
-- [ ] string version of search settings for vim-command like searching
-- [ ] Server process living past test lifetime 
+- [ ] String version of search settings for vim-command like searching
+- [ ] Intercept edit events from editor and re-run search? Or use file watcher to update most recent search on open stream?
+
+# Bugs 
+
+- [ ] Incorrect navigation in AK\FloatingPointStringConversions.cpp searching for log2, though highlight is correct. Caused by unicode characters earlier in file, vs code positionAt does not account for them. 
