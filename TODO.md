@@ -52,6 +52,7 @@ https://en.wikipedia.org/wiki/FM-index
 - [x] Fix eslint config 
 - [x] Reorganize protobuf definitions
 - [x] Server process living past test lifetime 
+- [ ] Adding/removing folders to/from workspace
 - [ ] Closing/re-opening workspaces
 - [ ] filesystem watching / re-indexing 
 - [ ] file path filtering
