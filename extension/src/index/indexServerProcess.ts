@@ -18,19 +18,6 @@ import { IndexUpdate } from "gen/searchium/index_update";
 import { IndexState } from "gen/searchium/status_response";
 import { ProcessInfoResponse } from "gen/searchium/process_info_response";
 
-class IndexServerProcess implements vscode.Disposable {
-    constructor(
-        private proc: child_process.ChildProcessWithoutNullStreams | undefined,
-        private transport: GrpcTransport,
-    ) {
-    }
-
-    public dispose(): void {
-        this.proc?.kill();
-        this.transport.close();
-    }
-};
-
 class IndexServerClient implements IndexClient {
     constructor(private client: ISearchiumServiceClient) { }
     public registerWorkspaceFolder(request: FolderRegisterRequest): AsyncIterable<IndexUpdate> {
@@ -102,9 +89,8 @@ class IndexServerClient implements IndexClient {
     }
 }
 
-export async function startServer(context: vscode.ExtensionContext): Promise<[IndexServerProcess, IndexClient]> {
+export async function startServer(context: vscode.ExtensionContext): Promise<IndexClient> {
     let host = process.env["SEARCHIUM_DEBUG_HOST"];
-    let childProc: child_process.ChildProcessWithoutNullStreams | undefined;
     if (host) {
         getLogger().logInformation`Connecting to existing debug server on ${host}`;
     }
@@ -115,7 +101,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
         if (!proc) {
             throw new Error("Failed to create server process");
         }
-        childProc = proc;
+        context.subscriptions.push({ dispose : () => proc?.kill() });
         // Wait for the first line of output from the new process telling us its host address/port
         host = await new Promise<string>((resolve, reject) => {
             let msg = "";
@@ -147,6 +133,7 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
         host,
         channelCredentials: ChannelCredentials.createInsecure(),
     });
+    context.subscriptions.push({ dispose : () => transport?.close() });
 
     const client = new SearchiumServiceClient(transport);
     await client.hello({ id: "node" })
@@ -159,5 +146,5 @@ export async function startServer(context: vscode.ExtensionContext): Promise<[In
             throw err;
         });
 
-    return [new IndexServerProcess(childProc, transport), new IndexServerClient(client)];
+    return new IndexServerClient(client);
 }

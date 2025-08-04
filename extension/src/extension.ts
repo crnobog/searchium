@@ -8,6 +8,7 @@ import { DetailsPanelProvider } from './detailsPanel';
 import { SearchHistory } from './history';
 import { startServer } from './index/indexServerProcess';
 import { FileSearchManager } from 'fileSearch';
+import { IndexClient } from 'index/indexInterface';
 
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -15,7 +16,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         getLogger().logInformation`Initializing searchium`;
         const history = new SearchHistory(context);
         // TODO: Progress bar/status bar update for this? 
-        const [process, client] = await startServer(context);
+        const client : IndexClient = await startServer(context);
         const fileSearchManager = new FileSearchManager(client);
         const searchResultsProvider = new SearchResultsProvider(client);
         const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
@@ -25,7 +26,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const controlsProvider = new ControlsProvider(context, context.extensionUri, history, indexState);
         const detailsPanelProvider = new DetailsPanelProvider(context, client);
         context.subscriptions.push(
-            process,
             new DocumentRegistrationService(context, client),
             fileSearchManager,
             vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager)
