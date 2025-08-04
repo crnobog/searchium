@@ -4,7 +4,7 @@ import { getLogger } from "./logger";
 import { IndexClient } from "./index/indexInterface";
 import { Timestamp } from "gen/google/protobuf/timestamp";
 
-export class DocumentRegistrationService implements vscode.Disposable {
+export class DocumentRegistrationService {
     constructor(
         private context: vscode.ExtensionContext,
         private client: IndexClient 
