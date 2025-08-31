@@ -10,7 +10,6 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"C:/code/ladybird",
 				"--extensionDevelopmentPath=${workspaceFolder}/extension"
 			],
 			"outFiles": [
@@ -23,7 +22,6 @@
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
-				"C:/code/ladybird",
 				"--extensionDevelopmentPath=${workspaceFolder}/extension"
 			],
 			"outFiles": [
