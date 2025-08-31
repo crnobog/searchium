@@ -46,6 +46,29 @@
 			"problemMatcher": []
 		},
 		{
+			"label": "Check Server",
+			"type": "cargo",
+			"command": "check",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"args": [
+				"--manifest-path=${workspaceFolder}/server/Cargo.toml"
+			],
+			"env": {
+				"RUSTFLAGS": "--remap-path-prefix src=server\\src"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": false,
+				"clear": true
+			}
+		},
+		{
 			"label": "Build Debug Server",
 			"type": "cargo",
 			"command": "build",
