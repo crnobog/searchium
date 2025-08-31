@@ -209,26 +209,30 @@ impl State {
                         .searchable_files
                         .by_extension
                         .iter()
-                        .map(|(k, v)| database_details_response::FilesByExtensionDetails {
-                            extension: k
-                                .map(|s| s.to_string_lossy().to_string())
-                                .unwrap_or_default(),
-                            count: v.count,
-                            bytes: v.bytes,
-                        })
+                        .map(
+                            |(k, v)| database_details_response::FilesByExtensionDetails {
+                                extension: k
+                                    .map(|s| s.to_string_lossy().to_string())
+                                    .unwrap_or_default(),
+                                count: v.count,
+                                bytes: v.bytes,
+                            },
+                        )
                         .collect();
                     searchable_files_by_extension.sort_by(|a, b| b.bytes.cmp(&a.bytes));
                     let mut binary_files_by_extension: Vec<_> = stats
                         .binary_files
                         .by_extension
                         .iter()
-                        .map(|(k, v)| database_details_response::FilesByExtensionDetails {
-                            extension: k
-                                .map(|s| s.to_string_lossy().to_string())
-                                .unwrap_or_default(),
-                            count: v.count,
-                            bytes: v.bytes,
-                        })
+                        .map(
+                            |(k, v)| database_details_response::FilesByExtensionDetails {
+                                extension: k
+                                    .map(|s| s.to_string_lossy().to_string())
+                                    .unwrap_or_default(),
+                                count: v.count,
+                                bytes: v.bytes,
+                            },
+                        )
                         .collect();
                     binary_files_by_extension.sort_by(|a, b| b.bytes.cmp(&a.bytes));
                     let (mut large_searchable_files, mut large_binary_files) = root
@@ -356,7 +360,24 @@ impl State {
         Ok(())
     }
 
-    pub fn unregister_folder(&mut self, _params: FolderUnregisterRequest) -> CommandResult<()> {
-        todo!("");
+    pub fn unregister_folder(
+        &mut self,
+        params: FolderUnregisterRequest,
+    ) -> CommandResult<()> {
+        let span = info_span!("UnregisterFolder");
+        let _ = span.enter();
+
+        let path = Path::new(&params.path);
+        if let Some(index) = self
+            .roots
+            .iter()
+            .enumerate()
+            .find(|(_index, root)| root.path() == path).map(|x| x.0)
+        {
+            self.roots.remove(index);
+            self.contents.remove(index);
+        };
+
+        Ok(())
     }
 }

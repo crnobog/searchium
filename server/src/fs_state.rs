@@ -14,6 +14,9 @@ pub struct Root {
 
 #[allow(dead_code)]
 impl Root {
+    pub fn path(&self) -> &Path {
+        &self.directory.dir_path.as_path()
+    }
     pub fn directory(&self) -> &Directory {
         &self.directory
     }
