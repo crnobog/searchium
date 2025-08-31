@@ -13,6 +13,7 @@ export class DocumentRegistrationService {
             if (vscode.workspace.workspaceFolders) {
                 for (const folder of vscode.workspace.workspaceFolders) {
                     if (folder.uri.scheme === 'file') {
+                        getLogger().logInformation`Adding initial workspace folder ${folder.uri}`;
                         this.register(folder);
                     }
                 }
@@ -23,11 +24,13 @@ export class DocumentRegistrationService {
     public onWorkspaceFoldersChanged(event: vscode.WorkspaceFoldersChangeEvent): void {
         for (const added of event.added) {
             if (added.uri.scheme === 'file') {
+                getLogger().logInformation`Adding workspace folder ${added.uri}`;
                 this.register(added);
             }
         }
         for (const removed of event.removed) {
             if (removed.uri.scheme === 'file') {
+                getLogger().logInformation`Removing workspace folder ${removed.uri}`;
                 this.unregister(removed);
             }
         }
