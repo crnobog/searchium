@@ -18,10 +18,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // TODO: Progress bar/status bar update for this? 
         const client : IndexClient = await startServer(context);
         const fileSearchManager = new FileSearchManager(client);
-        const searchResultsProvider = new SearchResultsProvider(client);
+        context.subscriptions.push(fileSearchManager);
+        const searchResultsProvider = new SearchResultsProvider(context, client);
         const searchResultsTreeView = vscode.window.createTreeView('searchium-results',
             { treeDataProvider: searchResultsProvider, canSelectMany: false, dragAndDropController: undefined, showCollapseAll: true });
-        const searchManager = new SearchManager(searchResultsProvider, searchResultsTreeView, client, history);
+        context.subscriptions.push(searchResultsTreeView);
+        const searchManager = new SearchManager(context, searchResultsProvider, searchResultsTreeView, client, history);
         const indexState = new IndexState(client);
         const controlsProvider = new ControlsProvider(context, context.extensionUri, history, indexState);
         const detailsPanelProvider = new DetailsPanelProvider(context, client);
@@ -29,11 +31,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const documentRegistrationService = new DocumentRegistrationService(context, client);
         context.subscriptions.push( 
             vscode.workspace.onDidChangeWorkspaceFolders(documentRegistrationService.onWorkspaceFoldersChanged, documentRegistrationService)
-        );
-
-        context.subscriptions.push(
-            fileSearchManager,
-            vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager)
         );
 
         const toMbString = (value: bigint): string =>
@@ -57,6 +54,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             vscode.commands.registerCommand("searchium.newSearch", controlsProvider.onNewSearch, controlsProvider),
             vscode.commands.registerCommand("searchium.clearHistory", controlsProvider.onClearHistory, controlsProvider),
             vscode.commands.registerTextEditorCommand("searchium.searchCurrentToken", controlsProvider.onSearchCurrentToken, controlsProvider),
+
+            vscode.commands.registerCommand("searchium.searchFilePaths", fileSearchManager.onSearchFilePaths, fileSearchManager)
 
             // vscode.commands.registerCommand("searchium.toggleCaseSensitivity", controlsProvider.onToggleCaseSensitivity, controlsProvider),
             // vscode.commands.registerCommand("searchium.toggleWholeWord", controlsProvider.onToggleWholeWord, controlsProvider),

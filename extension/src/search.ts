@@ -107,16 +107,16 @@ export class SearchResultsProvider implements vscode.TreeDataProvider<SearchResu
     disposables: vscode.Disposable[] = [];
     navigationBehavior: NavigationBehavior = NavigationBehavior.selection;
 
-    constructor(private readonly client: IndexClient) {
+    constructor(context : vscode.ExtensionContext, private readonly client: IndexClient) {
         this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.selection);
         getLogger().logInformation`Initial navigation behavior is now ${this.navigationBehavior}`;
-        vscode.workspace.onDidChangeConfiguration(e => {
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration("searchium.navigationBehavior")) {
                 this.navigationBehavior = vscode.workspace.getConfiguration("searchium").get<NavigationBehavior>("navigationBehavior", NavigationBehavior.selection);
                 getLogger().logInformation`Navigation behavior is now ${this.navigationBehavior}`;
                 this._onDidChangeTreeData.fire(undefined);
             }
-        }, null, this.disposables);
+        }, null, this.disposables));
     }
 
     // TODO: Remove first layer of tree if there's only one project/directory ?
@@ -201,12 +201,13 @@ export class SearchManager {
     private currentNavOperation: Promise<void>;
     private currentRequestId = 0n;
     constructor(
+        context : vscode.ExtensionContext,
         private readonly provider: SearchResultsProvider,
         private readonly treeView: vscode.TreeView<SearchResult>,
         private readonly client: IndexClient,
         private readonly history: SearchHistory
     ) {
-        treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this);
+        context.subscriptions.push(treeView.onDidChangeSelection(this.onTreeViewSelectionChanged, this));
         this.currentNavOperation = Promise.resolve();
     }
 
