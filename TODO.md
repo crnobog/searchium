@@ -75,4 +75,7 @@ https://en.wikipedia.org/wiki/FM-index
 
 # Bugs 
 
+- [ ] Editor state changing from "open folder" to "workspace with multiple folders" seems to break searching. Also from closing & reopening workspace?
+    - "Element with id {} is already registered"
+- [ ] Incorrect extracts on last line of documents
 - [ ] Incorrect navigation in AK\FloatingPointStringConversions.cpp searching for log2, though highlight is correct. Caused by unicode characters earlier in file, vs code positionAt does not account for them. 
